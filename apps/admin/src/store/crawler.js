@@ -1,18 +1,13 @@
 /**
  * crawler.js
- * Anthropic API를 사용하여 각 토픽에 맞는 콘텐츠를 생성
- * 실제 크롤링 대신 AI가 최신 트렌드를 반영한 콘텐츠를 생성
+ * Anthropic API 콘텐츠 생성 — Vercel API Route 프록시 경유 (CORS 해결)
  */
 
 import { MENU_TOPICS, addItems, updateSchedule, readSchedule } from './crawlStore.js'
 
-const API_URL = 'https://api.anthropic.com/v1/messages'
+// 개발: 직접 호출, 프로덕션: Vercel 프록시 경유
+const API_URL = '/api/crawl'
 
-/**
- * 단일 토픽의 콘텐츠를 AI로 생성
- * @param {string} topicKey - MENU_TOPICS의 키
- * @returns {Promise<Array>} 생성된 게시글 배열
- */
 export async function crawlTopic(topicKey) {
   const topic = MENU_TOPICS[topicKey]
   if (!topic) throw new Error(`Unknown topic: ${topicKey}`)
@@ -51,16 +46,12 @@ export async function crawlTopic(topicKey) {
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    body: JSON.stringify({ prompt }),
   })
 
   if (!response.ok) {
-    const err = await response.json()
-    throw new Error(err.error?.message || `API error ${response.status}`)
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `API 오류 (${response.status})`)
   }
 
   const data = await response.json()
@@ -74,7 +65,6 @@ export async function crawlTopic(topicKey) {
     throw new Error('AI 응답 파싱 실패')
   }
 
-  // ID 및 메타 정보 추가
   const enriched = items.map((item, i) => ({
     id: `${topicKey}_${Date.now()}_${i}`,
     topicKey,
@@ -91,18 +81,12 @@ export async function crawlTopic(topicKey) {
     type: 'crawled',
   }))
 
-  // 스토어에 저장
   addItems(topicKey, enriched)
   updateSchedule(topicKey, new Date().toISOString())
 
   return enriched
 }
 
-/**
- * 여러 토픽을 순차적으로 크롤링 (rate limit 대응)
- * @param {string[]} topicKeys
- * @param {function} onProgress - (topicKey, status, result) => void
- */
 export async function crawlTopics(topicKeys, onProgress) {
   const results = {}
   for (const key of topicKeys) {
@@ -115,16 +99,12 @@ export async function crawlTopics(topicKeys, onProgress) {
       results[key] = { success: false, error: err.message }
       onProgress?.(key, 'error', err.message)
     }
-    // API rate limit 방지: 토픽 간 1.5초 대기
+    // rate limit 방지
     await new Promise(r => setTimeout(r, 1500))
   }
   return results
 }
 
-/**
- * 10분이 지난 토픽만 선택적으로 크롤링
- * @param {function} onProgress
- */
 export async function crawlStale(onProgress) {
   const schedule = readSchedule()
   const TEN_MIN = 10 * 60 * 1000
