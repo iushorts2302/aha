@@ -167,7 +167,29 @@ export default function CrawlerDashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 'var(--space-6)', alignItems: 'start' }}>
-        {/* 토픽 목록 */}
+  
+      {/* Cron 자동 스케줄 상태 패널 */}
+      <div style={{
+        marginBottom: 'var(--space-6)',
+        padding: 'var(--space-5)',
+        background: '#f0f9f4',
+        border: '1px solid rgba(0,180,100,0.25)',
+        borderRadius: 'var(--radius-card)',
+        display: 'flex', alignItems: 'center', gap: 'var(--space-5)', flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00B84F', display: 'inline-block', boxShadow: '0 0 6px rgba(0,184,79,0.6)' }} />
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#005C27' }}>Vercel Cron 활성</span>
+        </div>
+        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)' }}>10분마다 자동 크롤링 실행 중 (*/10 * * * *)</span>
+        <div style={{ flex: 1 }} />
+        <a href="https://vercel.com/pomong-s-projects/admin" target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-accent)', fontWeight: 700 }}>
+          Vercel 대시보드에서 확인 ↗
+        </a>
+      </div>
+
+      {/* 토픽 목록 */}
         <div>
           {/* 카테고리 필터 */}
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
