@@ -14,7 +14,7 @@ export default function AdminLoginPage({ navigate }) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: 'var(--color-ink)',
+      minHeight: '100vh', background: '#353B42',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px',
     }}>
       <div style={{ width: '100%', maxWidth: '360px' }}>

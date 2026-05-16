@@ -26,18 +26,19 @@ export default function Header({ currentPage, navigate }) {
       top: 0,
       zIndex: 100,
     }}>
-      {/* 워드마크 */}
       <button onClick={() => navigate('home')} style={{
-        fontSize: '14px', fontWeight: 500,
-        letterSpacing: '0.24em',
+        fontSize: 'var(--text-sm)', fontWeight: 800,
+        letterSpacing: '0.2em',
         color: 'var(--color-ink)',
         textTransform: 'uppercase',
         flexShrink: 0,
         transition: 'opacity var(--transition)',
       }}
-        onMouseEnter={e => e.currentTarget.style.opacity = '0.5'}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.6'}
         onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-      >AHA</button>
+      >
+        <span style={{ color: 'var(--color-accent)' }}>A</span>HA
+      </button>
 
       {/* 네비 */}
       <nav style={{ display: 'flex', gap: '0' }}>

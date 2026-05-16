@@ -14,19 +14,20 @@ export function AdminHeader({ navigate }) {
   return (
     <header style={{
       height: 'var(--nav-height)',
-      background: 'var(--color-ink)',
+      background: '#353B42',
       display: 'flex', alignItems: 'center',
-      padding: '0 40px', gap: '24px',
+      padding: '0 40px', gap: '12px',
+      borderBottom: '2px solid #00D564',
     }}>
       <button onClick={() => navigate('dashboard')} style={{
-        fontSize: '14px', fontWeight: 500, letterSpacing: '0.22em',
-        color: '#fff', textTransform: 'uppercase',
+        fontSize: 'var(--text-sm)', fontWeight: 800, letterSpacing: '0.2em',
+        color: '#00D564', textTransform: 'uppercase',
         transition: 'opacity var(--transition)',
       }}
-        onMouseEnter={e => e.currentTarget.style.opacity = '0.6'}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
         onMouseLeave={e => e.currentTarget.style.opacity = '1'}
       >AHA</button>
-      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>admin</span>
+      <span style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,0.35)', fontWeight: 400 }}>admin</span>
       <div style={{ flex: 1 }} />
       <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>{admin?.name}</span>
       <button onClick={() => { logout(); navigate('login') }} style={{

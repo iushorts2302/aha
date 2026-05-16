@@ -1,76 +1,172 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap');
 
+/* ─── Design Tokens — NAVER WEBTOON Design System ───────
+   Admin surface: Carbon Dark 헤더 + WEBTOON 그린 액센트
+──────────────────────────────────────────────────────── */
 :root {
   --color-bg:          #FFFFFF;
-  --color-surface:     #F4F4F4;
-  --color-surface2:    #EEEEEE;
-  --color-border:      #D0D1D2;
-  --color-border-soft: #EEEEEE;
-  --color-accent:      #3E6AE1;
-  --color-accent-dark: #2d55c4;
-  --color-ink:         #171A20;
-  --color-body:        #393C41;
-  --color-muted:       #5C5E62;
-  --color-placeholder: #8E8E8E;
-  --color-danger:      #C0392B;
-  --color-success:     #1E7E34;
+  --color-surface:     #F4F5F6;
+  --color-surface2:    #ECEDEF;
+  --color-border:      #D1D3D6;
+  --color-border-soft: #E8EAEC;
 
-  --font: 'Inter', -apple-system, Arial, sans-serif;
+  --color-accent:      #00D564;        /* WEBTOON 브랜드 그린 */
+  --color-accent-dark: #00B84F;
+  --color-accent-text: #00521E;        /* 그린 위 텍스트 */
+
+  --color-ink:         #353B42;        /* color.text.inverse */
+  --color-body:        #353B42;
+  --color-muted:       #595E65;        /* color.text.tertiary */
+  --color-placeholder: #9EA3A9;
+
+  --color-danger:      #E03131;
+  --color-success:     #00D564;
+
+  --font: 'Nanum Gothic', NanumSquare, 나눔스퀘어, 나눔고딕, Dotum, 돋움, Helvetica, Arial, AppleSDGothicNeo, sans-serif;
+
+  --text-xs:  12px;
+  --text-sm:  14px;
+  --text-md:  15px;
+  --text-lg:  16px;
+
+  --space-1:  5px;
+  --space-2:  8px;
+  --space-3:  10px;
+  --space-4:  12px;
+  --space-5:  18px;
+  --space-6:  24px;
+  --space-7:  26px;
+  --space-8:  28px;
+
   --radius-btn:  4px;
   --radius-card: 8px;
-  --ease: cubic-bezier(0.5, 0, 0, 0.75);
-  --duration: 0.33s;
+
+  --ease:       cubic-bezier(0.4, 0, 0.2, 1);
+  --duration:   0.2s;
   --transition: var(--duration) var(--ease);
-  --nav-height: 56px;
+
+  --nav-height:    56px;
   --sidebar-width: 220px;
 }
 
+/* ─── Reset ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: var(--font); background: var(--color-surface); color: var(--color-body); line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+body {
+  font-family: var(--font);
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+  color: var(--color-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  word-break: keep-all;
+}
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
 input, textarea, select { font-family: inherit; color: inherit; }
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 99px; }
 
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: var(--radius-btn); font-size: 13px; font-weight: 500; transition: background-color var(--transition), border-color var(--transition), color var(--transition); white-space: nowrap; border: 1px solid transparent; }
-.btn-primary { background: var(--color-ink); color: #fff; }
-.btn-primary:hover { background: var(--color-accent); }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+/* ─── Buttons ────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  height: 36px; padding: 0 var(--space-5);
+  border-radius: var(--radius-btn);
+  font-size: var(--text-sm); font-weight: 700; font-family: var(--font);
+  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+  white-space: nowrap; border: 1px solid transparent; cursor: pointer;
+}
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+
+/* Admin Primary — WEBTOON 그린 */
+.btn-primary { background: var(--color-accent); color: var(--color-accent-text); }
+.btn-primary:hover  { background: var(--color-accent-dark); }
+.btn-primary:active { background: #009E42; }
+
 .btn-secondary { background: var(--color-bg); color: var(--color-body); border-color: var(--color-border); }
 .btn-secondary:hover { border-color: var(--color-ink); color: var(--color-ink); }
+
 .btn-ghost { background: transparent; color: var(--color-muted); }
 .btn-ghost:hover { color: var(--color-ink); background: var(--color-surface2); }
+
 .btn-danger { background: var(--color-danger); color: #fff; border-color: var(--color-danger); }
 .btn-danger:hover { opacity: 0.88; }
-.btn-success { background: var(--color-success); color: #fff; }
-.btn-xs { height: 28px; padding: 0 10px; font-size: 12px; }
 
-.input { width: 100%; height: 36px; padding: 0 12px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-btn); font-size: 13px; color: var(--color-ink); transition: border-color var(--transition); outline: none; }
-.input:focus { border-color: var(--color-accent); }
-.input::placeholder { color: var(--color-placeholder); }
-textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
-select.input { cursor: pointer; }
+.btn-success { background: var(--color-success); color: var(--color-accent-text); }
 
-.card { background: var(--color-bg); border: 1px solid var(--color-border-soft); border-radius: var(--radius-card); }
-.divider { height: 1px; background: var(--color-border-soft); margin: 16px 0; }
+.btn-xs { height: 28px; padding: 0 var(--space-3); font-size: var(--text-xs); }
 
-.badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 99px; font-size: 11px; font-weight: 500; }
-.badge-green  { background: #dcfce7; color: #166534; }
-.badge-red    { background: #fee2e2; color: #991b1b; }
-.badge-yellow { background: #fef3c7; color: #92400e; }
-.badge-blue   { background: #dbeafe; color: #1e40af; }
+/* ─── Inputs ─────────────────────────────────────────── */
+.input {
+  width: 100%; height: 36px; padding: 0 var(--space-4);
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-btn);
+  font-size: var(--text-sm); font-family: var(--font);
+  color: var(--color-ink);
+  transition: border-color var(--transition); outline: none;
+}
+.input:focus         { border-color: var(--color-accent); }
+.input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; }
+.input::placeholder  { color: var(--color-placeholder); }
+.input:disabled      { opacity: 0.5; cursor: not-allowed; background: var(--color-surface); }
+textarea.input { height: auto; padding: var(--space-3) var(--space-4); resize: vertical; }
+select.input   { cursor: pointer; }
 
-.admin-layout { display: grid; grid-template-columns: var(--sidebar-width) 1fr; grid-template-rows: var(--nav-height) 1fr; min-height: 100vh; }
-.admin-header { grid-column: 1 / -1; background: var(--color-ink); }
-.admin-sidebar { grid-row: 2; background: var(--color-bg); border-right: 1px solid var(--color-border-soft); position: sticky; top: var(--nav-height); height: calc(100vh - var(--nav-height)); overflow-y: auto; }
-.admin-main { grid-row: 2; padding: 32px 40px; min-width: 0; }
+/* ─── Surface Utilities ──────────────────────────────── */
+.card    { background: var(--color-bg); border: 1px solid var(--color-border-soft); border-radius: var(--radius-card); }
+.divider { height: 1px; background: var(--color-border-soft); margin: var(--space-5) 0; }
 
-.table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.table th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 500; color: var(--color-placeholder); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--color-border-soft); background: var(--color-surface); }
-.table td { padding: 12px 16px; border-bottom: 1px solid var(--color-border-soft); color: var(--color-body); }
+/* ─── Badges ─────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center;
+  height: 20px; padding: 0 var(--space-2);
+  border-radius: 99px; font-size: 11px; font-weight: 700;
+}
+.badge-green  { background: #d4f9e6; color: #005C27; }  /* WEBTOON 그린 파생 */
+.badge-red    { background: #fee2e2; color: #9B1C1C; }
+.badge-yellow { background: #fef3c7; color: #78350F; }
+.badge-blue   { background: #dbeafe; color: #1E3A8A; }
+
+/* ─── Admin Layout ───────────────────────────────────── */
+.admin-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--nav-height) 1fr;
+  min-height: 100vh;
+}
+.admin-header  { grid-column: 1 / -1; background: var(--color-ink); }
+.admin-sidebar {
+  grid-row: 2; background: var(--color-bg);
+  border-right: 1px solid var(--color-border-soft);
+  position: sticky; top: var(--nav-height);
+  height: calc(100vh - var(--nav-height)); overflow-y: auto;
+}
+.admin-main { grid-row: 2; padding: var(--space-8) 40px; min-width: 0; }
+
+/* ─── Table ──────────────────────────────────────────── */
+.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.table th {
+  padding: var(--space-3) var(--space-5);
+  text-align: left; font-size: 11px; font-weight: 700;
+  color: var(--color-placeholder); text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+}
+.table td {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-soft);
+  color: var(--color-body);
+}
 .table tr:last-child td { border-bottom: none; }
-.table tr:hover td { background: var(--color-surface); }
+.table tr:hover td      { background: var(--color-surface); }
 
-@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.fade-up { animation: fadeUp 0.3s var(--ease) both; }
+/* ─── Animation ──────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.22s var(--ease) both; }

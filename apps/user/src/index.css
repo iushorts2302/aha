@@ -1,85 +1,197 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+/* NanumSquare — Google Fonts에서 가장 근접한 대체: Nanum Gothic */
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap');
 
-/* ─── Design Tokens — Tesla-inspired ────────────────── */
+/* ─── Design Tokens — NAVER WEBTOON Design System ───────
+   color.surface.base       = #000000  (다크 배경 전용)
+   color.surface.muted      = #ffffff  (기본 배경)
+   color.surface.raised     = #00d564  (브랜드 그린 CTA)
+   color.text.inverse       = #353b42  (주요 텍스트)
+   color.text.tertiary      = #595e65  (서브 텍스트)
+   font.family.primary      = NanumSquare
+   space: 5/8/10/12/18/24/26/28px
+──────────────────────────────────────────────────────── */
 :root {
-  --color-bg:          #FFFFFF;
-  --color-surface:     #F4F4F4;
-  --color-surface2:    #EEEEEE;
-  --color-border:      #D0D1D2;
-  --color-border-soft: #EEEEEE;
-  --color-accent:      #3E6AE1;
-  --color-accent-dark: #2d55c4;
-  --color-ink:         #171A20;
-  --color-body:        #393C41;
-  --color-muted:       #5C5E62;
-  --color-placeholder: #8E8E8E;
-  --color-danger:      #C0392B;
+  /* ── Surfaces ── */
+  --color-bg:          #FFFFFF;        /* color.surface.muted */
+  --color-surface:     #F4F5F6;        /* color.surface.muted 파생 — 연한 배경 */
+  --color-surface2:    #ECEDEF;        /* 구분용 표면 */
 
-  --font: 'Inter', -apple-system, Arial, sans-serif;
+  /* ── Borders ── */
+  --color-border:      #D1D3D6;        /* 테두리 — WCAG AA 보장 */
+  --color-border-soft: #E8EAEC;        /* 구분선 — 부드러운 분리 */
+
+  /* ── Brand — NAVER WEBTOON Green ── */
+  --color-accent:      #00D564;        /* color.surface.raised — Primary CTA */
+  --color-accent-dark: #00B84F;        /* hover / active 상태 */
+  --color-accent-text: #00521E;        /* 그린 배경 위 텍스트 — WCAG AA 4.5:1 확보 */
+
+  /* ── Typography ── */
+  --color-ink:         #353B42;        /* color.text.inverse — 주요 헤딩 */
+  --color-body:        #353B42;        /* 본문 텍스트 */
+  --color-muted:       #595E65;        /* color.text.tertiary — 보조 텍스트 */
+  --color-placeholder: #9EA3A9;        /* placeholder / 비활성 */
+
+  /* ── Semantic ── */
+  --color-danger:      #E03131;        /* 오류 / 삭제 */
+  --color-success:     #00D564;        /* 성공 = 브랜드 그린 */
+
+  /* ── Typography — NanumSquare ── */
+  --font: 'Nanum Gothic', NanumSquare, 나눔스퀘어, 나눔고딕, Dotum, 돋움, Helvetica, Arial, AppleSDGothicNeo, sans-serif;
+
+  /* ── Type Scale (WEBTOON spec) ── */
+  --text-xs:  12px;   /* 보조 레이블 */
+  --text-sm:  14px;   /* font.size.sm — UI 기본 */
+  --text-md:  15px;   /* font.size.md — 본문 */
+  --text-lg:  16px;   /* font.size.lg */
+  --text-xl:  17px;   /* font.size.xl */
+  --text-2xl: 19px;   /* font.size.2xl */
+  --text-3xl: 22px;   /* font.size.3xl */
+  --text-4xl: 26px;   /* font.size.4xl */
+
+  /* ── Spacing (WEBTOON spec) ── */
+  --space-1:  5px;
+  --space-2:  8px;
+  --space-3:  10px;
+  --space-4:  12px;
+  --space-5:  18px;
+  --space-6:  24px;
+  --space-7:  26px;
+  --space-8:  28px;
+
+  /* ── Shape ── */
   --radius-btn:  4px;
-  --radius-card: 12px;
-  --ease: cubic-bezier(0.5, 0, 0, 0.75);
-  --duration: 0.33s;
+  --radius-card: 8px;
+
+  /* ── Motion ── */
+  --ease:       cubic-bezier(0.4, 0, 0.2, 1);
+  --duration:   0.2s;
   --transition: var(--duration) var(--ease);
-  --nav-height: 56px;
-  --sidebar-width: 220px;
+
+  /* ── Layout ── */
+  --nav-height:     56px;
+  --sidebar-width:  220px;
 }
 
+/* ─── Reset ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
   font-family: var(--font);
+  font-size: var(--text-sm);
+  font-weight: 400;
   background: var(--color-bg);
   color: var(--color-body);
-  line-height: 1.5;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  word-break: keep-all;
 }
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
 input, textarea, select { font-family: inherit; color: inherit; }
 img { max-width: 100%; display: block; }
 
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 99px; }
-
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  height: 40px; padding: 0 20px; border-radius: var(--radius-btn);
-  font-size: 14px; font-weight: 500;
-  transition: background-color var(--transition), border-color var(--transition), color var(--transition), box-shadow 0.25s var(--ease);
-  white-space: nowrap; border: 3px solid transparent;
+/* ─── Focus Visible (WCAG 2.2 AA) ───────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
-.btn-primary { background: var(--color-accent); color: #fff; min-width: 140px; }
-.btn-primary:hover { background: var(--color-accent-dark); }
-.btn-secondary { background: var(--color-bg); color: var(--color-ink); border-color: var(--color-border); min-width: 140px; }
-.btn-secondary:hover { border-color: var(--color-ink); }
-.btn-ghost { background: transparent; color: var(--color-muted); height: 32px; padding: 0 12px; border-radius: var(--radius-btn); font-size: 13px; transition: color var(--transition), background-color var(--transition); }
-.btn-ghost:hover { color: var(--color-ink); background: var(--color-surface); }
+
+/* ─── Scrollbar ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+/* ─── Buttons ────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  height: 40px; padding: 0 var(--space-6);
+  border-radius: var(--radius-btn);
+  font-size: var(--text-sm); font-weight: 700;
+  font-family: var(--font);
+  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+  white-space: nowrap; border: 2px solid transparent;
+  cursor: pointer;
+}
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+
+/* Primary — WEBTOON 브랜드 그린 */
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  min-width: 120px;
+}
+.btn-primary:hover  { background: var(--color-accent-dark); }
+.btn-primary:active { background: #009E42; }
+
+/* Secondary */
+.btn-secondary {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  border-color: var(--color-border);
+  min-width: 120px;
+}
+.btn-secondary:hover  { border-color: var(--color-ink); }
+.btn-secondary:active { background: var(--color-surface); }
+
+/* Ghost */
+.btn-ghost {
+  background: transparent; color: var(--color-muted);
+  height: 32px; padding: 0 var(--space-4);
+  font-size: var(--text-sm); font-weight: 400;
+  transition: color var(--transition), background-color var(--transition);
+}
+.btn-ghost:hover  { color: var(--color-ink); background: var(--color-surface); }
+
+/* Danger */
 .btn-danger { background: var(--color-danger); color: #fff; }
 .btn-danger:hover { opacity: 0.88; }
-.btn-sm { height: 32px; padding: 0 14px; font-size: 13px; min-width: unset; }
 
+/* Size modifier */
+.btn-sm { height: 32px; padding: 0 var(--space-4); font-size: var(--text-sm); min-width: unset; }
+
+/* ─── Inputs ─────────────────────────────────────────── */
 .input {
-  width: 100%; height: 40px; padding: 0 14px;
-  background: var(--color-bg); border: 1px solid var(--color-border);
-  border-radius: var(--radius-btn); font-size: 14px; color: var(--color-ink);
-  transition: border-color var(--transition); outline: none;
+  width: 100%; height: 40px; padding: 0 var(--space-4);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-btn);
+  font-size: var(--text-sm); font-family: var(--font);
+  color: var(--color-ink);
+  transition: border-color var(--transition);
+  outline: none;
 }
-.input:focus { border-color: var(--color-accent); }
-.input::placeholder { color: var(--color-placeholder); }
-textarea.input { height: auto; padding: 12px 14px; resize: vertical; line-height: 1.6; }
-select.input { cursor: pointer; }
+.input:focus         { border-color: var(--color-accent); }
+.input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; }
+.input::placeholder  { color: var(--color-placeholder); }
+.input:disabled      { opacity: 0.5; cursor: not-allowed; background: var(--color-surface); }
+textarea.input { height: auto; padding: var(--space-3) var(--space-4); resize: vertical; line-height: 1.65; }
+select.input   { cursor: pointer; }
 
-.card { background: var(--color-bg); border: 1px solid var(--color-border-soft); border-radius: var(--radius-card); }
-.tag { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 99px; font-size: 12px; color: var(--color-muted); background: var(--color-surface); transition: color var(--transition), background-color var(--transition); }
+/* ─── Surface Utilities ──────────────────────────────── */
+.card    { background: var(--color-bg); border: 1px solid var(--color-border-soft); border-radius: var(--radius-card); }
+.tag     { display: inline-flex; align-items: center; height: 24px; padding: 0 var(--space-3); border-radius: 99px; font-size: var(--text-xs); color: var(--color-muted); background: var(--color-surface); transition: color var(--transition), background-color var(--transition); word-break: keep-all; }
 .tag:hover { color: var(--color-ink); background: var(--color-surface2); }
-.divider { height: 1px; background: var(--color-border-soft); margin: 20px 0; }
+.divider { height: 1px; background: var(--color-border-soft); margin: var(--space-6) 0; }
 
-.layout { display: grid; grid-template-columns: var(--sidebar-width) 1fr; grid-template-rows: var(--nav-height) 1fr; min-height: 100vh; }
-.layout-header { grid-column: 1 / -1; }
-.layout-sidebar { position: sticky; top: var(--nav-height); height: calc(100vh - var(--nav-height)); overflow-y: auto; border-right: 1px solid var(--color-border-soft); }
-.layout-main { padding: 40px 48px; min-width: 0; max-width: 900px; }
+/* ─── Layout ─────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--nav-height) 1fr;
+  min-height: 100vh;
+}
+.layout-header  { grid-column: 1 / -1; }
+.layout-sidebar {
+  position: sticky; top: var(--nav-height);
+  height: calc(100vh - var(--nav-height));
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border-soft);
+}
+.layout-main { padding: var(--space-8) 48px; min-width: 0; max-width: 900px; }
 
-@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.fade-up { animation: fadeUp 0.35s var(--ease) both; }
+/* ─── Animation ──────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.25s var(--ease) both; }
