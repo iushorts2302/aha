@@ -1,78 +1,51 @@
-/* NanumSquare — Google Fonts에서 가장 근접한 대체: Nanum Gothic */
 @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap');
 
-/* ─── Design Tokens — NAVER WEBTOON Design System ───────
-   color.surface.base       = #000000  (다크 배경 전용)
-   color.surface.muted      = #ffffff  (기본 배경)
-   color.surface.raised     = #00d564  (브랜드 그린 CTA)
-   color.text.inverse       = #353b42  (주요 텍스트)
-   color.text.tertiary      = #595e65  (서브 텍스트)
-   font.family.primary      = NanumSquare
-   space: 5/8/10/12/18/24/26/28px
-──────────────────────────────────────────────────────── */
+/* ─── NAVER WEBTOON Design Tokens ──────────────────────── */
 :root {
-  /* ── Surfaces ── */
-  --color-bg:          #FFFFFF;        /* color.surface.muted */
-  --color-surface:     #F4F5F6;        /* color.surface.muted 파생 — 연한 배경 */
-  --color-surface2:    #ECEDEF;        /* 구분용 표면 */
+  --color-bg:          #FFFFFF;
+  --color-surface:     #F4F5F6;
+  --color-surface2:    #ECEDEF;
+  --color-border:      #D1D3D6;
+  --color-border-soft: #E8EAEC;
+  --color-accent:      #00D564;
+  --color-accent-dark: #00B84F;
+  --color-accent-text: #00521E;
+  --color-hot:         #FF4757;   /* HOT 배지 */
+  --color-rising:      #FF6B35;   /* 급상승 */
+  --color-ink:         #353B42;
+  --color-body:        #353B42;
+  --color-muted:       #595E65;
+  --color-placeholder: #9EA3A9;
+  --color-danger:      #E03131;
+  --color-success:     #00D564;
 
-  /* ── Borders ── */
-  --color-border:      #D1D3D6;        /* 테두리 — WCAG AA 보장 */
-  --color-border-soft: #E8EAEC;        /* 구분선 — 부드러운 분리 */
+  --font: 'Nanum Gothic', NanumSquare, 나눔스퀘어, 나눔고딕, Helvetica, Arial, sans-serif;
 
-  /* ── Brand — NAVER WEBTOON Green ── */
-  --color-accent:      #00D564;        /* color.surface.raised — Primary CTA */
-  --color-accent-dark: #00B84F;        /* hover / active 상태 */
-  --color-accent-text: #00521E;        /* 그린 배경 위 텍스트 — WCAG AA 4.5:1 확보 */
+  --text-xs:  12px;
+  --text-sm:  14px;
+  --text-md:  15px;
+  --text-lg:  16px;
+  --text-xl:  17px;
+  --text-2xl: 19px;
+  --text-3xl: 22px;
+  --text-4xl: 26px;
 
-  /* ── Typography ── */
-  --color-ink:         #353B42;        /* color.text.inverse — 주요 헤딩 */
-  --color-body:        #353B42;        /* 본문 텍스트 */
-  --color-muted:       #595E65;        /* color.text.tertiary — 보조 텍스트 */
-  --color-placeholder: #9EA3A9;        /* placeholder / 비활성 */
+  --space-1: 5px;  --space-2: 8px;  --space-3: 10px; --space-4: 12px;
+  --space-5: 18px; --space-6: 24px; --space-7: 26px; --space-8: 28px;
 
-  /* ── Semantic ── */
-  --color-danger:      #E03131;        /* 오류 / 삭제 */
-  --color-success:     #00D564;        /* 성공 = 브랜드 그린 */
-
-  /* ── Typography — NanumSquare ── */
-  --font: 'Nanum Gothic', NanumSquare, 나눔스퀘어, 나눔고딕, Dotum, 돋움, Helvetica, Arial, AppleSDGothicNeo, sans-serif;
-
-  /* ── Type Scale (WEBTOON spec) ── */
-  --text-xs:  12px;   /* 보조 레이블 */
-  --text-sm:  14px;   /* font.size.sm — UI 기본 */
-  --text-md:  15px;   /* font.size.md — 본문 */
-  --text-lg:  16px;   /* font.size.lg */
-  --text-xl:  17px;   /* font.size.xl */
-  --text-2xl: 19px;   /* font.size.2xl */
-  --text-3xl: 22px;   /* font.size.3xl */
-  --text-4xl: 26px;   /* font.size.4xl */
-
-  /* ── Spacing (WEBTOON spec) ── */
-  --space-1:  5px;
-  --space-2:  8px;
-  --space-3:  10px;
-  --space-4:  12px;
-  --space-5:  18px;
-  --space-6:  24px;
-  --space-7:  26px;
-  --space-8:  28px;
-
-  /* ── Shape ── */
   --radius-btn:  4px;
   --radius-card: 8px;
+  --radius-pill: 99px;
 
-  /* ── Motion ── */
   --ease:       cubic-bezier(0.4, 0, 0.2, 1);
   --duration:   0.2s;
   --transition: var(--duration) var(--ease);
 
-  /* ── Layout ── */
-  --nav-height:     56px;
-  --sidebar-width:  220px;
+  --nav-height:    56px;
+  --tab-bar-height: 56px; /* 모바일 하단 탭바 */
 }
 
-/* ─── Reset ─────────────────────────────────────────── */
+/* ─── Reset ───────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
@@ -85,113 +58,140 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   word-break: keep-all;
+  /* 모바일 하단 탭바 공간 확보 */
+  padding-bottom: 0;
 }
+@media (max-width: 768px) {
+  body { padding-bottom: var(--tab-bar-height); }
+}
+
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
 input, textarea, select { font-family: inherit; color: inherit; }
 img { max-width: 100%; display: block; }
 
-/* ─── Focus Visible (WCAG 2.2 AA) ───────────────────── */
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-/* ─── Scrollbar ──────────────────────────────────────── */
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 
-/* ─── Buttons ────────────────────────────────────────── */
+/* ─── Buttons ─────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
   height: 40px; padding: 0 var(--space-6);
   border-radius: var(--radius-btn);
-  font-size: var(--text-sm); font-weight: 700;
-  font-family: var(--font);
+  font-size: var(--text-sm); font-weight: 800; font-family: var(--font);
   transition: background-color var(--transition), border-color var(--transition), color var(--transition);
-  white-space: nowrap; border: 2px solid transparent;
-  cursor: pointer;
+  white-space: nowrap; border: 2px solid transparent; cursor: pointer;
 }
 .btn:disabled { opacity: 0.4; pointer-events: none; }
-
-/* Primary — WEBTOON 브랜드 그린 */
-.btn-primary {
-  background: var(--color-accent);
-  color: var(--color-accent-text);
-  min-width: 120px;
-}
+.btn-primary { background: var(--color-accent); color: var(--color-accent-text); min-width: 120px; }
 .btn-primary:hover  { background: var(--color-accent-dark); }
 .btn-primary:active { background: #009E42; }
-
-/* Secondary */
-.btn-secondary {
-  background: var(--color-bg);
-  color: var(--color-ink);
-  border-color: var(--color-border);
-  min-width: 120px;
-}
+.btn-secondary { background: var(--color-bg); color: var(--color-ink); border-color: var(--color-border); min-width: 80px; }
 .btn-secondary:hover  { border-color: var(--color-ink); }
-.btn-secondary:active { background: var(--color-surface); }
-
-/* Ghost */
-.btn-ghost {
-  background: transparent; color: var(--color-muted);
-  height: 32px; padding: 0 var(--space-4);
-  font-size: var(--text-sm); font-weight: 400;
-  transition: color var(--transition), background-color var(--transition);
-}
+.btn-ghost { background: transparent; color: var(--color-muted); height: 32px; padding: 0 var(--space-4); font-size: var(--text-sm); font-weight: 700; }
 .btn-ghost:hover  { color: var(--color-ink); background: var(--color-surface); }
-
-/* Danger */
 .btn-danger { background: var(--color-danger); color: #fff; }
 .btn-danger:hover { opacity: 0.88; }
-
-/* Size modifier */
 .btn-sm { height: 32px; padding: 0 var(--space-4); font-size: var(--text-sm); min-width: unset; }
+.btn-xs { height: 26px; padding: 0 var(--space-3); font-size: var(--text-xs); min-width: unset; }
 
-/* ─── Inputs ─────────────────────────────────────────── */
+/* ─── Badges ──────────────────────────────────────────── */
+.badge-hot {
+  display: inline-flex; align-items: center;
+  height: 18px; padding: 0 6px;
+  background: var(--color-hot); color: #fff;
+  border-radius: var(--radius-pill);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+}
+.badge-rising {
+  display: inline-flex; align-items: center;
+  height: 18px; padding: 0 6px;
+  background: var(--color-rising); color: #fff;
+  border-radius: var(--radius-pill);
+  font-size: 10px; font-weight: 800;
+}
+.badge-new {
+  display: inline-flex; align-items: center;
+  height: 18px; padding: 0 6px;
+  background: var(--color-accent); color: var(--color-accent-text);
+  border-radius: var(--radius-pill);
+  font-size: 10px; font-weight: 800;
+}
+.badge-debate {
+  display: inline-flex; align-items: center;
+  height: 18px; padding: 0 6px;
+  background: #7C3AED; color: #fff;
+  border-radius: var(--radius-pill);
+  font-size: 10px; font-weight: 800;
+}
+
+/* ─── Inputs ──────────────────────────────────────────── */
 .input {
   width: 100%; height: 40px; padding: 0 var(--space-4);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--color-bg); border: 1px solid var(--color-border);
   border-radius: var(--radius-btn);
-  font-size: var(--text-sm); font-family: var(--font);
-  color: var(--color-ink);
-  transition: border-color var(--transition);
-  outline: none;
+  font-size: var(--text-sm); font-family: var(--font); color: var(--color-ink);
+  transition: border-color var(--transition); outline: none;
 }
-.input:focus         { border-color: var(--color-accent); }
-.input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; }
-.input::placeholder  { color: var(--color-placeholder); }
-.input:disabled      { opacity: 0.5; cursor: not-allowed; background: var(--color-surface); }
+.input:focus { border-color: var(--color-accent); }
+.input::placeholder { color: var(--color-placeholder); }
+.input:disabled { opacity: 0.5; background: var(--color-surface); cursor: not-allowed; }
 textarea.input { height: auto; padding: var(--space-3) var(--space-4); resize: vertical; line-height: 1.65; }
-select.input   { cursor: pointer; }
+select.input { cursor: pointer; }
 
-/* ─── Surface Utilities ──────────────────────────────── */
-.card    { background: var(--color-bg); border: 1px solid var(--color-border-soft); border-radius: var(--radius-card); }
-.tag     { display: inline-flex; align-items: center; height: 24px; padding: 0 var(--space-3); border-radius: 99px; font-size: var(--text-xs); color: var(--color-muted); background: var(--color-surface); transition: color var(--transition), background-color var(--transition); word-break: keep-all; }
-.tag:hover { color: var(--color-ink); background: var(--color-surface2); }
+/* ─── Layout ──────────────────────────────────────────── */
+.layout-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+@media (max-width: 768px) {
+  .layout-main { padding: 0 var(--space-4); }
+}
+
+/* ─── Divider ─────────────────────────────────────────── */
 .divider { height: 1px; background: var(--color-border-soft); margin: var(--space-6) 0; }
 
-/* ─── Layout ─────────────────────────────────────────── */
-.layout {
-  display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
-  grid-template-rows: var(--nav-height) 1fr;
-  min-height: 100vh;
+/* ─── Tags ────────────────────────────────────────────── */
+.tag {
+  display: inline-flex; align-items: center;
+  height: 22px; padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs); color: var(--color-muted);
+  background: var(--color-surface);
+  transition: color var(--transition), background-color var(--transition);
 }
-.layout-header  { grid-column: 1 / -1; }
-.layout-sidebar {
-  position: sticky; top: var(--nav-height);
-  height: calc(100vh - var(--nav-height));
-  overflow-y: auto;
-  border-right: 1px solid var(--color-border-soft);
-}
-.layout-main { padding: var(--space-8) 48px; min-width: 0; max-width: 900px; }
+.tag:hover { color: var(--color-ink); background: var(--color-surface2); }
 
-/* ─── Animation ──────────────────────────────────────── */
+/* ─── Mobile Bottom Tab Bar ──────────────────────────── */
+.mobile-tabbar {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: var(--tab-bar-height);
+  background: rgba(255,255,255,0.96);
+  backdropFilter: blur(20px);
+  border-top: 1px solid var(--color-border-soft);
+  z-index: 200;
+}
+@media (max-width: 768px) {
+  .mobile-tabbar { display: flex; }
+  .desktop-nav   { display: none !important; }
+}
+
+/* ─── Animations ──────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-up { animation: fadeUp 0.25s var(--ease) both; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+@keyframes slideIn {
+  from { transform: translateX(-8px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.fade-up  { animation: fadeUp  0.22s var(--ease) both; }
+.slide-in { animation: slideIn 0.22s var(--ease) both; }
+.skeleton { background: var(--color-surface); animation: pulse 1.4s ease infinite; border-radius: var(--radius-btn); }

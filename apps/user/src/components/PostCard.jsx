@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { ahaScore } from '../store/algorithm.js'
+import ReactionBar from './ReactionBar.jsx'
 
 function timeAgo(d) {
   const diff = Date.now() - new Date(d).getTime()
@@ -20,37 +23,41 @@ export default function PostCard({ post, navigate }) {
   const isLiked = post.likes.includes(currentUser?.id)
   const isBookmarked = currentUser?.bookmarks?.includes(post.id)
 
+  // 알고리즘 점수
+  const score = ahaScore(post, commentCount)
+  const isHot     = score > 5
+  const isViral   = score > 8
+  const isRising  = score > 3 && (Date.now() - new Date(post.createdAt).getTime()) < 3 * 3600000
+
   return (
     <article style={{
-      padding: '28px 0',
+      padding: 'var(--space-6) 0',
       borderBottom: '1px solid var(--color-border-soft)',
       cursor: 'pointer',
+      borderLeft: isViral ? '3px solid #FF4500' : isHot ? '3px solid var(--color-accent)' : '3px solid transparent',
+      paddingLeft: (isViral || isHot) ? 'var(--space-4)' : '0',
+      transition: 'border-color var(--transition)',
     }} onClick={() => navigate(`post/${post.id}`)}>
 
       {/* 메타 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)', flexWrap: 'wrap' }}>
+        {/* HOT 배지 */}
+        {isViral && <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>🔥 바이럴</span>}
+        {!isViral && isRising && <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', background: 'var(--color-accent)', color: 'var(--color-accent-text)', borderRadius: '99px' }}>↑ 급상승</span>}
+        {!isViral && !isRising && isHot && <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>HOT</span>}
+
         {post.type === 'crawled' && (
-          <span style={{
-            fontSize: '11px', fontWeight: 500, padding: '2px 8px',
-            color: 'var(--color-accent)',
-            border: '1px solid rgba(62,106,225,0.25)',
-            borderRadius: '99px',
-          }}>큐레이션</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', color: 'var(--color-accent)', border: '1px solid rgba(0,213,100,0.3)', borderRadius: '99px' }}>큐레이션</span>
         )}
-        {category && (
-          <span style={{ fontSize: '13px', color: 'var(--color-muted)' }}>
-            {category.icon} {category.name}
-          </span>
-        )}
-        <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>·</span>
-        <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>{timeAgo(post.createdAt)}</span>
+        {category && <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{category.icon} {category.name}</span>}
+        <span style={{ fontSize: '11px', color: 'var(--color-placeholder)' }}>·</span>
+        <span style={{ fontSize: '11px', color: 'var(--color-placeholder)' }}>{timeAgo(post.createdAt)}</span>
       </div>
 
       {/* 제목 */}
       <h3 style={{
-        fontSize: '16px', fontWeight: 500, lineHeight: 1.45,
-        color: 'var(--color-ink)', marginBottom: '8px',
-        transition: 'opacity var(--transition)',
+        fontSize: 'var(--text-md)', fontWeight: 700,
+        color: 'var(--color-ink)', lineHeight: 1.4, marginBottom: 'var(--space-2)',
       }}
         onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
         onMouseLeave={e => e.currentTarget.style.opacity = '1'}
@@ -58,52 +65,47 @@ export default function PostCard({ post, navigate }) {
 
       {/* 미리보기 */}
       <p style={{
-        fontSize: '14px', color: 'var(--color-muted)', lineHeight: 1.65, marginBottom: '14px',
+        fontSize: 'var(--text-sm)', color: 'var(--color-muted)', lineHeight: 1.65, marginBottom: 'var(--space-3)',
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-      }}>{post.body.replace(/#+\s/g, '').replace(/\n/g, ' ')}</p>
+      }}>{post.body?.replace(/#+\s/g, '').replace(/\n/g, ' ')}</p>
 
       {/* 태그 */}
-      {post.tags.length > 0 && (
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+      {post.tags?.length > 0 && (
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-3)' }}>
           {post.tags.slice(0, 4).map(tag => (
-            <span key={tag} style={{
-              fontSize: '12px', color: 'var(--color-muted)',
-              background: 'var(--color-surface)',
-              padding: '3px 10px', borderRadius: '99px',
-            }}>{tag}</span>
+            <span key={tag} style={{ fontSize: '11px', color: 'var(--color-muted)', background: 'var(--color-surface)', padding: '2px 8px', borderRadius: '99px' }}>{tag}</span>
           ))}
         </div>
       )}
 
-      {/* 하단: 작성자 + 액션 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* 하단 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
         <button onClick={e => { e.stopPropagation(); navigate(`profile/${post.authorId}`) }} style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          fontSize: '13px', color: 'var(--color-muted)',
-          transition: 'color var(--transition)',
+          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+          fontSize: 'var(--text-sm)', color: 'var(--color-muted)', transition: 'color var(--transition)',
         }}
           onMouseEnter={e => e.currentTarget.style.color = 'var(--color-ink)'}
           onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted)'}
         >
-          <span style={{
-            width: '20px', height: '20px', borderRadius: '50%',
-            background: 'var(--color-ink)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '9px', fontWeight: 600,
-          }}>{author?.nickname?.[0] ?? '?'}</span>
+          <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 800 }}>
+            {author?.nickname?.[0] ?? '?'}
+          </span>
           {author?.nickname ?? '알 수 없음'}
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          {/* 반응 바 (compact) */}
+          <div onClick={e => e.stopPropagation()}>
+            <ReactionBar postId={post.id} compact />
+          </div>
           <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>조회 {post.views}</span>
           <button onClick={e => { e.stopPropagation(); if (currentUser) toggleLike(post.id, currentUser.id) }} style={{
             fontSize: '12px', color: isLiked ? 'var(--color-accent)' : 'var(--color-placeholder)',
             display: 'flex', alignItems: 'center', gap: '3px', transition: 'color var(--transition)',
           }}>♥ {post.likes.length}</button>
-          <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>댓글 {commentCount}</span>
+          <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>💬 {commentCount}</span>
           <button onClick={e => { e.stopPropagation(); if (currentUser) toggleBookmark(post.id) }} style={{
-            fontSize: '14px', color: isBookmarked ? 'var(--color-ink)' : 'var(--color-placeholder)',
-            transition: 'color var(--transition)',
+            fontSize: '13px', color: isBookmarked ? 'var(--color-ink)' : 'var(--color-placeholder)', transition: 'color var(--transition)',
           }}>{isBookmarked ? '★' : '☆'}</button>
         </div>
       </div>
