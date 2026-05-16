@@ -21,7 +21,7 @@ export default function Header({ currentPage, navigate }) {
 
   function handleSearch(e) {
     e.preventDefault()
-    if (search.trim()) { navigate(`board?q=${encodeURIComponent(search.trim())}`); setSearch('') }
+    if (search.trim()) { navigate(`search?q=${encodeURIComponent(search.trim())}`); setSearch('') }
   }
 
   return (

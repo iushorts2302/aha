@@ -1,13 +1,14 @@
 import { useAdmin } from '../context/AdminContext'
 
 const NAV_ITEMS = [
-  { key: 'dashboard',  label: '대시보드',    icon: '↗' },
-  { key: 'crawler',    label: '크롤링 관리', icon: '⟳' },
-  { key: 'categories', label: '분야 관리',    icon: '⊞' },
-  { key: 'topics',     label: '주제 관리',    icon: '≡' },
-  { key: 'sources',    label: '크롤링 소스',  icon: '⊙' },
-  { key: 'users',      label: '사용자 관리',  icon: '○' },
-  { key: 'posts',      label: '게시글 관리',  icon: '□' },
+  { key: 'dashboard',  label: '대시보드',       icon: '↗' },
+  { key: 'crawler',    label: '크롤링 관리',    icon: '⟳' },
+  { key: 'preview',    label: '데이터 미리보기', icon: '◉' },
+  { key: 'categories', label: '분야 관리',       icon: '⊞' },
+  { key: 'topics',     label: '주제 관리',       icon: '≡' },
+  { key: 'sources',    label: '크롤링 소스',     icon: '⊙' },
+  { key: 'users',      label: '사용자 관리',     icon: '○' },
+  { key: 'posts',      label: '게시글 관리',     icon: '□' },
 ]
 
 export function AdminHeader({ navigate }) {

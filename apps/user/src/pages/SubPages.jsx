@@ -253,3 +253,79 @@ export function MyPage({ navigate }) {
     </div>
   )
 }
+
+// ── 홈 ─────────────────────────────────────────────────
+export function HomePage({ navigate }) {
+  const [tab, setTab] = useState('trending')
+  const { currentUser } = useAuth()
+  const { posts, comments } = useApp()
+
+  const TABS = [
+    { key: 'trending',  label: '오늘의 인기글' },
+    { key: 'rising',    label: '🔥 실시간 급상승' },
+    { key: 'ai_feed',   label: 'AI 추천 피드' },
+    { key: 'shortform', label: '숏폼' },
+    { key: 'following', label: '팔로잉' },
+  ]
+
+  const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
+  const hotPosts    = posts.map(p => ({ ...p, _s: sortPosts([p], commentsMap, 'hot')[0]?._score || 0 })).sort((a, b) => b._s - a._s).slice(0, 10)
+  const risingPosts = posts.filter(p => (Date.now() - new Date(p.createdAt).getTime()) < 3 * 3600000).sort((a, b) => (b.likes?.length + b.views) - (a.likes?.length + a.views)).slice(0, 10)
+  const followPosts = currentUser ? posts.filter(p => currentUser.following.includes(p.authorId)) : []
+
+  return (
+    <div className="fade-up">
+      <div style={{ padding: 'var(--space-8) 0 var(--space-6)', borderBottom: '1px solid var(--color-border-soft)' }}>
+        <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 800, color: 'var(--color-ink)', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 'var(--space-2)' }}>
+          <span style={{ color: 'var(--color-accent)' }}>aha!</span>
+        </h1>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)' }}>전문 정보 큐레이션 & 공유 커뮤니티</p>
+        {!currentUser && (
+          <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
+            <button onClick={() => navigate('signup')} className="btn btn-primary">지금 가입하기</button>
+            <button onClick={() => navigate('board')} className="btn btn-secondary">게시판 둘러보기</button>
+          </div>
+        )}
+      </div>
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      {tab === 'trending'  && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="home.trending" title="오늘의 인기글" limit={10} showRank />)}
+      {tab === 'rising'    && (risingPosts.length > 0 ? <div>{risingPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="home.rising" title="실시간 급상승" limit={10} showRank />)}
+      {tab === 'ai_feed'   && <CrawlFeed topicKey="home.ai_feed" title="AI 추천 피드" limit={10} />}
+      {tab === 'shortform' && <ShortformFeed topicKey="home.shortform" />}
+      {tab === 'following' && (
+        currentUser
+          ? followPosts.length > 0
+            ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div>
+            : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)' }}>팔로잉 게시글이 없습니다.</p></div>
+          : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn btn-primary">로그인</button></div>
+      )}
+    </div>
+  )
+}
+
+// ── 인기 ────────────────────────────────────────────────
+export function TrendingPage({ navigate }) {
+  const [tab, setTab] = useState('realtime')
+  const { posts, comments } = useApp()
+  const TABS = [
+    { key: 'realtime', label: '🔴 실시간 인기' },
+    { key: 'daily',    label: '일간 베스트' },
+    { key: 'weekly',   label: '주간 베스트' },
+    { key: 'debate',   label: '💬 논쟁중' },
+  ]
+  const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
+  const hotPosts    = sortPosts(posts, commentsMap, 'hot').slice(0, 15)
+  const topPosts    = sortPosts(posts, commentsMap, 'top').slice(0, 15)
+  const debatePosts = posts.filter(p => (commentsMap[p.id] || 0) >= 2).sort((a, b) => (commentsMap[b.id] || 0) - (commentsMap[a.id] || 0)).slice(0, 15)
+
+  return (
+    <div className="fade-up">
+      <PageHeader title="인기" subtitle="지금 가장 뜨거운 콘텐츠 — Hot Score 알고리즘 기반" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      {tab === 'realtime' && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="trending.realtime" title="실시간 인기" limit={15} showRank />)}
+      {tab === 'daily'    && (topPosts.length > 0 ? <div>{topPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="trending.daily" title="일간 베스트" limit={15} showRank />)}
+      {tab === 'weekly'   && <CrawlFeed topicKey="trending.weekly" title="주간 베스트" limit={15} showRank />}
+      {tab === 'debate'   && (debatePosts.length > 0 ? <div>{debatePosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="trending.debate" title="논쟁중" limit={15} />)}
+    </div>
+  )
+}

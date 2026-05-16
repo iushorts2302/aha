@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { ahaScore } from '../store/algorithm.js'
+import ReactionBar from '../components/ReactionBar.jsx'
 import CommentSection from '../components/CommentSection'
 
 function timeAgo(d) {
@@ -13,148 +15,149 @@ function timeAgo(d) {
 }
 
 function renderBody(body) {
+  if (!body) return null
   return body.split('\n').map((line, i) => {
-    if (line.startsWith('## ')) return (
-      <h3 key={i} style={{ fontSize: '18px', fontWeight: 500, color: 'var(--color-ink)', margin: '28px 0 12px', letterSpacing: '-0.01em' }}>
-        {line.slice(3)}
-      </h3>
-    )
-    if (line.startsWith('# ')) return (
-      <h2 key={i} style={{ fontSize: '22px', fontWeight: 500, color: 'var(--color-ink)', margin: '32px 0 14px' }}>
-        {line.slice(2)}
-      </h2>
-    )
-    if (line.startsWith('- ')) return (
-      <li key={i} style={{ fontSize: '15px', lineHeight: 1.7, color: 'var(--color-body)', marginLeft: '20px', marginBottom: '4px' }}>
-        {line.slice(2)}
-      </li>
-    )
-    if (line.match(/^\d+\./)) return (
-      <li key={i} style={{ fontSize: '15px', lineHeight: 1.7, color: 'var(--color-body)', marginLeft: '20px', marginBottom: '4px' }}>
-        {line.replace(/^\d+\.\s/, '')}
-      </li>
-    )
-    if (line === '') return <div key={i} style={{ height: '12px' }} />
-    return (
-      <p key={i} style={{ fontSize: '15px', lineHeight: 1.8, color: 'var(--color-body)', marginBottom: '2px' }}>
-        {line}
-      </p>
-    )
+    if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-ink)', margin: 'var(--space-8) 0 var(--space-4)', letterSpacing: '-0.01em' }}>{line.slice(3)}</h3>
+    if (line.startsWith('# '))  return <h2 key={i} style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-ink)', margin: 'var(--space-8) 0 var(--space-5)' }}>{line.slice(2)}</h2>
+    if (line.startsWith('- '))  return <li key={i} style={{ fontSize: 'var(--text-md)', lineHeight: 1.75, color: 'var(--color-body)', marginLeft: 'var(--space-5)', marginBottom: 'var(--space-2)' }}>{line.slice(2)}</li>
+    if (line.match(/^\d+\./))  return <li key={i} style={{ fontSize: 'var(--text-md)', lineHeight: 1.75, color: 'var(--color-body)', marginLeft: 'var(--space-5)', marginBottom: 'var(--space-2)' }}>{line.replace(/^\d+\.\s/, '')}</li>
+    if (line === '') return <div key={i} style={{ height: 'var(--space-4)' }} />
+    return <p key={i} style={{ fontSize: 'var(--text-md)', lineHeight: 1.85, color: 'var(--color-body)' }}>{line}</p>
   })
 }
 
 export default function PostDetailPage({ postId, navigate }) {
-  const { currentUser, toggleBookmark, getUserById } = useAuth()
-  const { getPostById, toggleLike, categories, incrementView } = useApp()
+  const { currentUser, toggleBookmark, getUserById, toggleFollow } = useAuth()
+  const { getPostById, toggleLike, categories, comments, incrementView } = useApp()
   const post = getPostById(postId)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => { if (post) incrementView(postId) }, [postId])
 
   if (!post) return (
-    <div style={{ padding: '80px 0', textAlign: 'center' }}>
-      <p style={{ fontSize: '14px', color: 'var(--color-muted)', marginBottom: '20px' }}>게시글을 찾을 수 없습니다.</p>
+    <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}>
+      <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-muted)', marginBottom: 'var(--space-5)' }}>게시글을 찾을 수 없습니다.</p>
       <button onClick={() => navigate('board')} className="btn btn-secondary">게시판으로</button>
     </div>
   )
 
   const author = getUserById(post.authorId)
   const category = categories.find(c => c.id === post.categoryId)
+  const commentCount = comments.filter(c => c.postId === post.id).length
   const isLiked = post.likes.includes(currentUser?.id)
   const isBookmarked = currentUser?.bookmarks?.includes(post.id)
+  const isFollowing = currentUser?.following.includes(post.authorId)
+  const isMe = currentUser?.id === post.authorId
+
+  const score = ahaScore(post, commentCount)
+  const isViral   = score > 8
+  const isRising  = score > 3 && (Date.now() - new Date(post.createdAt).getTime()) < 3 * 3600000
+  const isHot     = score > 5
+
+  function handleShare() {
+    navigator.clipboard?.writeText(window.location.href).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   return (
-    <article className="fade-up" style={{ maxWidth: '720px' }}>
+    <article className="fade-up" style={{ maxWidth: '720px', paddingTop: 'var(--space-6)' }}>
+
       {/* 뒤로 */}
       <button onClick={() => navigate('board')} style={{
-        fontSize: '13px', color: 'var(--color-muted)', marginBottom: '32px',
-        display: 'flex', alignItems: 'center', gap: '6px',
-        transition: 'color var(--transition)',
+        fontSize: 'var(--text-sm)', color: 'var(--color-muted)', marginBottom: 'var(--space-6)',
+        display: 'flex', alignItems: 'center', gap: 'var(--space-2)', transition: 'color var(--transition)',
       }}
         onMouseEnter={e => e.currentTarget.style.color = 'var(--color-ink)'}
         onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted)'}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M19 12H5M12 19l-7-7 7-7"/>
         </svg>
         게시판으로
       </button>
 
-      {/* 메타 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-        {post.type === 'crawled' && (
-          <span style={{
-            fontSize: '11px', fontWeight: 500, padding: '2px 8px',
-            color: 'var(--color-accent)', border: '1px solid rgba(62,106,225,0.25)', borderRadius: '99px',
-          }}>큐레이션</span>
-        )}
-        {category && <span style={{ fontSize: '13px', color: 'var(--color-muted)' }}>{category.icon} {category.name}</span>}
+      {/* 배지 + 메타 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
+        {isViral  && <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 9px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>🔥 바이럴</span>}
+        {!isViral && isRising && <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 9px', background: 'var(--color-accent)', color: 'var(--color-accent-text)', borderRadius: '99px' }}>↑ 급상승</span>}
+        {!isViral && !isRising && isHot && <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 9px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>HOT</span>}
+        {post.type === 'crawled' && <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 9px', color: 'var(--color-accent)', border: '1px solid rgba(0,213,100,0.3)', borderRadius: '99px' }}>큐레이션</span>}
+        {category && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)' }}>{category.icon} {category.name}</span>}
         <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>· {timeAgo(post.createdAt)}</span>
+        <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>· 조회 {post.views}</span>
       </div>
 
       {/* 제목 */}
-      <h1 style={{
-        fontSize: '28px', fontWeight: 500, color: 'var(--color-ink)',
-        letterSpacing: '-0.02em', lineHeight: 1.35, marginBottom: '24px',
-      }}>{post.title}</h1>
+      <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 800, color: 'var(--color-ink)', letterSpacing: '-0.02em', lineHeight: 1.3, marginBottom: 'var(--space-6)' }}>
+        {post.title}
+      </h1>
 
-      {/* 작성자 + 액션 */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        paddingBottom: '28px', borderBottom: '1px solid var(--color-border-soft)',
-        flexWrap: 'wrap', gap: '12px',
-      }}>
-        <button onClick={() => navigate(`profile/${post.authorId}`)} style={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          transition: 'opacity var(--transition)',
-        }}
+      {/* 작성자 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 'var(--space-6)', borderBottom: '1px solid var(--color-border-soft)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+        <button onClick={() => navigate(`profile/${post.authorId}`)} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', transition: 'opacity var(--transition)' }}
           onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
           onMouseLeave={e => e.currentTarget.style.opacity = '1'}
         >
-          <span style={{
-            width: '32px', height: '32px', borderRadius: '50%',
-            background: 'var(--color-ink)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '13px', fontWeight: 600,
-          }}>{author?.nickname?.[0] ?? '?'}</span>
+          <span style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-md)', fontWeight: 800, flexShrink: 0 }}>
+            {author?.nickname?.[0] ?? '?'}
+          </span>
           <div style={{ textAlign: 'left' }}>
-            <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-ink)' }}>{author?.nickname}</p>
-            <p style={{ fontSize: '12px', color: 'var(--color-muted)' }}>팔로워 {author?.followers?.length ?? 0}명</p>
+            <p style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-ink)' }}>{author?.nickname}</p>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)' }}>팔로워 {author?.followers?.length ?? 0}명</p>
           </div>
         </button>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => currentUser && toggleLike(post.id, currentUser.id)} className="btn btn-secondary" style={{
-            height: '36px', padding: '0 16px',
-            color: isLiked ? 'var(--color-accent)' : undefined,
-            borderColor: isLiked ? 'var(--color-accent)' : undefined,
-          }}>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* 팔로우 버튼 */}
+          {!isMe && currentUser && (
+            <button onClick={() => toggleFollow(post.authorId)} className={isFollowing ? 'btn btn-secondary' : 'btn btn-primary'}
+              style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', fontSize: 'var(--text-xs)' }}>
+              {isFollowing ? '팔로잉' : '+ 팔로우'}
+            </button>
+          )}
+          {/* 좋아요 */}
+          <button onClick={() => currentUser && toggleLike(post.id, currentUser.id)} className="btn btn-secondary"
+            style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', color: isLiked ? 'var(--color-accent)' : undefined, borderColor: isLiked ? 'var(--color-accent)' : undefined }}>
             ♥ {post.likes.length}
           </button>
-          <button onClick={() => currentUser && toggleBookmark(post.id)} className="btn btn-secondary" style={{
-            height: '36px', padding: '0 16px',
-            color: isBookmarked ? 'var(--color-ink)' : undefined,
-          }}>
+          {/* 저장 */}
+          <button onClick={() => currentUser && toggleBookmark(post.id)} className="btn btn-secondary"
+            style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', color: isBookmarked ? 'var(--color-ink)' : undefined }}>
             {isBookmarked ? '★ 저장됨' : '☆ 저장'}
+          </button>
+          {/* 공유 */}
+          <button onClick={handleShare} className="btn btn-secondary"
+            style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', color: copied ? 'var(--color-accent)' : undefined }}>
+            {copied ? '✓ 복사됨' : '↗ 공유'}
           </button>
         </div>
       </div>
 
       {/* 본문 */}
-      <div style={{ padding: '32px 0' }}>
+      <div style={{ padding: 'var(--space-8) 0 var(--space-6)' }}>
         {renderBody(post.body)}
       </div>
 
       {/* 태그 */}
-      {post.tags.length > 0 && (
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingBottom: '28px', borderBottom: '1px solid var(--color-border-soft)' }}>
+      {post.tags?.length > 0 && (
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-6)' }}>
           {post.tags.map(tag => (
-            <span key={tag} style={{ fontSize: '12px', color: 'var(--color-muted)', background: 'var(--color-surface)', padding: '4px 12px', borderRadius: '99px' }}>
-              {tag}
+            <span key={tag} style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)', background: 'var(--color-surface)', padding: 'var(--space-1) var(--space-4)', borderRadius: '99px', fontWeight: 700 }}>
+              #{tag}
             </span>
           ))}
         </div>
       )}
 
+      {/* 반응 바 (풀 사이즈) */}
+      <div style={{ padding: 'var(--space-5) 0', borderTop: '1px solid var(--color-border-soft)', borderBottom: '1px solid var(--color-border-soft)', marginBottom: 'var(--space-6)' }}>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)', marginBottom: 'var(--space-3)', fontWeight: 800 }}>이 글 어떠셨나요?</p>
+        <ReactionBar postId={post.id} compact={false} />
+      </div>
+
+      {/* 댓글 */}
       <CommentSection postId={post.id} navigate={navigate} />
     </article>
   )
