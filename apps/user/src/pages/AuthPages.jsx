@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 
-const Field = ({ label, children }) => (
-  <div style={{ marginBottom: '18px' }}>
-    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: 'var(--color-ink)', marginBottom: '6px' }}>{label}</label>
+const FormField = ({ label, children }) => (
+  <div>
+    <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-ink)', display: 'block', marginBottom: '8px' }}>
+      {label}
+    </label>
     {children}
   </div>
 )
@@ -21,33 +23,52 @@ export function LoginPage({ navigate }) {
   }
 
   return (
-    <div className="fade-up" style={{ maxWidth: '360px', margin: '80px auto', padding: '0 16px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--color-ink)', marginBottom: '8px' }}>AHA</h1>
-        <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>다시 오신 걸 환영합니다</p>
-      </div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div style={{ width: '100%', maxWidth: '360px' }}>
+        {/* 워드마크 */}
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <button onClick={() => navigate('home')} style={{
+            fontSize: '20px', fontWeight: 500, letterSpacing: '0.24em',
+            color: 'var(--color-ink)', textTransform: 'uppercase',
+          }}>AHA</button>
+          <p style={{ fontSize: '14px', color: 'var(--color-muted)', marginTop: '10px' }}>계정에 로그인</p>
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <Field label="이메일">
-          <input className="input" type="email" placeholder="이메일 입력" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-        </Field>
-        <Field label="비밀번호">
-          <input className="input" type="password" placeholder="비밀번호 입력" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-        </Field>
-        {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)', marginBottom: '14px' }}>{error}</p>}
-        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '16px' }}>로그인</button>
-      </form>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <FormField label="이메일">
+            <input className="input" type="email" placeholder="이메일 입력"
+              value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+          </FormField>
+          <FormField label="비밀번호">
+            <input className="input" type="password" placeholder="비밀번호 입력"
+              value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+          </FormField>
 
-      <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-muted)', marginBottom: '20px' }}>
-        계정이 없으신가요?{' '}
-        <button onClick={() => navigate('signup')} style={{ color: 'var(--color-accent)', fontWeight: 500, transition: 'opacity var(--transition)' }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '0.7'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-        >회원가입</button>
-      </p>
+          {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
 
-      <div style={{ padding: '14px', background: 'var(--color-surface)', borderRadius: 'var(--radius-btn)', fontSize: '12px', color: 'var(--color-muted)' }}>
-        <p style={{ fontWeight: 500, marginBottom: '4px', color: 'var(--color-body)' }}>데모 계정</p>
-        <p>demo@aha.com / demo1234</p>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '44px', marginTop: '4px' }}>
+            로그인
+          </button>
+        </form>
+
+        <div style={{ height: '1px', background: 'var(--color-border-soft)', margin: '24px 0' }} />
+
+        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-muted)' }}>
+          계정이 없으신가요?{' '}
+          <button onClick={() => navigate('signup')} style={{
+            color: 'var(--color-ink)', fontWeight: 500, textDecoration: 'underline',
+          }}>회원가입</button>
+        </p>
+
+        {/* 데모 계정 */}
+        <div style={{
+          marginTop: '24px', padding: '14px 16px',
+          background: 'var(--color-surface)', borderRadius: 'var(--radius-btn)',
+          fontSize: '12px', color: 'var(--color-muted)',
+        }}>
+          <p style={{ fontWeight: 500, color: 'var(--color-ink)', marginBottom: '4px' }}>데모 계정</p>
+          <p>demo@aha.com / demo1234</p>
+        </div>
       </div>
     </div>
   )
@@ -75,49 +96,64 @@ export function SignupPage({ navigate }) {
   }
 
   return (
-    <div className="fade-up" style={{ maxWidth: '380px', margin: '60px auto', padding: '0 16px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--color-ink)', marginBottom: '8px' }}>AHA</h1>
-        <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>새 계정 만들기</p>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        {[
-          { key: 'email', label: '이메일', type: 'email', placeholder: '이메일 입력' },
-          { key: 'password', label: '비밀번호', type: 'password', placeholder: '6자 이상' },
-          { key: 'nickname', label: '닉네임', type: 'text', placeholder: '사용할 닉네임' },
-        ].map(f => (
-          <Field key={f.key} label={f.label}>
-            <input className="input" type={f.type} placeholder={f.placeholder} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
-          </Field>
-        ))}
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: 'var(--color-ink)', marginBottom: '10px' }}>관심 분야 (선택)</label>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {categories.map(cat => {
-              const sel = form.expertise.includes(cat.name)
-              return (
-                <button key={cat.id} type="button" onClick={() => toggleExpertise(cat.name)} style={{
-                  padding: '6px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 500,
-                  border: `1px solid ${sel ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                  background: sel ? 'rgba(62,106,225,0.08)' : 'transparent',
-                  color: sel ? 'var(--color-accent)' : 'var(--color-muted)',
-                  transition: 'all var(--transition)',
-                }}>{cat.icon} {cat.name}</button>
-              )
-            })}
-          </div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div style={{ width: '100%', maxWidth: '400px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <button onClick={() => navigate('home')} style={{
+            fontSize: '20px', fontWeight: 500, letterSpacing: '0.24em',
+            color: 'var(--color-ink)', textTransform: 'uppercase',
+          }}>AHA</button>
+          <p style={{ fontSize: '14px', color: 'var(--color-muted)', marginTop: '10px' }}>새 계정 만들기</p>
         </div>
 
-        {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)', marginBottom: '14px' }}>{error}</p>}
-        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '16px' }}>회원가입</button>
-      </form>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {[
+            { key: 'email', label: '이메일', type: 'email', placeholder: '이메일 입력' },
+            { key: 'password', label: '비밀번호', type: 'password', placeholder: '6자 이상' },
+            { key: 'nickname', label: '닉네임', type: 'text', placeholder: '닉네임 입력' },
+          ].map(field => (
+            <FormField key={field.key} label={field.label}>
+              <input className="input" type={field.type} placeholder={field.placeholder}
+                value={form[field.key]} onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))} />
+            </FormField>
+          ))}
 
-      <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-muted)' }}>
-        이미 계정이 있으신가요?{' '}
-        <button onClick={() => navigate('login')} style={{ color: 'var(--color-accent)', fontWeight: 500 }}>로그인</button>
-      </p>
+          {/* 관심분야 */}
+          <div>
+            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-ink)', display: 'block', marginBottom: '10px' }}>
+              관심 분야 <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>(선택)</span>
+            </label>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {categories.map(cat => {
+                const selected = form.expertise.includes(cat.name)
+                return (
+                  <button key={cat.id} type="button" onClick={() => toggleExpertise(cat.name)} style={{
+                    padding: '6px 14px', borderRadius: '99px', fontSize: '13px', fontWeight: 500,
+                    border: `1px solid ${selected ? 'var(--color-ink)' : 'var(--color-border)'}`,
+                    background: selected ? 'var(--color-ink)' : 'transparent',
+                    color: selected ? '#fff' : 'var(--color-muted)',
+                    transition: 'background-color var(--transition), border-color var(--transition), color var(--transition)',
+                  }}>{cat.icon} {cat.name}</button>
+                )
+              })}
+            </div>
+          </div>
+
+          {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
+
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '44px', marginTop: '4px' }}>
+            회원가입
+          </button>
+        </form>
+
+        <div style={{ height: '1px', background: 'var(--color-border-soft)', margin: '24px 0' }} />
+        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-muted)' }}>
+          이미 계정이 있으신가요?{' '}
+          <button onClick={() => navigate('login')} style={{ color: 'var(--color-ink)', fontWeight: 500, textDecoration: 'underline' }}>
+            로그인
+          </button>
+        </p>
+      </div>
     </div>
   )
 }

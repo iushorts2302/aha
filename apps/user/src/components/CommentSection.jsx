@@ -26,54 +26,71 @@ export default function CommentSection({ postId, navigate }) {
   }
 
   return (
-    <section style={{ marginTop: '40px' }}>
-      <h4 style={{ fontSize: '15px', fontWeight: 500, color: 'var(--color-ink)', marginBottom: '20px' }}>
-        댓글 <span style={{ color: 'var(--color-accent)' }}>{comments.length}</span>
+    <section style={{ marginTop: '48px' }}>
+      <h4 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-ink)', marginBottom: '24px' }}>
+        댓글 <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>{comments.length}</span>
       </h4>
 
+      {/* 입력 */}
       {currentUser ? (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '28px' }}>
-          <textarea className="input" style={{ minHeight: '80px', marginBottom: '10px' }}
-            placeholder="댓글을 입력하세요..." value={body} onChange={e => setBody(e.target.value)} />
+        <form onSubmit={handleSubmit} style={{ marginBottom: '32px' }}>
+          <textarea
+            className="input"
+            style={{ minHeight: '88px', marginBottom: '10px', fontSize: '14px' }}
+            placeholder="댓글을 입력하세요..."
+            value={body}
+            onChange={e => setBody(e.target.value)}
+          />
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn-primary btn-sm" style={{ opacity: body.trim() ? 1 : 0.4, minWidth: '80px' }}
-              disabled={!body.trim()}>등록</button>
+            <button type="submit" className="btn btn-primary" style={{ height: '36px', padding: '0 20px', opacity: body.trim() ? 1 : 0.4 }}>
+              댓글 작성
+            </button>
           </div>
         </form>
       ) : (
         <div style={{
-          padding: '16px', background: 'var(--color-surface)',
-          borderRadius: 'var(--radius-btn)', marginBottom: '28px',
-          fontSize: '14px', color: 'var(--color-muted)', textAlign: 'center',
+          padding: '20px 0', borderTop: '1px solid var(--color-border-soft)',
+          borderBottom: '1px solid var(--color-border-soft)', marginBottom: '24px',
+          fontSize: '13px', color: 'var(--color-muted)', textAlign: 'center',
         }}>
-          댓글을 작성하려면{' '}
-          <button onClick={() => navigate('login')} style={{ color: 'var(--color-accent)', fontWeight: 500 }}>로그인</button>
-          이 필요합니다.
+          <button onClick={() => navigate('login')} style={{
+            color: 'var(--color-ink)', fontWeight: 500, textDecoration: 'underline',
+          }}>로그인</button>하면 댓글을 작성할 수 있습니다.
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {comments.length === 0 ? (
-          <p style={{ fontSize: '14px', color: 'var(--color-placeholder)', textAlign: 'center', padding: '32px 0' }}>
+      {/* 목록 */}
+      <div>
+        {comments.length === 0 && (
+          <p style={{ fontSize: '14px', color: 'var(--color-placeholder)', padding: '24px 0' }}>
             첫 번째 댓글을 남겨보세요.
           </p>
-        ) : comments.map(comment => {
+        )}
+        {comments.map(comment => {
           const author = getUserById(comment.authorId)
           const isOwner = currentUser?.id === comment.authorId
           return (
             <div key={comment.id} style={{
-              padding: '16px 0', borderBottom: '1px solid var(--color-border-soft)',
+              padding: '20px 0',
+              borderBottom: '1px solid var(--color-border-soft)',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button onClick={() => navigate(`profile/${comment.authorId}`)} style={{
-                    width: '22px', height: '22px', borderRadius: '50%',
-                    background: 'var(--color-accent)', color: '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '10px', fontWeight: 600, flexShrink: 0,
-                  }}>{author?.nickname?.[0] ?? '?'}</button>
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-ink)' }}>{author?.nickname}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>{timeAgo(comment.createdAt)}</span>
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    fontSize: '13px', fontWeight: 500, color: 'var(--color-ink)',
+                  }}>
+                    <span style={{
+                      width: '22px', height: '22px', borderRadius: '50%',
+                      background: 'var(--color-ink)', color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '9px', fontWeight: 600,
+                    }}>{author?.nickname?.[0] ?? '?'}</span>
+                    {author?.nickname ?? '알 수 없음'}
+                  </button>
+                  <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>
+                    {timeAgo(comment.createdAt)}
+                  </span>
                 </div>
                 {isOwner && (
                   <button onClick={() => deleteComment(comment.id)} style={{
@@ -85,9 +102,7 @@ export default function CommentSection({ postId, navigate }) {
                   >삭제</button>
                 )}
               </div>
-              <p style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-body)', paddingLeft: '30px' }}>
-                {comment.body}
-              </p>
+              <p style={{ fontSize: '14px', color: 'var(--color-body)', lineHeight: 1.65 }}>{comment.body}</p>
             </div>
           )
         })}
