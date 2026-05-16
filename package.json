@@ -1,0 +1,18 @@
+{
+  "name": "aha",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:user": "npm run dev --workspace=apps/user",
+    "dev:admin": "npm run dev --workspace=apps/admin",
+    "build:user": "npm run build --workspace=apps/user",
+    "build:admin": "npm run build --workspace=apps/admin",
+    "build": "npm run build:user && npm run build:admin",
+    "lint:user": "npm run lint --workspace=apps/user",
+    "lint:admin": "npm run lint --workspace=apps/admin",
+    "lint": "npm run lint:user && npm run lint:admin"
+  }
+}

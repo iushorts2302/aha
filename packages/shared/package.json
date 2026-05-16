@@ -1,0 +1,10 @@
+{
+  "name": "@aha/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./index.js",
+  "exports": {
+    "./types": "./types/index.js",
+    "./utils": "./utils/index.js"
+  }
+}

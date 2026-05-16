@@ -1,0 +1,45 @@
+name: CI - aha! (user)
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'apps/user/**'
+      - 'packages/shared/**'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'apps/user/**'
+      - 'packages/shared/**'
+
+jobs:
+  ci:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/user
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_APP_NAME: ${{ vars.VITE_APP_NAME || 'aha!' }}
+          VITE_APP_ENV: ${{ vars.VITE_APP_ENV || 'production' }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
