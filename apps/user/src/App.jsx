@@ -2,14 +2,20 @@ import { useState } from 'react'
 import { AuthProvider } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
 import Header from './components/Header'
-import Sidebar from './components/Sidebar'
-import HomePage from './pages/HomePage'
-import BoardPage from './pages/BoardPage'
+
+// 기존 페이지
 import PostDetailPage from './pages/PostDetailPage'
 import WritePage from './pages/WritePage'
 import ProfilePage from './pages/ProfilePage'
 import { BookmarksPage, CategoryPage } from './pages/MiscPages'
 import { LoginPage, SignupPage } from './pages/AuthPages'
+
+// 신규 메뉴 페이지
+import HomePageNew from './pages/home/HomePageNew'
+import TrendingPage from './pages/trending/TrendingPage'
+import FeedPage from './pages/feed/FeedPage'
+import BoardPageNew from './pages/board/BoardPageNew'
+import { GalleryPage, CommunityPage, KnowledgePage, MarketPage, LivePage, AIHubPage, NotificationPage, MyPage } from './pages/SubPages'
 
 function parseRoute(route) {
   const [path, query] = route.split('?')
@@ -24,21 +30,32 @@ function AppInner() {
 
   function navigate(to) { setRoute(to); window.scrollTo(0, 0) }
 
-  const currentCategory = page === 'category' ? id : null
   const isAuthPage = page === 'login' || page === 'signup'
 
   const renderPage = () => {
     switch (page) {
-      case 'home':      return <HomePage navigate={navigate} />
-      case 'board':     return <BoardPage navigate={navigate} searchQuery={params.q ? decodeURIComponent(params.q) : ''} />
-      case 'post':      return <PostDetailPage postId={id} navigate={navigate} />
-      case 'write':     return <WritePage navigate={navigate} />
-      case 'profile':   return <ProfilePage userId={id} navigate={navigate} />
-      case 'bookmarks': return <BookmarksPage navigate={navigate} />
-      case 'category':  return <CategoryPage categoryId={id} navigate={navigate} />
-      case 'login':     return <LoginPage navigate={navigate} />
-      case 'signup':    return <SignupPage navigate={navigate} />
-      default:          return <HomePage navigate={navigate} />
+      // 신규 메뉴
+      case 'home':         return <HomePageNew navigate={navigate} />
+      case 'trending':     return <TrendingPage />
+      case 'feed':         return <FeedPage navigate={navigate} />
+      case 'board':        return <BoardPageNew navigate={navigate} searchQuery={params.q ? decodeURIComponent(params.q) : ''} />
+      case 'gallery':      return <GalleryPage />
+      case 'community':    return <CommunityPage />
+      case 'knowledge':    return <KnowledgePage />
+      case 'market':       return <MarketPage />
+      case 'live':         return <LivePage />
+      case 'aihub':        return <AIHubPage />
+      case 'notification': return <NotificationPage navigate={navigate} />
+      case 'my':           return <MyPage navigate={navigate} />
+      // 기존
+      case 'post':         return <PostDetailPage postId={id} navigate={navigate} />
+      case 'write':        return <WritePage navigate={navigate} />
+      case 'profile':      return <ProfilePage userId={id} navigate={navigate} />
+      case 'bookmarks':    return <BookmarksPage navigate={navigate} />
+      case 'category':     return <CategoryPage categoryId={id} navigate={navigate} />
+      case 'login':        return <LoginPage navigate={navigate} />
+      case 'signup':       return <SignupPage navigate={navigate} />
+      default:             return <HomePageNew navigate={navigate} />
     }
   }
 
@@ -49,14 +66,9 @@ function AppInner() {
   )
 
   return (
-    <div className="layout">
-      <div className="layout-header">
-        <Header currentPage={page} navigate={navigate} />
-      </div>
-      <div className="layout-sidebar">
-        <Sidebar currentCategory={currentCategory} navigate={navigate} />
-      </div>
-      <main className="layout-main">
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+      <Header currentPage={page} navigate={navigate} />
+      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '0 var(--space-6)' }}>
         {renderPage()}
       </main>
     </div>

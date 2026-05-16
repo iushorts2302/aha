@@ -2,6 +2,7 @@ import { useAdmin } from '../context/AdminContext'
 
 const NAV_ITEMS = [
   { key: 'dashboard',  label: '대시보드',    icon: '↗' },
+  { key: 'crawler',    label: '크롤링 관리', icon: '⟳' },
   { key: 'categories', label: '분야 관리',    icon: '⊞' },
   { key: 'topics',     label: '주제 관리',    icon: '≡' },
   { key: 'sources',    label: '크롤링 소스',  icon: '⊙' },

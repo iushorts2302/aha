@@ -6,6 +6,7 @@ import {
   DashboardPage, CategoryManager, TopicManager,
   SourceManager, UserManager, PostManager,
 } from './pages/AdminPages'
+import CrawlerDashboard from './pages/CrawlerDashboard'
 
 function AdminApp() {
   const { admin } = useAdmin()
@@ -18,6 +19,7 @@ function AdminApp() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard':  return <DashboardPage />
+      case 'crawler':    return <CrawlerDashboard />
       case 'categories': return <CategoryManager />
       case 'topics':     return <TopicManager />
       case 'sources':    return <SourceManager />
