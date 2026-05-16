@@ -8,30 +8,22 @@ export default function CategoryPage({ categoryId, navigate }) {
 
   if (!category) return (
     <div style={{ textAlign: 'center', padding: '80px', color: 'var(--color-muted)' }}>
-      <p>분야를 찾을 수 없습니다.</p>
+      <p style={{ fontSize: '14px' }}>분야를 찾을 수 없습니다.</p>
     </div>
   )
 
   return (
     <div className="fade-up">
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: '28px', paddingBottom: '20px', borderBottom: '1px solid var(--color-border-soft)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-          <span style={{ fontSize: '32px' }}>{category.icon}</span>
-          <h2 style={{ fontSize: '24px', fontWeight: 700 }}>{category.name}</h2>
+          <span style={{ fontSize: '28px' }}>{category.icon}</span>
+          <h2 style={{ fontSize: '20px', fontWeight: 500, color: 'var(--color-ink)' }}>{category.name}</h2>
         </div>
         <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>{category.description}</p>
       </div>
-
       {posts.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--color-muted)' }}>
-          <p style={{ fontSize: '32px', marginBottom: '12px' }}>📭</p>
-          <p style={{ fontSize: '14px' }}>아직 게시글이 없습니다.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {posts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}
-        </div>
-      )}
+        <p style={{ fontSize: '14px', color: 'var(--color-muted)', textAlign: 'center', padding: '60px 0' }}>게시글이 없습니다.</p>
+      ) : posts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}
     </div>
   )
 }
