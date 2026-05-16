@@ -10,79 +10,96 @@ function timeAgo(iso) {
   return `${Math.floor(m / 60)}시간 전`
 }
 
-/** 단일 크롤링 카드 */
+/** 크롤링 아이템 카드 — Apple list style */
 export function CrawlCard({ item, onClick, rank }) {
   return (
     <article onClick={() => onClick?.(item)} style={{
-      padding: 'var(--space-6) 0',
-      borderBottom: '1px solid var(--color-border-soft)',
+      padding: '20px 0',
+      borderBottom: '1px solid var(--color-divider)',
       cursor: 'pointer',
-      display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start',
+      display: 'flex', gap: '12px', alignItems: 'flex-start',
     }}>
-      {rank && (
+      {rank != null && (
         <span style={{
-          flexShrink: 0, width: '28px', textAlign: 'center',
-          fontSize: '18px', fontWeight: 800,
-          color: rank <= 3 ? 'var(--color-accent)' : 'var(--color-border)',
-          lineHeight: 1.4,
+          flexShrink: 0, width: '32px', textAlign: 'right',
+          fontSize: rank <= 3 ? '22px' : 'var(--text-caption)',
+          fontWeight: 600, lineHeight: 1.4,
+          color: rank <= 3 ? 'var(--color-primary)' : 'var(--color-muted-48)',
+          paddingTop: rank <= 3 ? '2px' : '4px',
         }}>{rank}</span>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)', flexWrap: 'wrap' }}>
-          {item.hot && (
-            <span style={{
-              fontSize: '10px', fontWeight: 800, padding: '2px 7px',
-              background: 'var(--color-accent)', color: 'var(--color-accent-text)',
-              borderRadius: '99px', letterSpacing: '0.04em',
-            }}>HOT</span>
-          )}
-          <span style={{ fontSize: '11px', color: 'var(--color-placeholder)' }}>{item.topicLabel}</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-placeholder)' }}>·</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-placeholder)' }}>{timeAgo(item.crawledAt)}</span>
+        {/* 메타 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+          {item.hot && <span className="badge-hot">🔥 HOT</span>}
+          <span style={{ fontSize: 'var(--text-fine)', color: 'var(--color-muted-48)' }}>{item.topicLabel}</span>
+          <span style={{ fontSize: 'var(--text-fine)', color: 'var(--color-muted-48)' }}>· {timeAgo(item.crawledAt)}</span>
         </div>
+        {/* 제목 — Apple body-strong */}
         <h3 style={{
-          fontSize: 'var(--text-md)', fontWeight: 700,
-          color: 'var(--color-ink)', lineHeight: 1.4, marginBottom: 'var(--space-2)',
+          fontSize: 'var(--text-body)',
+          fontWeight: 600,
+          lineHeight: 1.24,
+          letterSpacing: '-0.374px',
+          color: 'var(--color-ink)',
+          marginBottom: '6px',
         }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--color-ink)'}
         >{item.title}</h3>
+        {/* 요약 */}
         {item.summary && (
           <p style={{
-            fontSize: 'var(--text-sm)', color: 'var(--color-muted)', lineHeight: 1.6,
-            marginBottom: 'var(--space-3)',
+            fontSize: 'var(--text-body)', fontWeight: 400, lineHeight: 1.47,
+            letterSpacing: '-0.374px', color: 'var(--color-muted-48)',
+            marginBottom: '10px',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>{item.summary}</p>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-5)' }}>
+        {/* 태그 + 통계 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {item.tags?.slice(0, 3).map(tag => (
-            <span key={tag} style={{
-              fontSize: '11px', color: 'var(--color-muted)',
-              background: 'var(--color-surface)', padding: '2px 8px', borderRadius: '99px',
-            }}>{tag}</span>
+            <span key={tag} className="tag">{tag}</span>
           ))}
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>조회 {item.views?.toLocaleString()}</span>
-          <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>♥ {item.likes}</span>
-          <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>💬 {item.comments}</span>
+          {[
+            { icon: '👁', val: item.views?.toLocaleString() },
+            { icon: '♥',  val: item.likes },
+            { icon: '💬', val: item.comments },
+          ].map(s => (
+            <span key={s.icon} style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>
+              {s.icon} {s.val}
+            </span>
+          ))}
         </div>
       </div>
     </article>
   )
 }
 
-/** 섹션 헤더 */
+/** 섹션 헤더 — Apple sub-head */
 export function SectionHeader({ title, count, onRefresh, loading }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '2px solid var(--color-ink)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-        <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, color: 'var(--color-ink)' }}>{title}</h3>
-        {count > 0 && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)' }}>{count}개</span>}
+    <div style={{
+      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      marginBottom: '12px', paddingBottom: '12px',
+      borderBottom: '1px solid var(--color-ink)',  /* Apple 두꺼운 구분선 */
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+        <h3 style={{
+          fontSize: 'var(--text-tagline)',   /* 21px */
+          fontWeight: 600, lineHeight: 1.19,
+          letterSpacing: '0.231px',
+          color: 'var(--color-ink)',
+        }}>{title}</h3>
+        {count > 0 && (
+          <span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>{count}개</span>
+        )}
       </div>
       {onRefresh && (
         <button onClick={onRefresh} disabled={loading} style={{
-          fontSize: 'var(--text-xs)', color: loading ? 'var(--color-placeholder)' : 'var(--color-muted)',
-          transition: 'color var(--transition)',
+          fontSize: 'var(--text-caption)', color: loading ? 'var(--color-muted-48)' : 'var(--color-primary)',
+          transition: 'opacity var(--transition)',
         }}>
           {loading ? '로딩중...' : '새로고침'}
         </button>
@@ -91,18 +108,15 @@ export function SectionHeader({ title, count, onRefresh, loading }) {
   )
 }
 
-/** 크롤링 데이터를 보여주는 피드 섹션 */
+/** 크롤링 피드 섹션 */
 export function CrawlFeed({ topicKey, title, limit = 10, showRank = false }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
 
-  function refresh() {
-    setItems(getItems(topicKey, limit))
-  }
+  function refresh() { setItems(getItems(topicKey, limit)) }
 
   useEffect(() => {
     refresh()
-    // 30초마다 스토어에서 최신 데이터 polling
     const t = setInterval(refresh, 30000)
     return () => clearInterval(t)
   }, [topicKey, limit])
@@ -127,23 +141,32 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false }) {
 /** 빈 상태 */
 export function EmptyState({ message = '콘텐츠를 불러오는 중입니다.', sub = '관리자 페이지에서 크롤링을 실행해 주세요.' }) {
   return (
-    <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}>
-      <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-muted)', marginBottom: 'var(--space-2)' }}>{message}</p>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-placeholder)' }}>{sub}</p>
+    <div style={{ padding: '64px 0', textAlign: 'center' }}>
+      <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', marginBottom: '8px' }}>{message}</p>
+      <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-placeholder)' }}>{sub}</p>
     </div>
   )
 }
 
-/** 탭 네비게이션 */
+/** 탭 네비게이션 — Apple style */
 export function TabNav({ tabs, active, onChange }) {
   return (
-    <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-soft)', marginBottom: 'var(--space-6)', overflowX: 'auto' }}>
+    <div style={{
+      display: 'flex', gap: '0',
+      borderBottom: '1px solid var(--color-divider)',
+      marginBottom: '24px',
+      overflowX: 'auto',
+    }}>
       {tabs.map(tab => (
         <button key={tab.key} onClick={() => onChange(tab.key)} style={{
-          padding: 'var(--space-4) var(--space-5)', fontSize: 'var(--text-sm)', fontWeight: 700,
-          color: active === tab.key ? 'var(--color-ink)' : 'var(--color-muted)',
+          padding: '12px 18px',
+          fontSize: 'var(--text-caption)',   /* 14px */
+          fontWeight: active === tab.key ? 600 : 400,
+          letterSpacing: '-0.224px',
+          color: active === tab.key ? 'var(--color-ink)' : 'var(--color-muted-48)',
           borderBottom: `2px solid ${active === tab.key ? 'var(--color-ink)' : 'transparent'}`,
-          marginBottom: '-1px', transition: 'color var(--transition), border-color var(--transition)',
+          marginBottom: '-1px',
+          transition: 'color var(--transition), border-color var(--transition)',
           whiteSpace: 'nowrap', flexShrink: 0,
         }}>{tab.label}</button>
       ))}
@@ -151,22 +174,37 @@ export function TabNav({ tabs, active, onChange }) {
   )
 }
 
-/** 페이지 헤더 */
+/** 페이지 헤더 — Apple display-lg */
 export function PageHeader({ title, subtitle }) {
   return (
-    <div style={{ padding: 'var(--space-8) 0 var(--space-6)', borderBottom: '1px solid var(--color-border-soft)', marginBottom: '0' }}>
-      <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 800, color: 'var(--color-ink)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>{title}</h1>
-      {subtitle && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', marginTop: 'var(--space-2)' }}>{subtitle}</p>}
+    <div style={{
+      padding: 'var(--sp-section) 0 var(--sp-xxl)',
+      borderBottom: '1px solid var(--color-divider)',
+    }}>
+      <h1 style={{
+        fontSize: 'var(--text-display-lg)',  /* 40px */
+        fontWeight: 600, lineHeight: 1.10, letterSpacing: 0,
+        color: 'var(--color-ink)',
+        marginBottom: subtitle ? '8px' : 0,
+      }}>{title}</h1>
+      {subtitle && (
+        <p style={{
+          fontSize: 'var(--text-lead-lg)',  /* 28px */
+          fontWeight: 400, lineHeight: 1.14,
+          letterSpacing: '0.196px',
+          color: 'var(--color-muted-48)',
+        }}>{subtitle}</p>
+      )}
     </div>
   )
 }
 
-/** Coming Soon placeholder */
+/** Coming Soon */
 export function ComingSoon({ name }) {
   return (
-    <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}>
-      <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-ink)', marginBottom: 'var(--space-3)' }}>{name}</p>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)' }}>준비 중입니다.</p>
+    <div style={{ padding: '80px 0', textAlign: 'center' }}>
+      <p style={{ fontSize: 'var(--text-display)', fontWeight: 600, color: 'var(--color-ink)', marginBottom: '12px', letterSpacing: '-0.374px' }}>{name}</p>
+      <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', fontWeight: 400 }}>준비 중입니다.</p>
     </div>
   )
 }

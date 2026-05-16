@@ -2,15 +2,13 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 
-const FormField = ({ label, children }) => (
-  <div>
-    <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-ink)', display: 'block', marginBottom: '8px' }}>
-      {label}
-    </label>
-    {children}
-  </div>
-)
+const FIELD_STYLE = {
+  fontSize: 'var(--text-caption)', fontWeight: 600,
+  color: 'var(--color-muted-80)', display: 'block', marginBottom: '6px',
+  letterSpacing: '-0.12px',
+}
 
+/* ── LoginPage ─────────────────────────────────────────── */
 export function LoginPage({ navigate }) {
   const { login } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
@@ -23,57 +21,62 @@ export function LoginPage({ navigate }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-      <div style={{ width: '100%', maxWidth: '360px' }}>
+    /* Apple parchment canvas */
+    <div style={{ minHeight: '100vh', background: 'var(--color-parchment)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div style={{ width: '100%', maxWidth: '400px' }}>
         {/* 워드마크 */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <button onClick={() => navigate('home')} style={{
-            fontSize: '20px', fontWeight: 500, letterSpacing: '0.24em',
-            color: 'var(--color-ink)', textTransform: 'uppercase',
-          }}>AHA</button>
-          <p style={{ fontSize: '14px', color: 'var(--color-muted)', marginTop: '10px' }}>계정에 로그인</p>
+            fontSize: 'var(--text-hero)',   /* 56px */
+            fontWeight: 600, letterSpacing: '-0.28px', lineHeight: 1.07,
+            color: 'var(--color-ink)', fontFamily: 'var(--font-display)',
+          }}>aha!</button>
+          <p style={{ fontSize: 'var(--text-lead-lg)', fontWeight: 400, lineHeight: 1.14, letterSpacing: '0.196px', color: 'var(--color-muted-48)', marginTop: '8px' }}>
+            계정에 로그인
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <FormField label="이메일">
-            <input className="input" type="email" placeholder="이메일 입력"
-              value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-          </FormField>
-          <FormField label="비밀번호">
-            <input className="input" type="password" placeholder="비밀번호 입력"
-              value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-          </FormField>
+        {/* 카드 — Apple utility card (r-lg 18px) */}
+        <div style={{ background: 'var(--color-canvas)', borderRadius: 'var(--r-lg)', padding: '28px', border: '1px solid var(--color-hairline)' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {[
+              { key: 'email',    label: '이메일',    type: 'email',    placeholder: '이메일 주소' },
+              { key: 'password', label: '비밀번호',  type: 'password', placeholder: '비밀번호' },
+            ].map(f => (
+              <div key={f.key}>
+                <label style={FIELD_STYLE}>{f.label}</label>
+                <input className="input" type={f.type} placeholder={f.placeholder}
+                  style={{ borderRadius: 'var(--r-lg)', fontSize: 'var(--text-body)' }}
+                  value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
+              </div>
+            ))}
+            {error && <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-danger)', fontWeight: 400 }}>{error}</p>}
+            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '4px' }}>
+              로그인
+            </button>
+          </form>
 
-          {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
+          <div className="divider" />
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '44px', marginTop: '4px' }}>
-            로그인
-          </button>
-        </form>
+          <p style={{ textAlign: 'center', fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>
+            계정이 없으신가요?{' '}
+            <button onClick={() => navigate('signup')} style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+              회원가입
+            </button>
+          </p>
 
-        <div style={{ height: '1px', background: 'var(--color-border-soft)', margin: '24px 0' }} />
-
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-muted)' }}>
-          계정이 없으신가요?{' '}
-          <button onClick={() => navigate('signup')} style={{
-            color: 'var(--color-ink)', fontWeight: 500, textDecoration: 'underline',
-          }}>회원가입</button>
-        </p>
-
-        {/* 데모 계정 */}
-        <div style={{
-          marginTop: '24px', padding: '14px 16px',
-          background: 'var(--color-surface)', borderRadius: 'var(--radius-btn)',
-          fontSize: '12px', color: 'var(--color-muted)',
-        }}>
-          <p style={{ fontWeight: 500, color: 'var(--color-ink)', marginBottom: '4px' }}>데모 계정</p>
-          <p>demo@aha.com / demo1234</p>
+          {/* 데모 */}
+          <div style={{ marginTop: '16px', padding: '12px 16px', background: 'var(--color-parchment)', borderRadius: 'var(--r-md)', fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>
+            <p style={{ fontWeight: 600, color: 'var(--color-muted-80)', marginBottom: '4px' }}>데모 계정</p>
+            <p>demo@aha.com · demo1234</p>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
+/* ── SignupPage ─────────────────────────────────────────── */
 export function SignupPage({ navigate }) {
   const { signup } = useAuth()
   const { categories } = useApp()
@@ -96,63 +99,61 @@ export function SignupPage({ navigate }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-      <div style={{ width: '100%', maxWidth: '400px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <button onClick={() => navigate('home')} style={{
-            fontSize: '20px', fontWeight: 500, letterSpacing: '0.24em',
-            color: 'var(--color-ink)', textTransform: 'uppercase',
-          }}>AHA</button>
-          <p style={{ fontSize: '14px', color: 'var(--color-muted)', marginTop: '10px' }}>새 계정 만들기</p>
+    <div style={{ minHeight: '100vh', background: 'var(--color-parchment)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div style={{ width: '100%', maxWidth: '440px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+          <button onClick={() => navigate('home')} style={{ fontSize: 'var(--text-hero)', fontWeight: 600, letterSpacing: '-0.28px', color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}>aha!</button>
+          <p style={{ fontSize: 'var(--text-lead-lg)', fontWeight: 400, lineHeight: 1.14, color: 'var(--color-muted-48)', marginTop: '8px' }}>새 계정 만들기</p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {[
-            { key: 'email', label: '이메일', type: 'email', placeholder: '이메일 입력' },
-            { key: 'password', label: '비밀번호', type: 'password', placeholder: '6자 이상' },
-            { key: 'nickname', label: '닉네임', type: 'text', placeholder: '닉네임 입력' },
-          ].map(field => (
-            <FormField key={field.key} label={field.label}>
-              <input className="input" type={field.type} placeholder={field.placeholder}
-                value={form[field.key]} onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))} />
-            </FormField>
-          ))}
+        <div style={{ background: 'var(--color-canvas)', borderRadius: 'var(--r-lg)', padding: '28px', border: '1px solid var(--color-hairline)' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {[
+              { key: 'email',    label: '이메일',   type: 'email',    placeholder: '이메일 주소' },
+              { key: 'password', label: '비밀번호', type: 'password', placeholder: '6자 이상' },
+              { key: 'nickname', label: '닉네임',   type: 'text',     placeholder: '표시될 이름' },
+            ].map(f => (
+              <div key={f.key}>
+                <label style={FIELD_STYLE}>{f.label}</label>
+                <input className="input" type={f.type} placeholder={f.placeholder}
+                  style={{ borderRadius: 'var(--r-lg)', fontSize: 'var(--text-body)' }}
+                  value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
+              </div>
+            ))}
 
-          {/* 관심분야 */}
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-ink)', display: 'block', marginBottom: '10px' }}>
-              관심 분야 <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>(선택)</span>
-            </label>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {categories.map(cat => {
-                const selected = form.expertise.includes(cat.name)
-                return (
-                  <button key={cat.id} type="button" onClick={() => toggleExpertise(cat.name)} style={{
-                    padding: '6px 14px', borderRadius: '99px', fontSize: '13px', fontWeight: 500,
-                    border: `1px solid ${selected ? 'var(--color-ink)' : 'var(--color-border)'}`,
-                    background: selected ? 'var(--color-ink)' : 'transparent',
-                    color: selected ? '#fff' : 'var(--color-muted)',
-                    transition: 'background-color var(--transition), border-color var(--transition), color var(--transition)',
-                  }}>{cat.icon} {cat.name}</button>
-                )
-              })}
+            {/* 관심 분야 — Apple configurator chip */}
+            <div>
+              <label style={FIELD_STYLE}>관심 분야 <span style={{ fontWeight: 400, color: 'var(--color-muted-48)' }}>(선택)</span></label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {categories.map(cat => {
+                  const sel = form.expertise.includes(cat.name)
+                  return (
+                    <button key={cat.id} type="button" onClick={() => toggleExpertise(cat.name)} style={{
+                      padding: '8px 14px', borderRadius: 'var(--r-pill)',
+                      fontSize: 'var(--text-caption)', fontWeight: sel ? 600 : 400,
+                      border: `${sel ? 2 : 1}px solid ${sel ? 'var(--color-primary-focus)' : 'var(--color-hairline)'}`,
+                      background: sel ? 'rgba(0,102,204,0.06)' : 'var(--color-canvas)',
+                      color: sel ? 'var(--color-primary)' : 'var(--color-ink)',
+                      transition: 'all var(--transition)',
+                    }}>{cat.icon} {cat.name}</button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
 
-          {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
+            {error && <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-danger)' }}>{error}</p>}
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '44px', marginTop: '4px' }}>
-            회원가입
-          </button>
-        </form>
+            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '4px' }}>
+              회원가입
+            </button>
+          </form>
 
-        <div style={{ height: '1px', background: 'var(--color-border-soft)', margin: '24px 0' }} />
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-muted)' }}>
-          이미 계정이 있으신가요?{' '}
-          <button onClick={() => navigate('login')} style={{ color: 'var(--color-ink)', fontWeight: 500, textDecoration: 'underline' }}>
-            로그인
-          </button>
-        </p>
+          <div className="divider" />
+          <p style={{ textAlign: 'center', fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>
+            이미 계정이 있으신가요?{' '}
+            <button onClick={() => navigate('login')} style={{ color: 'var(--color-primary)', fontWeight: 600 }}>로그인</button>
+          </p>
+        </div>
       </div>
     </div>
   )

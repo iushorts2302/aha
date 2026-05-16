@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { ahaScore } from '../store/algorithm.js'
@@ -17,95 +16,124 @@ function timeAgo(d) {
 export default function PostCard({ post, navigate }) {
   const { currentUser, toggleBookmark, getUserById } = useAuth()
   const { toggleLike, categories, comments } = useApp()
+
   const author = getUserById(post.authorId)
   const category = categories.find(c => c.id === post.categoryId)
   const commentCount = comments.filter(c => c.postId === post.id).length
   const isLiked = post.likes.includes(currentUser?.id)
   const isBookmarked = currentUser?.bookmarks?.includes(post.id)
 
-  // 알고리즘 점수
   const score = ahaScore(post, commentCount)
-  const isHot     = score > 5
-  const isViral   = score > 8
-  const isRising  = score > 3 && (Date.now() - new Date(post.createdAt).getTime()) < 3 * 3600000
+  const isViral  = score > 8
+  const isRising = score > 3 && (Date.now() - new Date(post.createdAt).getTime()) < 3 * 3600000
+  const isHot    = score > 5
 
   return (
     <article style={{
-      padding: 'var(--space-6) 0',
-      borderBottom: '1px solid var(--color-border-soft)',
+      padding: '20px 0',
+      borderBottom: '1px solid var(--color-divider)',
       cursor: 'pointer',
-      borderLeft: isViral ? '3px solid #FF4500' : isHot ? '3px solid var(--color-accent)' : '3px solid transparent',
-      paddingLeft: (isViral || isHot) ? 'var(--space-4)' : '0',
-      transition: 'border-color var(--transition)',
     }} onClick={() => navigate(`post/${post.id}`)}>
 
-      {/* 메타 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)', flexWrap: 'wrap' }}>
-        {/* HOT 배지 */}
-        {isViral && <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>🔥 바이럴</span>}
-        {!isViral && isRising && <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', background: 'var(--color-accent)', color: 'var(--color-accent-text)', borderRadius: '99px' }}>↑ 급상승</span>}
-        {!isViral && !isRising && isHot && <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>HOT</span>}
+      {/* 메타 행 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+        {/* 알고리즘 배지 */}
+        {isViral  && <span className="badge-hot">🔥 바이럴</span>}
+        {!isViral && isRising && <span className="badge-rising">↑ 급상승</span>}
+        {!isViral && !isRising && isHot && <span className="badge-hot">HOT</span>}
 
         {post.type === 'crawled' && (
-          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', color: 'var(--color-accent)', border: '1px solid rgba(0,213,100,0.3)', borderRadius: '99px' }}>큐레이션</span>
+          <span style={{
+            fontSize: '10px', fontWeight: 600, padding: '2px 8px',
+            color: 'var(--color-primary)',
+            border: '1px solid rgba(0,102,204,0.25)',
+            borderRadius: 'var(--r-pill)',
+          }}>큐레이션</span>
         )}
-        {category && <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{category.icon} {category.name}</span>}
-        <span style={{ fontSize: '11px', color: 'var(--color-placeholder)' }}>·</span>
-        <span style={{ fontSize: '11px', color: 'var(--color-placeholder)' }}>{timeAgo(post.createdAt)}</span>
+        {category && (
+          <span style={{ fontSize: 'var(--text-fine)', color: 'var(--color-muted-48)' }}>
+            {category.icon} {category.name}
+          </span>
+        )}
+        <span style={{ fontSize: 'var(--text-fine)', color: 'var(--color-muted-48)' }}>·</span>
+        <span style={{ fontSize: 'var(--text-fine)', color: 'var(--color-muted-48)' }}>{timeAgo(post.createdAt)}</span>
       </div>
 
-      {/* 제목 */}
+      {/* 제목 — Apple body-strong (17px/600) */}
       <h3 style={{
-        fontSize: 'var(--text-md)', fontWeight: 700,
-        color: 'var(--color-ink)', lineHeight: 1.4, marginBottom: 'var(--space-2)',
+        fontSize: 'var(--text-body)',   /* 17px */
+        fontWeight: 600,
+        lineHeight: 1.24,
+        letterSpacing: '-0.374px',
+        color: 'var(--color-ink)',
+        marginBottom: '6px',
       }}
-        onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
-        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--color-ink)'}
       >{post.title}</h3>
 
-      {/* 미리보기 */}
+      {/* 미리보기 — Apple body (17px/400) */}
       <p style={{
-        fontSize: 'var(--text-sm)', color: 'var(--color-muted)', lineHeight: 1.65, marginBottom: 'var(--space-3)',
+        fontSize: 'var(--text-body)',
+        fontWeight: 400,
+        lineHeight: 1.47,
+        letterSpacing: '-0.374px',
+        color: 'var(--color-muted-48)',
+        marginBottom: '12px',
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
       }}>{post.body?.replace(/#+\s/g, '').replace(/\n/g, ' ')}</p>
 
-      {/* 태그 */}
+      {/* 태그 — Apple chip */}
       {post.tags?.length > 0 && (
-        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-3)' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
           {post.tags.slice(0, 4).map(tag => (
-            <span key={tag} style={{ fontSize: '11px', color: 'var(--color-muted)', background: 'var(--color-surface)', padding: '2px 8px', borderRadius: '99px' }}>{tag}</span>
+            <span key={tag} className="tag">{tag}</span>
           ))}
         </div>
       )}
 
-      {/* 하단 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+      {/* 하단 바 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+        {/* 작성자 */}
         <button onClick={e => { e.stopPropagation(); navigate(`profile/${post.authorId}`) }} style={{
-          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-          fontSize: 'var(--text-sm)', color: 'var(--color-muted)', transition: 'color var(--transition)',
+          display: 'flex', alignItems: 'center', gap: '6px',
+          fontSize: 'var(--text-caption)',
+          color: 'var(--color-muted-48)',
+          transition: 'color var(--transition)',
         }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--color-ink)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted)'}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted-48)'}
         >
-          <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 800 }}>
-            {author?.nickname?.[0] ?? '?'}
-          </span>
+          <span style={{
+            width: '18px', height: '18px', borderRadius: '50%',
+            background: 'var(--color-ink)', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '9px', fontWeight: 600,
+          }}>{author?.nickname?.[0] ?? '?'}</span>
           {author?.nickname ?? '알 수 없음'}
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          {/* 반응 바 (compact) */}
+        {/* 액션 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div onClick={e => e.stopPropagation()}>
             <ReactionBar postId={post.id} compact />
           </div>
-          <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>조회 {post.views}</span>
+          <span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>
+            👁 {post.views}
+          </span>
           <button onClick={e => { e.stopPropagation(); if (currentUser) toggleLike(post.id, currentUser.id) }} style={{
-            fontSize: '12px', color: isLiked ? 'var(--color-accent)' : 'var(--color-placeholder)',
-            display: 'flex', alignItems: 'center', gap: '3px', transition: 'color var(--transition)',
+            fontSize: 'var(--text-caption)',
+            color: isLiked ? 'var(--color-primary)' : 'var(--color-muted-48)',
+            display: 'flex', alignItems: 'center', gap: '3px',
+            transition: 'color var(--transition)',
           }}>♥ {post.likes.length}</button>
-          <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>💬 {commentCount}</span>
+          <span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>
+            💬 {commentCount}
+          </span>
           <button onClick={e => { e.stopPropagation(); if (currentUser) toggleBookmark(post.id) }} style={{
-            fontSize: '13px', color: isBookmarked ? 'var(--color-ink)' : 'var(--color-placeholder)', transition: 'color var(--transition)',
+            fontSize: '14px',
+            color: isBookmarked ? 'var(--color-primary)' : 'var(--color-muted-48)',
+            transition: 'color var(--transition)',
           }}>{isBookmarked ? '★' : '☆'}</button>
         </div>
       </div>

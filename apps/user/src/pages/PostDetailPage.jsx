@@ -17,8 +17,8 @@ function timeAgo(d) {
 function renderBody(body) {
   if (!body) return null
   return body.split('\n').map((line, i) => {
-    if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-ink)', margin: 'var(--space-8) 0 var(--space-4)', letterSpacing: '-0.01em' }}>{line.slice(3)}</h3>
-    if (line.startsWith('# '))  return <h2 key={i} style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-ink)', margin: 'var(--space-8) 0 var(--space-5)' }}>{line.slice(2)}</h2>
+    if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, color: 'var(--color-ink)', margin: 'var(--space-8) 0 var(--space-4)', letterSpacing: '-0.01em' }}>{line.slice(3)}</h3>
+    if (line.startsWith('# '))  return <h2 key={i} style={{ fontSize: 'var(--text-display-md)', fontWeight: 600, color: 'var(--color-ink)', margin: 'var(--space-8) 0 var(--space-5)' }}>{line.slice(2)}</h2>
     if (line.startsWith('- '))  return <li key={i} style={{ fontSize: 'var(--text-md)', lineHeight: 1.75, color: 'var(--color-body)', marginLeft: 'var(--space-5)', marginBottom: 'var(--space-2)' }}>{line.slice(2)}</li>
     if (line.match(/^\d+\./))  return <li key={i} style={{ fontSize: 'var(--text-md)', lineHeight: 1.75, color: 'var(--color-body)', marginLeft: 'var(--space-5)', marginBottom: 'var(--space-2)' }}>{line.replace(/^\d+\.\s/, '')}</li>
     if (line === '') return <div key={i} style={{ height: 'var(--space-4)' }} />
@@ -37,7 +37,7 @@ export default function PostDetailPage({ postId, navigate }) {
   if (!post) return (
     <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}>
       <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-muted)', marginBottom: 'var(--space-5)' }}>게시글을 찾을 수 없습니다.</p>
-      <button onClick={() => navigate('board')} className="btn btn-secondary">게시판으로</button>
+      <button onClick={() => navigate('board')} className="btn-secondary">게시판으로</button>
     </div>
   )
 
@@ -80,17 +80,17 @@ export default function PostDetailPage({ postId, navigate }) {
 
       {/* 배지 + 메타 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
-        {isViral  && <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 9px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>🔥 바이럴</span>}
-        {!isViral && isRising && <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 9px', background: 'var(--color-accent)', color: 'var(--color-accent-text)', borderRadius: '99px' }}>↑ 급상승</span>}
-        {!isViral && !isRising && isHot && <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 9px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>HOT</span>}
-        {post.type === 'crawled' && <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 9px', color: 'var(--color-accent)', border: '1px solid rgba(0,213,100,0.3)', borderRadius: '99px' }}>큐레이션</span>}
+        {isViral  && <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 9px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>🔥 바이럴</span>}
+        {!isViral && isRising && <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 9px', background: 'var(--color-primary)', color: '#FFFFFF', borderRadius: '99px' }}>↑ 급상승</span>}
+        {!isViral && !isRising && isHot && <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 9px', background: '#FF4500', color: '#fff', borderRadius: '99px' }}>HOT</span>}
+        {post.type === 'crawled' && <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 9px', color: 'var(--color-primary)', border: '1px solid rgba(0,213,100,0.3)', borderRadius: '99px' }}>큐레이션</span>}
         {category && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)' }}>{category.icon} {category.name}</span>}
         <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>· {timeAgo(post.createdAt)}</span>
         <span style={{ fontSize: '12px', color: 'var(--color-placeholder)' }}>· 조회 {post.views}</span>
       </div>
 
       {/* 제목 */}
-      <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 800, color: 'var(--color-ink)', letterSpacing: '-0.02em', lineHeight: 1.3, marginBottom: 'var(--space-6)' }}>
+      <h1 style={{ fontSize: 'var(--text-display-lg)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.02em', lineHeight: 1.3, marginBottom: 'var(--space-6)' }}>
         {post.title}
       </h1>
 
@@ -100,11 +100,11 @@ export default function PostDetailPage({ postId, navigate }) {
           onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
           onMouseLeave={e => e.currentTarget.style.opacity = '1'}
         >
-          <span style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-md)', fontWeight: 800, flexShrink: 0 }}>
+          <span style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-md)', fontWeight: 600, flexShrink: 0 }}>
             {author?.nickname?.[0] ?? '?'}
           </span>
           <div style={{ textAlign: 'left' }}>
-            <p style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-ink)' }}>{author?.nickname}</p>
+            <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-ink)' }}>{author?.nickname}</p>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)' }}>팔로워 {author?.followers?.length ?? 0}명</p>
           </div>
         </button>
@@ -118,18 +118,18 @@ export default function PostDetailPage({ postId, navigate }) {
             </button>
           )}
           {/* 좋아요 */}
-          <button onClick={() => currentUser && toggleLike(post.id, currentUser.id)} className="btn btn-secondary"
-            style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', color: isLiked ? 'var(--color-accent)' : undefined, borderColor: isLiked ? 'var(--color-accent)' : undefined }}>
+          <button onClick={() => currentUser && toggleLike(post.id, currentUser.id)} className="btn-secondary"
+            style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', color: isLiked ? 'var(--color-primary)' : undefined, borderColor: isLiked ? 'var(--color-primary)' : undefined }}>
             ♥ {post.likes.length}
           </button>
           {/* 저장 */}
-          <button onClick={() => currentUser && toggleBookmark(post.id)} className="btn btn-secondary"
+          <button onClick={() => currentUser && toggleBookmark(post.id)} className="btn-secondary"
             style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', color: isBookmarked ? 'var(--color-ink)' : undefined }}>
             {isBookmarked ? '★ 저장됨' : '☆ 저장'}
           </button>
           {/* 공유 */}
-          <button onClick={handleShare} className="btn btn-secondary"
-            style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', color: copied ? 'var(--color-accent)' : undefined }}>
+          <button onClick={handleShare} className="btn-secondary"
+            style={{ height: '34px', padding: '0 var(--space-4)', minWidth: 'unset', color: copied ? 'var(--color-primary)' : undefined }}>
             {copied ? '✓ 복사됨' : '↗ 공유'}
           </button>
         </div>
@@ -153,7 +153,7 @@ export default function PostDetailPage({ postId, navigate }) {
 
       {/* 반응 바 (풀 사이즈) */}
       <div style={{ padding: 'var(--space-5) 0', borderTop: '1px solid var(--color-border-soft)', borderBottom: '1px solid var(--color-border-soft)', marginBottom: 'var(--space-6)' }}>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)', marginBottom: 'var(--space-3)', fontWeight: 800 }}>이 글 어떠셨나요?</p>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)', marginBottom: 'var(--space-3)', fontWeight: 600 }}>이 글 어떠셨나요?</p>
         <ReactionBar postId={post.id} compact={false} />
       </div>
 

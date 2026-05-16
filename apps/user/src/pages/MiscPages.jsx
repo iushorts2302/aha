@@ -9,7 +9,7 @@ export function BookmarksPage({ navigate }) {
   if (!currentUser) return (
     <div style={{ padding: '80px 0', textAlign: 'center' }}>
       <p style={{ fontSize: '14px', color: 'var(--color-muted)', marginBottom: '20px' }}>로그인이 필요합니다.</p>
-      <button onClick={() => navigate('login')} className="btn btn-primary">로그인</button>
+      <button onClick={() => navigate('login')} className="btn-primary">로그인</button>
     </div>
   )
 
@@ -30,7 +30,7 @@ export function BookmarksPage({ navigate }) {
           <p style={{ fontSize: '14px', color: 'var(--color-muted)', marginBottom: '20px' }}>
             저장한 글이 없습니다.
           </p>
-          <button onClick={() => navigate('board')} className="btn btn-secondary">
+          <button onClick={() => navigate('board')} className="btn-secondary">
             게시판 둘러보기
           </button>
         </div>

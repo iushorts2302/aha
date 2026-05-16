@@ -31,7 +31,7 @@ export function FeedPage({ navigate }) {
       {tab === 'following' && (currentUser
         ? followPosts.length > 0 ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div>
           : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)', fontSize: 'var(--text-md)' }}>팔로잉 게시글이 없습니다.</p></div>
-        : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn btn-primary">로그인</button></div>
+        : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn-primary">로그인</button></div>
       )}
       {tab === 'latest'      && <div>{latestPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div>}
       {tab === 'recommended' && <CrawlFeed topicKey="feed.recommended" title="추천글" limit={10} />}
@@ -66,10 +66,10 @@ export function BoardPageNew({ navigate, searchQuery }) {
     <div className="fade-up">
       <div style={{ padding: 'var(--space-8) 0 var(--space-5)', borderBottom: '1px solid var(--color-border-soft)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 800, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>게시판</h1>
+          <h1 style={{ fontSize: 'var(--text-display-lg)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '0' }}>게시판</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', marginTop: 'var(--space-1)' }}>주제별 커뮤니티 게시판</p>
         </div>
-        {currentUser && <button onClick={() => navigate('write')} className="btn btn-primary">글 작성</button>}
+        {currentUser && <button onClick={() => navigate('write')} className="btn-primary">글 작성</button>}
       </div>
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'free' && (
@@ -194,7 +194,7 @@ export function NotificationPage({ navigate }) {
   const { currentUser } = useAuth()
   const [tab, setTab] = useState('comment')
   const TABS = [{ key: 'comment', label: '댓글' }, { key: 'mention', label: '멘션' }, { key: 'follow', label: '팔로우' }, { key: 'system', label: '시스템' }]
-  if (!currentUser) return <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn btn-primary">로그인</button></div>
+  if (!currentUser) return <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn-primary">로그인</button></div>
   return (
     <div className="fade-up">
       <PageHeader title="알림" subtitle="나의 활동 알림" />
@@ -214,7 +214,7 @@ export function MyPage({ navigate }) {
   if (!currentUser) return (
     <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}>
       <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-muted)', marginBottom: 'var(--space-5)' }}>로그인이 필요합니다.</p>
-      <button onClick={() => navigate('login')} className="btn btn-primary">로그인</button>
+      <button onClick={() => navigate('login')} className="btn-primary">로그인</button>
     </div>
   )
 
@@ -224,7 +224,7 @@ export function MyPage({ navigate }) {
       <div style={{ padding: 'var(--space-8) 0 var(--space-6)', borderBottom: '1px solid var(--color-border-soft)', display: 'flex', alignItems: 'center', gap: 'var(--space-5)', flexWrap: 'wrap' }}>
         <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 800 }}>{currentUser.nickname[0]}</div>
         <div>
-          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-ink)' }}>{currentUser.nickname}</h1>
+          <h1 style={{ fontSize: 'var(--text-display-md)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.374px' }}>{currentUser.nickname}</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', marginTop: 'var(--space-1)' }}>{currentUser.email}</p>
           <div style={{ display: 'flex', gap: 'var(--space-5)', marginTop: 'var(--space-3)' }}>
             {[{ label: '게시글', value: myPosts.length }, { label: '팔로워', value: currentUser.followers.length }, { label: '팔로잉', value: currentUser.following.length }].map(s => (
@@ -233,11 +233,11 @@ export function MyPage({ navigate }) {
           </div>
         </div>
         <div style={{ flex: 1 }} />
-        <button onClick={() => navigate(`profile/${currentUser.id}`)} className="btn btn-secondary" style={{ height: '36px' }}>프로필 보기</button>
+        <button onClick={() => navigate(`profile/${currentUser.id}`)} className="btn-secondary" style={{ height: '36px' }}>프로필 보기</button>
       </div>
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'profile' && <div style={{ padding: 'var(--space-6) 0' }}>{currentUser.bio && <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-body)', marginBottom: 'var(--space-5)' }}>{currentUser.bio}</p>}{currentUser.expertise?.length > 0 && <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>{currentUser.expertise.map(e => <span key={e} style={{ fontSize: 'var(--text-sm)', padding: '4px 14px', borderRadius: '99px', border: '1px solid var(--color-border)', color: 'var(--color-body)', fontWeight: 700 }}>{e}</span>)}</div>}</div>}
-      {tab === 'posts' && (myPosts.length > 0 ? <div>{myPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)', marginBottom: 'var(--space-5)' }}>작성한 글이 없습니다.</p><button onClick={() => navigate('write')} className="btn btn-primary">글 작성하기</button></div>)}
+      {tab === 'posts' && (myPosts.length > 0 ? <div>{myPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)', marginBottom: 'var(--space-5)' }}>작성한 글이 없습니다.</p><button onClick={() => navigate('write')} className="btn-primary">글 작성하기</button></div>)}
       {tab === 'saved' && <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)' }}>저장된 글이 없습니다.</p></div>}
       {tab === 'settings' && (
         <div style={{ padding: 'var(--space-6) 0', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', maxWidth: '400px' }}>
@@ -247,7 +247,7 @@ export function MyPage({ navigate }) {
               <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-ink)' }}>{f.value}</p>
             </div>
           ))}
-          <button onClick={() => logout()} className="btn btn-secondary" style={{ marginTop: 'var(--space-4)', alignSelf: 'flex-start' }}>로그아웃</button>
+          <button onClick={() => logout()} className="btn-secondary" style={{ marginTop: 'var(--space-4)', alignSelf: 'flex-start' }}>로그아웃</button>
         </div>
       )}
     </div>
@@ -276,14 +276,14 @@ export function HomePage({ navigate }) {
   return (
     <div className="fade-up">
       <div style={{ padding: 'var(--space-8) 0 var(--space-6)', borderBottom: '1px solid var(--color-border-soft)' }}>
-        <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 800, color: 'var(--color-ink)', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 'var(--space-2)' }}>
+        <h1 style={{ fontSize: 'var(--text-display-lg)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '0', lineHeight: 1.2, marginBottom: 'var(--space-2)' }}>
           <span style={{ color: 'var(--color-accent)' }}>aha!</span>
         </h1>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)' }}>전문 정보 큐레이션 & 공유 커뮤니티</p>
         {!currentUser && (
           <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
-            <button onClick={() => navigate('signup')} className="btn btn-primary">지금 가입하기</button>
-            <button onClick={() => navigate('board')} className="btn btn-secondary">게시판 둘러보기</button>
+            <button onClick={() => navigate('signup')} className="btn-primary">지금 가입하기</button>
+            <button onClick={() => navigate('board')} className="btn-secondary">게시판 둘러보기</button>
           </div>
         )}
       </div>
@@ -297,7 +297,7 @@ export function HomePage({ navigate }) {
           ? followPosts.length > 0
             ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div>
             : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)' }}>팔로잉 게시글이 없습니다.</p></div>
-          : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn btn-primary">로그인</button></div>
+          : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn-primary">로그인</button></div>
       )}
     </div>
   )

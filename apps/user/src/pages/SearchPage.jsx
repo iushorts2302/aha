@@ -72,7 +72,7 @@ export default function SearchPage({ query: initQuery, navigate }) {
               autoFocus
             />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ height: '44px', padding: '0 var(--space-6)' }}>
+          <button type="submit" className="btn-primary" style={{ height: '44px', padding: '0 var(--space-6)' }}>
             검색
           </button>
         </div>
@@ -106,7 +106,7 @@ export default function SearchPage({ query: initQuery, navigate }) {
             <div>
               {matchedPosts.length > 0 && (
                 <div>
-                  <p style={{ fontSize: 'var(--text-xs)', fontWeight: 800, color: 'var(--color-muted)', marginBottom: 'var(--space-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-muted)', marginBottom: 'var(--space-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     게시글 {matchedPosts.length}개
                   </p>
                   {matchedPosts.slice(0, 5).map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}
@@ -114,7 +114,7 @@ export default function SearchPage({ query: initQuery, navigate }) {
               )}
               {allCrawled.length > 0 && (
                 <div style={{ marginTop: 'var(--space-6)' }}>
-                  <p style={{ fontSize: 'var(--text-xs)', fontWeight: 800, color: 'var(--color-muted)', marginBottom: 'var(--space-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-muted)', marginBottom: 'var(--space-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     큐레이션 {allCrawled.length}개
                   </p>
                   {allCrawled.slice(0, 5).map(item => <CrawlCard key={item.id} item={item} />)}

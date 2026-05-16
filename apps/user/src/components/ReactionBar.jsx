@@ -1,8 +1,5 @@
-/**
- * ReactionBar — 이모지 반응 시스템 (FM코리아/페이스북 스타일)
- */
 import { useState, useEffect } from 'react'
-import { REACTIONS, getReactions, getUserReaction, toggleReaction, getTotalReactions } from '../store/reactionStore.js'
+import { REACTIONS, getReactions, getUserReaction, toggleReaction } from '../store/reactionStore.js'
 import { useAuth } from '../context/AuthContext'
 
 export default function ReactionBar({ postId, compact = false }) {
@@ -10,7 +7,7 @@ export default function ReactionBar({ postId, compact = false }) {
   const [counts, setCounts]     = useState({})
   const [userReact, setUserReact] = useState(null)
   const [showPicker, setShowPicker] = useState(false)
-  const [animated, setAnimated] = useState(null)
+  const [animated, setAnimated]   = useState(null)
 
   useEffect(() => {
     setCounts(getReactions(postId))
@@ -24,94 +21,90 @@ export default function ReactionBar({ postId, compact = false }) {
     setUserReact(getUserReaction(postId, currentUser.id))
     setAnimated(key)
     setShowPicker(false)
-    setTimeout(() => setAnimated(null), 600)
+    setTimeout(() => setAnimated(null), 500)
   }
 
   const total = Object.values(counts).reduce((s, v) => s + v, 0)
   const topReactions = REACTIONS.filter(r => counts[r.key] > 0).slice(0, 3)
 
-  if (compact) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', position: 'relative' }}>
-        {/* 상위 반응 표시 */}
-        {topReactions.length > 0 && (
-          <div style={{ display: 'flex', gap: '2px' }}>
-            {topReactions.map(r => (
-              <span key={r.key} style={{ fontSize: '14px' }}>{r.emoji}</span>
+  if (compact) return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
+      {topReactions.length > 0 && (
+        <div style={{ display: 'flex', gap: '1px' }}>
+          {topReactions.map(r => <span key={r.key} style={{ fontSize: '13px' }}>{r.emoji}</span>)}
+        </div>
+      )}
+      {total > 0 && <span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>{total}</span>}
+      <button onClick={e => { e.stopPropagation(); setShowPicker(v => !v) }} style={{
+        fontSize: '12px', padding: '2px 7px',
+        borderRadius: 'var(--r-pill)',
+        border: '1px solid var(--color-hairline)',
+        color: 'var(--color-muted-48)',
+        background: showPicker ? 'var(--color-parchment)' : 'transparent',
+        transition: 'background-color var(--transition)',
+        lineHeight: 1,
+      }}>＋</button>
+
+      {showPicker && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={() => setShowPicker(false)} />
+          <div style={{
+            position: 'absolute', bottom: '32px', left: 0,
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid var(--color-hairline)',
+            borderRadius: '16px', padding: '8px',
+            display: 'flex', gap: '4px', zIndex: 50,
+            boxShadow: 'rgba(0,0,0,0.14) 0 8px 28px',
+          }}>
+            {REACTIONS.map(r => (
+              <button key={r.key} onClick={() => handleReact(r.key)} title={r.label} style={{
+                fontSize: '20px', padding: '6px',
+                borderRadius: '10px',
+                background: userReact === r.key ? 'rgba(0,102,204,0.08)' : 'transparent',
+                border: userReact === r.key ? '1px solid rgba(0,102,204,0.25)' : '1px solid transparent',
+                transform: animated === r.key ? 'scale(1.35)' : 'scale(1)',
+                transition: 'transform 0.15s, background-color var(--transition)',
+                lineHeight: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              }}>
+                {r.emoji}
+                {counts[r.key] > 0 && (
+                  <span style={{ fontSize: '9px', color: 'var(--color-muted-48)', lineHeight: 1, marginTop: '2px' }}>
+                    {counts[r.key]}
+                  </span>
+                )}
+              </button>
             ))}
           </div>
-        )}
-        {total > 0 && (
-          <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{total}</span>
-        )}
-        {/* 반응 추가 버튼 */}
-        <button
-          onClick={e => { e.stopPropagation(); setShowPicker(v => !v) }}
-          style={{
-            fontSize: '14px', padding: '2px 6px',
-            borderRadius: '99px',
-            border: '1px solid var(--color-border-soft)',
-            color: 'var(--color-muted)',
-            background: showPicker ? 'var(--color-surface)' : 'transparent',
-            transition: 'background-color var(--transition)',
-            lineHeight: 1,
-          }}
-        >＋😊</button>
+        </>
+      )}
+    </div>
+  )
 
-        {showPicker && (
-          <>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={() => setShowPicker(false)} />
-            <div style={{
-              position: 'absolute', bottom: '32px', left: 0,
-              background: '#fff', border: '1px solid var(--color-border-soft)',
-              borderRadius: 'var(--radius-card)', padding: 'var(--space-2)',
-              display: 'flex', gap: 'var(--space-1)', zIndex: 50,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            }}>
-              {REACTIONS.map(r => (
-                <button key={r.key} onClick={() => handleReact(r.key)}
-                  title={r.label}
-                  style={{
-                    fontSize: '20px', padding: 'var(--space-1)', borderRadius: 'var(--radius-btn)',
-                    background: userReact === r.key ? 'var(--color-surface)' : 'transparent',
-                    transform: animated === r.key ? 'scale(1.4)' : 'scale(1)',
-                    transition: 'transform 0.15s, background-color var(--transition)',
-                    lineHeight: 1,
-                  }}>
-                  {r.emoji}
-                  {counts[r.key] > 0 && (
-                    <span style={{ fontSize: '9px', display: 'block', color: 'var(--color-muted)', lineHeight: 1 }}>
-                      {counts[r.key]}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    )
-  }
-
-  // 풀 사이즈
+  /* 풀사이즈 — Apple configurator chip 스타일 */
   return (
-    <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       {REACTIONS.map(r => {
         const count = counts[r.key] || 0
         const active = userReact === r.key
         return (
           <button key={r.key} onClick={() => handleReact(r.key)} style={{
-            display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
-            padding: 'var(--space-1) var(--space-3)',
-            borderRadius: '99px',
-            border: `1px solid ${active ? 'var(--color-accent)' : 'var(--color-border-soft)'}`,
-            background: active ? 'rgba(0,213,100,0.08)' : 'var(--color-surface)',
-            fontSize: '14px',
-            transform: animated === r.key ? 'scale(1.15)' : 'scale(1)',
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '10px 16px',
+            borderRadius: 'var(--r-pill)',
+            border: `${active ? 2 : 1}px solid ${active ? 'var(--color-primary-focus)' : 'var(--color-hairline)'}`,
+            background: active ? 'rgba(0,102,204,0.06)' : 'var(--color-canvas)',
+            fontSize: '15px',
+            transform: animated === r.key ? 'scale(1.1)' : 'scale(1)',
             transition: 'transform 0.15s, border-color var(--transition), background-color var(--transition)',
+            cursor: 'pointer',
           }}>
             <span>{r.emoji}</span>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: active ? 'var(--color-accent)' : 'var(--color-muted)', minWidth: '8px' }}>
+            <span style={{
+              fontSize: 'var(--text-caption)', fontWeight: active ? 600 : 400,
+              letterSpacing: '-0.224px',
+              color: active ? 'var(--color-primary)' : 'var(--color-muted-48)',
+            }}>
               {count > 0 ? count : r.label}
             </span>
           </button>

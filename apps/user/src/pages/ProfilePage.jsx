@@ -43,10 +43,10 @@ export default function ProfilePage({ userId, navigate }) {
               width: '80px', height: '80px', borderRadius: '50%',
               background: 'var(--color-ink)', color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '32px', fontWeight: 800, flexShrink: 0,
+              fontSize: '32px', fontWeight: 600, flexShrink: 0,
             }}>{user.nickname[0]}</div>
             <div>
-              <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>{user.nickname}</h1>
+              <h1 style={{ fontSize: 'var(--text-display-md)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>{user.nickname}</h1>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', marginTop: 'var(--space-1)' }}>{user.bio || '소개가 없습니다.'}</p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-placeholder)', marginTop: 'var(--space-2)' }}>{user.createdAt} 가입</p>
             </div>
@@ -54,7 +54,7 @@ export default function ProfilePage({ userId, navigate }) {
 
           {/* 팔로우 / 편집 */}
           {isMe ? (
-            <button onClick={() => navigate('my')} className="btn btn-secondary" style={{ height: '36px', padding: '0 var(--space-5)', minWidth: 'unset' }}>
+            <button onClick={() => navigate('my')} className="btn-secondary" style={{ height: '36px', padding: '0 var(--space-5)', minWidth: 'unset' }}>
               프로필 편집
             </button>
           ) : currentUser && (
@@ -75,7 +75,7 @@ export default function ProfilePage({ userId, navigate }) {
             { label: '받은 좋아요', value: userPosts.reduce((s, p) => s + (p.likes?.length || 0), 0) },
           ].map(stat => (
             <div key={stat.label} style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-ink)', lineHeight: 1.2 }}>{stat.value}</p>
+              <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, color: 'var(--color-ink)', lineHeight: 1.2 }}>{stat.value}</p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)', marginTop: '2px' }}>{stat.label}</p>
             </div>
           ))}
@@ -87,10 +87,10 @@ export default function ProfilePage({ userId, navigate }) {
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-placeholder)', fontWeight: 700, alignSelf: 'center' }}>전문 분야</span>
             {user.expertise.map(e => (
               <span key={e} style={{
-                fontSize: 'var(--text-xs)', fontWeight: 800,
+                fontSize: 'var(--text-xs)', fontWeight: 600,
                 padding: 'var(--space-1) var(--space-4)', borderRadius: '99px',
                 background: 'rgba(0,213,100,0.1)',
-                color: 'var(--color-accent-text)',
+                color: '#FFFFFF',
                 border: '1px solid rgba(0,213,100,0.25)',
               }}>⚡ {e}</span>
             ))}
@@ -102,7 +102,7 @@ export default function ProfilePage({ userId, navigate }) {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-soft)' }}>
         {visibleTabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
-            padding: 'var(--space-4) var(--space-6)', fontSize: 'var(--text-sm)', fontWeight: 800,
+            padding: 'var(--space-4) var(--space-6)', fontSize: 'var(--text-sm)', fontWeight: 600,
             color: tab === t.key ? 'var(--color-ink)' : 'var(--color-muted)',
             borderBottom: `2px solid ${tab === t.key ? 'var(--color-ink)' : 'transparent'}`,
             marginBottom: '-1px', transition: 'color var(--transition), border-color var(--transition)',
@@ -127,7 +127,7 @@ export default function ProfilePage({ userId, navigate }) {
                   <div key={c.id} style={{ padding: 'var(--space-5) 0', borderBottom: '1px solid var(--color-border-soft)' }}>
                     {p && (
                       <button onClick={() => navigate(`post/${c.postId}`)} style={{
-                        fontSize: 'var(--text-xs)', color: 'var(--color-accent)', fontWeight: 800,
+                        fontSize: 'var(--text-xs)', color: 'var(--color-primary)', fontWeight: 600,
                         marginBottom: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
                         transition: 'opacity var(--transition)',
                       }}

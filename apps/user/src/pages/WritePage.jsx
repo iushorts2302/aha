@@ -5,8 +5,8 @@ import { useApp } from '../context/AppContext'
 function renderPreview(body) {
   if (!body) return <p style={{ color: 'var(--color-placeholder)', fontSize: 'var(--text-sm)' }}>미리보기...</p>
   return body.split('\n').map((line, i) => {
-    if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: 'var(--text-xl)', fontWeight: 800, margin: '16px 0 8px', color: 'var(--color-ink)' }}>{line.slice(3)}</h3>
-    if (line.startsWith('# '))  return <h2 key={i} style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: '20px 0 10px', color: 'var(--color-ink)' }}>{line.slice(2)}</h2>
+    if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: 'var(--text-xl)', fontWeight: 600, margin: '16px 0 8px', color: 'var(--color-ink)' }}>{line.slice(3)}</h3>
+    if (line.startsWith('# '))  return <h2 key={i} style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, margin: '20px 0 10px', color: 'var(--color-ink)' }}>{line.slice(2)}</h2>
     if (line.startsWith('- '))  return <li key={i} style={{ fontSize: 'var(--text-md)', lineHeight: 1.75, marginLeft: '20px', marginBottom: '4px', color: 'var(--color-body)' }}>{line.slice(2)}</li>
     if (line.match(/^\d+\./))  return <li key={i} style={{ fontSize: 'var(--text-md)', lineHeight: 1.75, marginLeft: '20px', marginBottom: '4px', color: 'var(--color-body)' }}>{line.replace(/^\d+\.\s/, '')}</li>
     if (line === '') return <div key={i} style={{ height: '10px' }} />
@@ -14,7 +14,7 @@ function renderPreview(body) {
   })
 }
 
-const LABEL_STYLE = { fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-ink)', display: 'block', marginBottom: 'var(--space-2)' }
+const LABEL_STYLE = { fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-ink)', display: 'block', marginBottom: 'var(--space-2)' }
 
 export default function WritePage({ navigate }) {
   const { currentUser } = useAuth()
@@ -26,7 +26,7 @@ export default function WritePage({ navigate }) {
   if (!currentUser) return (
     <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}>
       <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-muted)', marginBottom: 'var(--space-5)' }}>로그인이 필요합니다.</p>
-      <button onClick={() => navigate('login')} className="btn btn-primary">로그인</button>
+      <button onClick={() => navigate('login')} className="btn-primary">로그인</button>
     </div>
   )
 
@@ -48,7 +48,7 @@ export default function WritePage({ navigate }) {
     <div className="fade-up">
       {/* 헤더 */}
       <div style={{ padding: 'var(--space-8) 0 var(--space-6)', borderBottom: '1px solid var(--color-border-soft)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>새 글 작성</h1>
+        <h1 style={{ fontSize: 'var(--text-display-md)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>새 글 작성</h1>
         <button onClick={() => navigate('board')} style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', transition: 'color var(--transition)' }}
           onMouseEnter={e => e.currentTarget.style.color = 'var(--color-ink)'}
           onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted)'}
@@ -84,7 +84,7 @@ export default function WritePage({ navigate }) {
               {[{ key: false, label: '작성' }, { key: true, label: '미리보기' }].map(v => (
                 <button key={String(v.key)} type="button" onClick={() => setPreview(v.key)} style={{
                   padding: 'var(--space-1) var(--space-4)', borderRadius: 'var(--radius-btn)',
-                  fontSize: 'var(--text-xs)', fontWeight: 800,
+                  fontSize: 'var(--text-xs)', fontWeight: 600,
                   background: preview === v.key ? '#fff' : 'transparent',
                   color: preview === v.key ? 'var(--color-ink)' : 'var(--color-muted)',
                   border: preview === v.key ? '1px solid var(--color-border-soft)' : 'none',
@@ -135,8 +135,8 @@ export default function WritePage({ navigate }) {
         {error && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-danger)', fontWeight: 700 }}>{error}</p>}
 
         <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', paddingBottom: 'var(--space-8)' }}>
-          <button type="button" onClick={() => navigate('board')} className="btn btn-secondary">취소</button>
-          <button type="submit" className="btn btn-primary">게시하기</button>
+          <button type="button" onClick={() => navigate('board')} className="btn-secondary">취소</button>
+          <button type="submit" className="btn-primary">게시하기</button>
         </div>
       </form>
     </div>
