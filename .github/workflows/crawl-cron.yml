@@ -1,0 +1,39 @@
+name: Auto Crawl — 10분 스케줄
+
+on:
+  schedule:
+    # UTC 기준 매 10분 (GitHub Actions 최소 단위: 5분)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:  # 수동 실행 허용
+
+jobs:
+  crawl:
+    name: 크롤링 실행
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Trigger /api/cron
+        run: |
+          RESPONSE=$(curl -s -o /tmp/cron_response.json -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --max-time 60 \
+            https://admin-vert-psi.vercel.app/api/cron)
+
+          echo "HTTP Status: $RESPONSE"
+          cat /tmp/cron_response.json | python3 -c "
+          import sys, json
+          try:
+              d = json.load(sys.stdin)
+              print('크롤링 완료:', d.get('crawled', {}))
+              print('오류:', d.get('errors', {}))
+              print('소요시간:', d.get('elapsed'), '초')
+          except:
+              print(sys.stdin.read())
+          " 2>/dev/null || cat /tmp/cron_response.json
+
+          if [ "$RESPONSE" != "200" ]; then
+            echo "크롤링 실패 (HTTP $RESPONSE)"
+            exit 1
+          fi
