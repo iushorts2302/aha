@@ -4,7 +4,7 @@ import { AppProvider } from './context/AppContext'
 import Header from './components/Header'
 import MobileTabBar from './components/MobileTabBar'
 
-import PostDetailPage, { incNavCount } from './pages/PostDetailPage'
+import PostDetailPage from './pages/PostDetailPage'
 import CrawlDetailPage from './pages/CrawlDetailPage'
 import WritePage from './pages/WritePage'
 import ProfilePage from './pages/ProfilePage'
@@ -63,13 +63,18 @@ function parseRoute(route) {
 function AppInner() {
   const [route, setRoute] = useState('home')
   const { page, id, params } = parseRoute(route)
-  function navigate(to) { incNavCount(); setRoute(to); window.scrollTo(0, 0) }
+  const [prevRoute, setPrevRoute] = useState('board')
+  function navigate(to) {
+    setPrevRoute(route)   // 이전 페이지 저장
+    setRoute(to)
+    window.scrollTo(0, 0)
+  }
 
   const isAuth = page === 'login' || page === 'signup'
 
   const renderPage = () => {
     // 동적 페이지 (id 필요)
-    if (page === 'post')     return <PostDetailPage postId={id} navigate={navigate} />
+    if (page === 'post')     return <PostDetailPage postId={id} navigate={navigate} prevPage={prevRoute} />
     if (page === 'crawl-detail') return <CrawlDetailPage itemId={id} navigate={navigate} />
     if (page === 'profile')  return <ProfilePage userId={id} navigate={navigate} />
     if (page === 'category') return <CategoryPage categoryId={id} navigate={navigate} />
