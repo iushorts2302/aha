@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchFromServer, getItems } from '../store/crawlStore.js'
+import { saveDetail } from '../store/crawlDetailStore.js'
 
 function timeAgo(iso) {
   if (!iso) return ''
@@ -11,9 +12,16 @@ function timeAgo(iso) {
 }
 
 /** 크롤링 아이템 카드 */
-export function CrawlCard({ item, onClick, rank }) {
+export function CrawlCard({ item, onClick, rank, navigate }) {
   return (
-    <article onClick={() => onClick?.(item)} style={{
+    <article onClick={() => {
+      if (navigate) {
+        saveDetail(item)
+        navigate(`crawl-detail/${item.id}`)
+      } else {
+        onClick?.(item)
+      }
+    }} style={{
       padding: '20px 0',
       borderBottom: '1px solid var(--color-divider)',
       cursor: 'pointer',
@@ -109,7 +117,7 @@ export function SectionHeader({ title, count, onRefresh, loading, source }) {
  * - 마운트 시 즉시 서버 fetch
  * - 30초마다 자동 갱신 (Cron이 10분마다 갱신하므로 30초 폴링으로 충분)
  */
-export function CrawlFeed({ topicKey, title, limit = 10, showRank = false }) {
+export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navigate }) {
   const [items, setItems] = useState(() => getItems(topicKey, limit))
   const [loading, setLoading] = useState(false)
   const [source, setSource] = useState(null)
@@ -156,7 +164,7 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false }) {
         source={source}
       />
       {items.map((item, i) => (
-        <CrawlCard key={item.id} item={item} rank={showRank ? i + 1 : null} />
+        <CrawlCard key={item.id} item={item} rank={showRank ? i + 1 : null} navigate={navigate} />
       ))}
     </div>
   )

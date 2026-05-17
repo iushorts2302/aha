@@ -5,6 +5,7 @@ import Header from './components/Header'
 import MobileTabBar from './components/MobileTabBar'
 
 import PostDetailPage from './pages/PostDetailPage'
+import CrawlDetailPage from './pages/CrawlDetailPage'
 import WritePage from './pages/WritePage'
 import ProfilePage from './pages/ProfilePage'
 import SearchPage from './pages/SearchPage'
@@ -69,6 +70,7 @@ function AppInner() {
   const renderPage = () => {
     // 동적 페이지 (id 필요)
     if (page === 'post')     return <PostDetailPage postId={id} navigate={navigate} />
+    if (page === 'crawl-detail') return <CrawlDetailPage itemId={id} navigate={navigate} />
     if (page === 'profile')  return <ProfilePage userId={id} navigate={navigate} />
     if (page === 'category') return <CategoryPage categoryId={id} navigate={navigate} />
     // 특수 페이지

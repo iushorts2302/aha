@@ -40,9 +40,9 @@ export function HomePage({ navigate }) {
         )}
       </div>
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'trending'  && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.trending" title="오늘의 인기글" limit={10} showRank />)}
-      {tab === 'rising'    && (risingPosts.length > 0 ? <div>{risingPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.rising" title="실시간 급상승" limit={10} showRank />)}
-      {tab === 'ai_feed'   && <CrawlFeed topicKey="home.ai_feed" title="AI 추천 피드" limit={10} />}
+      {tab === 'trending'  && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.trending" title="오늘의 인기글" limit={10} showRank navigate={navigate} />)}
+      {tab === 'rising'    && (risingPosts.length > 0 ? <div>{risingPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.rising" title="실시간 급상승" limit={10} showRank navigate={navigate} />)}
+      {tab === 'ai_feed'   && <CrawlFeed topicKey="home.ai_feed" title="AI 추천 피드" limit={10} navigate={navigate} />}
       {tab === 'shortform' && <ShortformFeed topicKey="home.shortform" />}
       {tab === 'following' && (
         currentUser
@@ -74,10 +74,10 @@ export function TrendingPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="인기" subtitle="Hot Score 알고리즘 기반 실시간 랭킹" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'realtime' && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.realtime" title="실시간 인기" limit={15} showRank />)}
-      {tab === 'daily'    && (topPosts.length > 0 ? <div>{topPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.daily" title="일간 베스트" limit={15} showRank />)}
-      {tab === 'weekly'   && <CrawlFeed topicKey="trending.weekly" title="주간 베스트" limit={15} showRank />}
-      {tab === 'debate'   && (debatePosts.length > 0 ? <div>{debatePosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.realtime" title="논쟁중" limit={15} />)}
+      {tab === 'realtime' && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.realtime" title="실시간 인기" limit={15} showRank navigate={navigate} />)}
+      {tab === 'daily'    && (topPosts.length > 0 ? <div>{topPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.daily" title="일간 베스트" limit={15} showRank navigate={navigate} />)}
+      {tab === 'weekly'   && <CrawlFeed topicKey="trending.weekly" title="주간 베스트" limit={15} showRank navigate={navigate} />}
+      {tab === 'debate'   && (debatePosts.length > 0 ? <div>{debatePosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.realtime" title="논쟁중" limit={15} navigate={navigate} />)}
     </div>
   )
 }
@@ -104,9 +104,9 @@ export function FeedPage({ navigate }) {
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'following'  && (currentUser ? (followPosts.length > 0 ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <Empty msg="팔로잉 게시글이 없습니다." />) : <LoginPrompt navigate={navigate} />)}
       {tab === 'latest'     && <div>{latestPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>}
-      {tab === 'recommended'&& <CrawlFeed topicKey="home.trending" title="추천글" limit={10} />}
+      {tab === 'recommended'&& <CrawlFeed topicKey="home.trending" title="추천글" limit={10} navigate={navigate} />}
       {tab === 'shortform'  && <ShortformFeed topicKey="home.shortform" />}
-      {tab === 'ai'         && <CrawlFeed topicKey="home.ai_feed" title="AI 맞춤 피드" limit={10} />}
+      {tab === 'ai'         && <CrawlFeed topicKey="home.ai_feed" title="AI 맞춤 피드" limit={10} navigate={navigate} />}
     </div>
   )
 }
@@ -187,7 +187,7 @@ export function AIPage({ navigate }) {
 }
 
 // ── 스타트업 ─────────────────────────────────────────────────
-export function StartupPage() {
+export function StartupPage({ navigate }) {
   const [tab, setTab] = useState('new')
   const TABS = [
     { key: 'new',     label: '신규 스타트업' },
@@ -204,7 +204,7 @@ export function StartupPage() {
 }
 
 // ── 개발(Dev) ────────────────────────────────────────────────
-export function DevPage() {
+export function DevPage({ navigate }) {
   const [tab, setTab] = useState('trending')
   const TABS = [
     { key: 'trending',  label: 'GitHub 트렌딩' },
@@ -224,7 +224,7 @@ export function DevPage() {
 }
 
 // ── 오픈소스(OSS) ────────────────────────────────────────────
-export function OSSPage() {
+export function OSSPage({ navigate }) {
   const [tab, setTab] = useState('trending')
   const TABS = [
     { key: 'trending', label: 'OSS 트렌딩' },
@@ -241,7 +241,7 @@ export function OSSPage() {
 }
 
 // ── 디자인(Design) ───────────────────────────────────────────
-export function DesignPage() {
+export function DesignPage({ navigate }) {
   const [tab, setTab] = useState('ui')
   const TABS = [
     { key: 'ui',    label: 'UI 컴포넌트' },
@@ -259,7 +259,7 @@ export function DesignPage() {
 }
 
 // ── IT 뉴스 ─────────────────────────────────────────────────
-export function ITNewsPage() {
+export function ITNewsPage({ navigate }) {
   const [tab, setTab] = useState('news')
   const TABS = [
     { key: 'news',     label: 'IT 뉴스' },
@@ -277,7 +277,7 @@ export function ITNewsPage() {
 }
 
 // ── 갤러리(Gallery) ──────────────────────────────────────────
-export function GalleryPage() {
+export function GalleryPage({ navigate }) {
   const [tab, setTab] = useState('trending')
   const TABS = [
     { key: 'trending', label: '인기 이미지' },
@@ -294,7 +294,7 @@ export function GalleryPage() {
 }
 
 // ── 커뮤니티(Community) ──────────────────────────────────────
-export function CommunityPage() {
+export function CommunityPage({ navigate }) {
   const [tab, setTab] = useState('dev')
   const TABS = [
     { key: 'dev', label: '개발' }, { key: 'invest', label: '투자' },
@@ -310,7 +310,7 @@ export function CommunityPage() {
 }
 
 // ── 정보(Knowledge) ──────────────────────────────────────────
-export function KnowledgePage() {
+export function KnowledgePage({ navigate }) {
   const [tab, setTab] = useState('news')
   const TABS = [
     { key: 'news', label: '뉴스' }, { key: 'tips', label: '팁' },
@@ -326,7 +326,7 @@ export function KnowledgePage() {
 }
 
 // ── 마켓(Market) ─────────────────────────────────────────────
-export function MarketPage() {
+export function MarketPage({ navigate }) {
   const [tab, setTab] = useState('deal')
   const TABS = [
     { key: 'deal', label: '핫딜' }, { key: 'coupon', label: '쿠폰/할인' }, { key: 'used', label: '중고거래' },
@@ -341,7 +341,7 @@ export function MarketPage() {
 }
 
 // ── 게임(Game) ───────────────────────────────────────────────
-export function GamePage() {
+export function GamePage({ navigate }) {
   const [tab, setTab] = useState('news')
   const TABS = [
     { key: 'news', label: '게임 뉴스' }, { key: 'indie', label: '인디게임' }, { key: 'review', label: '게임 리뷰' },
@@ -356,7 +356,7 @@ export function GamePage() {
 }
 
 // ── 주식/코인(Finance) ───────────────────────────────────────
-export function FinancePage() {
+export function FinancePage({ navigate }) {
   const [tab, setTab] = useState('stock')
   const TABS = [
     { key: 'stock', label: '주식' }, { key: 'crypto', label: '코인' }, { key: 'invest', label: '투자' },
@@ -371,7 +371,7 @@ export function FinancePage() {
 }
 
 // ── 취업(Job) ────────────────────────────────────────────────
-export function JobPage() {
+export function JobPage({ navigate }) {
   const [tab, setTab] = useState('dev')
   const TABS = [
     { key: 'dev', label: '개발 채용' }, { key: 'startup', label: '스타트업 채용' }, { key: 'remote', label: '원격 근무' },
@@ -386,7 +386,7 @@ export function JobPage() {
 }
 
 // ── 학습(Learn) ──────────────────────────────────────────────
-export function LearnPage() {
+export function LearnPage({ navigate }) {
   const [tab, setTab] = useState('tutorial')
   const TABS = [
     { key: 'tutorial', label: '튜토리얼' }, { key: 'course', label: '강의/코스' }, { key: 'book', label: '도서' },
@@ -401,7 +401,7 @@ export function LearnPage() {
 }
 
 // ── 논문/리서치(Research) ────────────────────────────────────
-export function ResearchPage() {
+export function ResearchPage({ navigate }) {
   const [tab, setTab] = useState('ai')
   const TABS = [
     { key: 'ai', label: 'AI 논문' }, { key: 'paper', label: '최신 논문' }, { key: 'data', label: '데이터 사이언스' },
@@ -416,7 +416,7 @@ export function ResearchPage() {
 }
 
 // ── 유머/밈(Humor) ───────────────────────────────────────────
-export function HumorPage() {
+export function HumorPage({ navigate }) {
   const [tab, setTab] = useState('meme')
   const TABS = [{ key: 'meme', label: '밈' }, { key: 'funny', label: '유머' }]
   return (
@@ -429,14 +429,14 @@ export function HumorPage() {
 }
 
 // ── 영상(Video) ──────────────────────────────────────────────
-export function VideoPage() {
+export function VideoPage({ navigate }) {
   const [tab, setTab] = useState('trending')
   const TABS = [{ key: 'trending', label: '인기 영상' }, { key: 'shorts', label: '숏폼' }]
   return (
     <div className="fade-up">
       <PageHeader title="영상" subtitle="YouTube Trending · TikTok · Vimeo 기반 인기 영상" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'trending' && <CrawlFeed topicKey="video.trending" title="인기 영상" limit={10} />}
+      {tab === 'trending' && <CrawlFeed topicKey="video.trending" title="인기 영상" limit={10} navigate={navigate} />}
       {tab === 'shorts'   && <ShortformFeed topicKey="home.shortform" />}
     </div>
   )
@@ -455,7 +455,7 @@ export function LivePage() {
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'issue' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'start' }}>
-          <CrawlFeed topicKey="trending.realtime" title="실시간 이슈 피드" limit={10} />
+          <CrawlFeed topicKey="trending.realtime" title="실시간 이슈 피드" limit={10} navigate={navigate} />
           <LiveIssueRanking />
         </div>
       )}
@@ -465,7 +465,7 @@ export function LivePage() {
 }
 
 // ── AI 허브(AIHub) ───────────────────────────────────────────
-export function AIHubPage() {
+export function AIHubPage({ navigate }) {
   const [tab, setTab] = useState('trend')
   const TABS = [
     { key: 'trend',   label: 'AI 트렌드' },
@@ -476,9 +476,9 @@ export function AIHubPage() {
     <div className="fade-up">
       <PageHeader title="AI 허브" subtitle="AI로 더 스마트하게 탐색하기" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'trend'   && <CrawlFeed topicKey="aihub.trend" title="AI 트렌드" limit={10} />}
-      {tab === 'summary' && <CrawlFeed topicKey="aihub.summary" title="AI 요약" limit={10} />}
-      {tab === 'tools'   && <CrawlFeed topicKey="ai.tools" title="AI 도구" limit={10} />}
+      {tab === 'trend'   && <CrawlFeed topicKey="aihub.trend" title="AI 트렌드" limit={10} navigate={navigate} />}
+      {tab === 'summary' && <CrawlFeed topicKey="aihub.summary" title="AI 요약" limit={10} navigate={navigate} />}
+      {tab === 'tools'   && <CrawlFeed topicKey="ai.tools" title="AI 도구" limit={10} navigate={navigate} />}
     </div>
   )
 }
