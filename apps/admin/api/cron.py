@@ -1,86 +1,75 @@
 """
-/api/cron.py — Vercel Cron Job Handler (GET)
-10분마다 자동 실행: 모든 토픽 크롤링 → 인메모리 캐시 갱신
+/api/cron.py — Vercel Cron / GitHub Actions 10분 자동 크롤링
+우선순위 토픽 순차 실행
 """
 
-import json
-import os
-import time
-import sys
+import json, os, sys, time, datetime
 from http.server import BaseHTTPRequestHandler
 
-# crawl.py와 같은 디렉터리에서 임포트
 sys.path.insert(0, os.path.dirname(__file__))
-from crawl import TOPIC_CRAWLERS, enrich
+from crawl import TOPIC_CRAWLERS, enrich, TOPIC_LABELS
 
-# ─── 인메모리 캐시 (프로세스 생존 동안 유지) ─────────────
-# Vercel Serverless는 warm instance 재사용 시 캐시 활용
 _CACHE: dict = {}
 _CACHE_TS: dict = {}
 
-# 우선순위 높은 토픽 (매 Cron 실행 시 반드시 갱신)
+# 10분 Cron 실행 시 갱신할 우선순위 토픽
 PRIORITY_TOPICS = [
+    # 홈
     "home.trending", "home.rising", "home.ai_feed",
+    # AI
+    "ai.news", "ai.tools", "ai.trend",
+    # 개발
+    "dev.trending", "dev.javascript", "dev.python",
+    # IT 뉴스
+    "it.news", "it.security",
+    # 스타트업
+    "startup.new",
+    # 오픈소스
+    "oss.trending", "oss.awesome",
+    # 인기
     "trending.realtime", "trending.daily",
+    # 게시판
     "board.it", "board.free",
-    "knowledge.news", "aihub.trend",
-    "community.dev",
+    # 학습
+    "learn.tutorial",
 ]
 
-
-def get_cache():
-    return _CACHE
-
-def set_cache(topic_key, items):
-    _CACHE[topic_key] = items
-    _CACHE_TS[topic_key] = time.time()
+def get_cache(): return _CACHE
+def set_cache(k, v): _CACHE[k] = v; _CACHE_TS[k] = time.time()
 
 
 class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        # Vercel Cron 인증 헤더 검증
-        auth = self.headers.get("Authorization", "")
-        cron_secret = os.environ.get("CRON_SECRET", "")
-        if cron_secret and auth != f"Bearer {cron_secret}":
-            self._json(401, {"error": "Unauthorized"})
-            return
+        secret = os.environ.get("CRON_SECRET", "")
+        auth   = self.headers.get("Authorization", "")
+        if secret and auth != f"Bearer {secret}":
+            return self._json(401, {"error": "Unauthorized"})
 
-        start_ts = time.time()
-        results = {}
-        errors = {}
+        start = time.time()
+        crawled, errors = {}, {}
 
-        for topic_key in PRIORITY_TOPICS:
+        for key in PRIORITY_TOPICS:
+            fn = TOPIC_CRAWLERS.get(key)
+            if not fn:
+                continue
             try:
-                crawler_fn = TOPIC_CRAWLERS.get(topic_key)
-                if not crawler_fn:
-                    continue
-
-                raw = crawler_fn()
-                if not raw:
-                    continue
-
-                label = topic_key.split(".")[-1].replace("_", " ").title()
-                category = topic_key.split(".")[0]
-                items = enrich(raw[:8], topic_key, label, category)
-
-                set_cache(topic_key, items)
-                results[topic_key] = len(items)
-
-                # 각 토픽 간 짧은 대기 (서버 부하 방지)
+                raw   = fn()
+                label = TOPIC_LABELS.get(key, key)
+                cat   = key.split(".")[0]
+                items = enrich(raw[:8], key, label, cat)
+                set_cache(key, items)
+                crawled[key] = len(items)
                 time.sleep(0.3)
-
             except Exception as e:
-                errors[topic_key] = str(e)
-
-        elapsed = round(time.time() - start_ts, 2)
+                errors[key] = str(e)
 
         self._json(200, {
             "ok": True,
-            "elapsed": elapsed,
-            "crawled": results,
+            "elapsed": round(time.time() - start, 2),
+            "crawled": crawled,
             "errors": errors,
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
         })
 
     def _json(self, status, data):
@@ -91,5 +80,4 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, *args):
-        pass
+    def log_message(self, *args): pass

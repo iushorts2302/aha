@@ -5,10 +5,84 @@ import { sortPosts } from '../store/algorithm.js'
 import { CrawlFeed, TabNav, PageHeader, ComingSoon } from '../components/CrawlComponents.jsx'
 import { LiveChatPanel, LiveIssueRanking } from '../components/LiveChat.jsx'
 import ShortformFeed from '../components/ShortformFeed.jsx'
-import ReactionBar from '../components/ReactionBar.jsx'
 import PostCard from '../components/PostCard.jsx'
 
-// ── 피드 ────────────────────────────────────────────────
+// ── 홈 ─────────────────────────────────────────────────────
+export function HomePage({ navigate }) {
+  const [tab, setTab] = useState('trending')
+  const { currentUser } = useAuth()
+  const { posts, comments } = useApp()
+  const TABS = [
+    { key: 'trending',  label: '오늘의 인기글' },
+    { key: 'rising',    label: '🔥 실시간 급상승' },
+    { key: 'ai_feed',   label: 'AI 추천 피드' },
+    { key: 'shortform', label: '숏폼' },
+    { key: 'following', label: '팔로잉' },
+  ]
+  const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
+  const hotPosts    = sortPosts(posts, commentsMap, 'hot').slice(0, 10)
+  const risingPosts = posts.filter(p => (Date.now() - new Date(p.createdAt).getTime()) < 3*3600000)
+                          .sort((a,b) => (b.likes?.length+b.views)-(a.likes?.length+a.views)).slice(0,10)
+  const followPosts = currentUser ? posts.filter(p => currentUser.following.includes(p.authorId)) : []
+
+  return (
+    <div className="fade-up">
+      <div style={{ padding: 'var(--sp-section) 0 var(--sp-xxl)', borderBottom: '1px solid var(--color-divider)' }}>
+        <h1 style={{ fontSize: 'var(--text-hero)', fontWeight: 600, letterSpacing: '-0.28px', lineHeight: 1.07, color: 'var(--color-ink)', marginBottom: '8px' }}>
+          <span style={{ color: 'var(--color-primary)' }}>aha!</span>
+        </h1>
+        <p style={{ fontSize: 'var(--text-lead-lg)', fontWeight: 400, lineHeight: 1.14, color: 'var(--color-muted-48)' }}>전문 정보 큐레이션 & 공유 커뮤니티</p>
+        {!currentUser && (
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <button onClick={() => navigate('signup')} className="btn-primary">지금 가입하기</button>
+            <button onClick={() => navigate('board')} className="btn-secondary">게시판 둘러보기</button>
+          </div>
+        )}
+      </div>
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      {tab === 'trending'  && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.trending" title="오늘의 인기글" limit={10} showRank />)}
+      {tab === 'rising'    && (risingPosts.length > 0 ? <div>{risingPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.rising" title="실시간 급상승" limit={10} showRank />)}
+      {tab === 'ai_feed'   && <CrawlFeed topicKey="home.ai_feed" title="AI 추천 피드" limit={10} />}
+      {tab === 'shortform' && <ShortformFeed topicKey="home.shortform" />}
+      {tab === 'following' && (
+        currentUser
+          ? followPosts.length > 0
+            ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>
+            : <Empty msg="팔로잉 게시글이 없습니다." />
+          : <LoginPrompt navigate={navigate} />
+      )}
+    </div>
+  )
+}
+
+// ── 인기(Trending) ───────────────────────────────────────────
+export function TrendingPage({ navigate }) {
+  const [tab, setTab] = useState('realtime')
+  const { posts, comments } = useApp()
+  const TABS = [
+    { key: 'realtime', label: '🔴 실시간 인기' },
+    { key: 'daily',    label: '일간 베스트' },
+    { key: 'weekly',   label: '주간 베스트' },
+    { key: 'debate',   label: '💬 논쟁중' },
+  ]
+  const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
+  const hotPosts = sortPosts(posts, commentsMap, 'hot').slice(0, 15)
+  const topPosts = sortPosts(posts, commentsMap, 'top').slice(0, 15)
+  const debatePosts = posts.filter(p => (commentsMap[p.id]||0) >= 2).sort((a,b) => (commentsMap[b.id]||0)-(commentsMap[a.id]||0)).slice(0,15)
+
+  return (
+    <div className="fade-up">
+      <PageHeader title="인기" subtitle="Hot Score 알고리즘 기반 실시간 랭킹" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      {tab === 'realtime' && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.realtime" title="실시간 인기" limit={15} showRank />)}
+      {tab === 'daily'    && (topPosts.length > 0 ? <div>{topPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.daily" title="일간 베스트" limit={15} showRank />)}
+      {tab === 'weekly'   && <CrawlFeed topicKey="trending.weekly" title="주간 베스트" limit={15} showRank />}
+      {tab === 'debate'   && (debatePosts.length > 0 ? <div>{debatePosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.realtime" title="논쟁중" limit={15} />)}
+    </div>
+  )
+}
+
+// ── 피드(Feed) ───────────────────────────────────────────────
 export function FeedPage({ navigate }) {
   const [tab, setTab] = useState('latest')
   const { currentUser } = useAuth()
@@ -28,27 +102,22 @@ export function FeedPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="피드" subtitle="나만의 맞춤 콘텐츠 피드" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'following' && (currentUser
-        ? followPosts.length > 0 ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div>
-          : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)', fontSize: 'var(--text-md)' }}>팔로잉 게시글이 없습니다.</p></div>
-        : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn-primary">로그인</button></div>
-      )}
-      {tab === 'latest'      && <div>{latestPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div>}
-      {tab === 'recommended' && <CrawlFeed topicKey="feed.recommended" title="추천글" limit={10} />}
-      {tab === 'shortform'   && <ShortformFeed topicKey="home.shortform" />}
-      {tab === 'ai'          && <CrawlFeed topicKey="home.ai_feed" title="AI 맞춤 피드" limit={10} />}
+      {tab === 'following'  && (currentUser ? (followPosts.length > 0 ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <Empty msg="팔로잉 게시글이 없습니다." />) : <LoginPrompt navigate={navigate} />)}
+      {tab === 'latest'     && <div>{latestPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>}
+      {tab === 'recommended'&& <CrawlFeed topicKey="home.trending" title="추천글" limit={10} />}
+      {tab === 'shortform'  && <ShortformFeed topicKey="home.shortform" />}
+      {tab === 'ai'         && <CrawlFeed topicKey="home.ai_feed" title="AI 맞춤 피드" limit={10} />}
     </div>
   )
 }
 
-// ── 게시판 ──────────────────────────────────────────────
+// ── 게시판(Board) ────────────────────────────────────────────
 export function BoardPageNew({ navigate, searchQuery }) {
   const [tab, setTab] = useState('free')
   const [sort, setSort] = useState('hot')
   const [search, setSearch] = useState(searchQuery || '')
   const { currentUser } = useAuth()
   const { posts, comments } = useApp()
-
   const TABS = [
     { key: 'free', label: '자유' }, { key: 'question', label: '질문' },
     { key: 'info', label: '정보' }, { key: 'humor', label: '유머' },
@@ -56,276 +125,439 @@ export function BoardPageNew({ navigate, searchQuery }) {
     { key: 'sports', label: '스포츠' }, { key: 'politics', label: '정치' },
     { key: 'anon', label: '익명' },
   ]
-  const TOPIC_MAP = { free: 'board.free', question: 'board.question', info: 'board.info', humor: 'board.humor', it: 'board.it', game: 'board.game', sports: 'board.sports', politics: 'board.politics', anon: 'board.free' }
   const SORTS = [{ key: 'hot', label: '인기순' }, { key: 'new', label: '최신순' }, { key: 'top', label: '추천순' }]
-
   const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
-  const userPosts = tab === 'free' ? sortPosts(posts, commentsMap, sort).filter(p => !search || p.title.includes(search) || p.tags.some(t => t.includes(search))) : []
+  const userPosts = tab === 'free'
+    ? sortPosts(posts, commentsMap, sort).filter(p => !search || p.title.includes(search) || p.tags.some(t => t.includes(search)))
+    : []
 
   return (
     <div className="fade-up">
-      <div style={{ padding: 'var(--space-8) 0 var(--space-5)', borderBottom: '1px solid var(--color-border-soft)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div style={{ padding: 'var(--sp-section) 0 var(--sp-xxl)', borderBottom: '1px solid var(--color-divider)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: 'var(--text-display-lg)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '0' }}>게시판</h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', marginTop: 'var(--space-1)' }}>주제별 커뮤니티 게시판</p>
+          <h1 style={{ fontSize: 'var(--text-display-lg)', fontWeight: 600, color: 'var(--color-ink)' }}>게시판</h1>
+          <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', marginTop: '8px' }}>주제별 커뮤니티 게시판</p>
         </div>
         {currentUser && <button onClick={() => navigate('write')} className="btn-primary">글 작성</button>}
       </div>
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'free' && (
-        <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-5)', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
-            <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-placeholder)', pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-placeholder)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
-            <input className="input" style={{ paddingLeft: '30px', height: '32px', fontSize: 'var(--text-sm)' }} placeholder="검색..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input className="input" style={{ paddingLeft: '40px', height: '40px', fontSize: 'var(--text-body)' }}
+              placeholder="검색..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div style={{ display: 'flex', gap: '2px' }}>
             {SORTS.map(s => (
-              <button key={s.key} onClick={() => setSort(s.key)} style={{ height: '32px', padding: '0 var(--space-4)', fontSize: 'var(--text-sm)', fontWeight: 700, borderRadius: 'var(--radius-btn)', color: sort === s.key ? 'var(--color-ink)' : 'var(--color-muted)', background: sort === s.key ? 'var(--color-surface)' : 'transparent' }}>{s.label}</button>
+              <button key={s.key} onClick={() => setSort(s.key)} style={{
+                height: '40px', padding: '0 16px', fontSize: 'var(--text-caption)', fontWeight: sort===s.key?600:400,
+                borderRadius: 'var(--r-pill)', color: sort===s.key?'var(--color-ink)':'var(--color-muted-48)',
+                background: sort===s.key?'var(--color-parchment)':'transparent',
+              }}>{s.label}</button>
             ))}
           </div>
         </div>
       )}
-      {tab === 'free' && userPosts.length > 0 && <div style={{ marginBottom: 'var(--space-6)' }}>{userPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div>}
-      <CrawlFeed topicKey={TOPIC_MAP[tab]} title={TABS.find(t => t.key === tab)?.label + ' 게시판 HOT'} limit={10} />
+      {tab === 'free' && userPosts.length > 0 && <div style={{ marginBottom: '24px' }}>{userPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>}
+      <CrawlFeed topicKey={`board.${tab}`} title={TABS.find(t=>t.key===tab)?.label + ' 게시판 HOT'} limit={10} />
     </div>
   )
 }
 
-// ── 갤러리 ──────────────────────────────────────────────
-export function GalleryPage() {
-  const [tab, setTab] = useState('image')
-  const TABS = [{ key: 'image', label: '이미지' }, { key: 'meme', label: '밈' }, { key: 'ai', label: 'AI 이미지' }, { key: 'shortform', label: '숏폼' }]
+// ── AI 뉴스 ─────────────────────────────────────────────────
+export function AIPage({ navigate }) {
+  const [tab, setTab] = useState('news')
+  const TABS = [
+    { key: 'news',     label: 'AI 뉴스' },
+    { key: 'tools',    label: 'AI 도구' },
+    { key: 'trend',    label: 'AI 트렌드' },
+    { key: 'research', label: 'AI 리서치' },
+    { key: 'summary',  label: 'AI 요약' },
+  ]
   return (
     <div className="fade-up">
-      <PageHeader title="갤러리" subtitle="이미지, 밈, AI 생성 이미지" />
+      <PageHeader title="AI 뉴스" subtitle="TechCrunch AI · The Verge · VentureBeat 기반 최신 AI 소식" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'image'    && <CrawlFeed topicKey="gallery.image" title="이미지" limit={10} />}
-      {tab === 'meme'     && <CrawlFeed topicKey="gallery.meme" title="밈" limit={10} />}
-      {tab === 'ai'       && <CrawlFeed topicKey="gallery.ai" title="AI 이미지" limit={10} />}
-      {tab === 'shortform'&& <ShortformFeed topicKey="home.shortform" />}
+      <CrawlFeed topicKey={`ai.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
     </div>
   )
 }
 
-// ── 커뮤니티 ────────────────────────────────────────────
+// ── 스타트업 ─────────────────────────────────────────────────
+export function StartupPage() {
+  const [tab, setTab] = useState('new')
+  const TABS = [
+    { key: 'new',     label: '신규 스타트업' },
+    { key: 'funding', label: '투자/펀딩' },
+    { key: 'product', label: '신제품' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="스타트업" subtitle="Product Hunt · Y Combinator · Crunchbase 기반" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`startup.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 개발(Dev) ────────────────────────────────────────────────
+export function DevPage() {
+  const [tab, setTab] = useState('trending')
+  const TABS = [
+    { key: 'trending',  label: 'GitHub 트렌딩' },
+    { key: 'javascript',label: 'JavaScript' },
+    { key: 'python',    label: 'Python' },
+    { key: 'devops',    label: 'DevOps' },
+    { key: 'tools',     label: '개발 도구' },
+    { key: 'opensource',label: '오픈소스' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="개발" subtitle="GitHub Trending · Dev.to · Stack Overflow 기반" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`dev.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 오픈소스(OSS) ────────────────────────────────────────────
+export function OSSPage() {
+  const [tab, setTab] = useState('trending')
+  const TABS = [
+    { key: 'trending', label: 'OSS 트렌딩' },
+    { key: 'awesome',  label: 'Awesome 리스트' },
+    { key: 'new',      label: '신규 OSS' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="오픈소스" subtitle="GitHub · Awesome Lists · GitLab 기반" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`oss.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 디자인(Design) ───────────────────────────────────────────
+export function DesignPage() {
+  const [tab, setTab] = useState('ui')
+  const TABS = [
+    { key: 'ui',    label: 'UI 컴포넌트' },
+    { key: 'ux',    label: 'UX 디자인' },
+    { key: 'tools', label: '디자인 도구' },
+    { key: 'css',   label: 'CSS/스타일' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="디자인" subtitle="Dribbble · Behance · Awwwards 기반 UI/UX 레퍼런스" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`design.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── IT 뉴스 ─────────────────────────────────────────────────
+export function ITNewsPage() {
+  const [tab, setTab] = useState('news')
+  const TABS = [
+    { key: 'news',     label: 'IT 뉴스' },
+    { key: 'security', label: '보안' },
+    { key: 'cloud',    label: '클라우드' },
+    { key: 'mobile',   label: '모바일' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="IT 뉴스" subtitle="ZDNet · GeekNews · Ars Technica 기반 기술 뉴스" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`it.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 갤러리(Gallery) ──────────────────────────────────────────
+export function GalleryPage() {
+  const [tab, setTab] = useState('trending')
+  const TABS = [
+    { key: 'trending', label: '인기 이미지' },
+    { key: 'ai',       label: 'AI 이미지' },
+    { key: 'design',   label: '디자인 에셋' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="갤러리" subtitle="Pinterest · Unsplash · Pexels 기반 이미지 큐레이션" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`image.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 커뮤니티(Community) ──────────────────────────────────────
 export function CommunityPage() {
   const [tab, setTab] = useState('dev')
-  const TABS = [{ key: 'dev', label: '개발' }, { key: 'invest', label: '투자' }, { key: 'travel', label: '여행' }, { key: 'fashion', label: '패션' }, { key: 'fitness', label: '운동' }]
-  const TOPIC_MAP = { dev: 'community.dev', invest: 'community.invest', travel: 'community.travel', fashion: 'community.fashion', fitness: 'community.fitness' }
+  const TABS = [
+    { key: 'dev', label: '개발' }, { key: 'invest', label: '투자' },
+    { key: 'travel', label: '여행' }, { key: 'fashion', label: '패션' }, { key: 'fitness', label: '운동' },
+  ]
   return (
     <div className="fade-up">
       <PageHeader title="커뮤니티" subtitle="관심사 기반 전문 커뮤니티" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={TOPIC_MAP[tab]} title={TABS.find(t => t.key === tab)?.label + ' 커뮤니티'} limit={10} />
+      <CrawlFeed topicKey={`community.${tab}`} title={TABS.find(t=>t.key===tab)?.label + ' 커뮤니티'} limit={10} />
     </div>
   )
 }
 
-// ── 정보 ────────────────────────────────────────────────
+// ── 정보(Knowledge) ──────────────────────────────────────────
 export function KnowledgePage() {
   const [tab, setTab] = useState('news')
-  const TABS = [{ key: 'news', label: '뉴스' }, { key: 'tips', label: '팁' }, { key: 'review', label: '리뷰' }, { key: 'tutorial', label: '튜토리얼' }]
-  const TOPIC_MAP = { news: 'knowledge.news', tips: 'knowledge.tips', review: 'knowledge.review', tutorial: 'knowledge.tutorial' }
+  const TABS = [
+    { key: 'news', label: '뉴스' }, { key: 'tips', label: '팁' },
+    { key: 'review', label: '리뷰' }, { key: 'tutorial', label: '튜토리얼' },
+  ]
   return (
     <div className="fade-up">
       <PageHeader title="정보" subtitle="검증된 지식과 정보" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={TOPIC_MAP[tab]} title={TABS.find(t => t.key === tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`knowledge.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
     </div>
   )
 }
 
-// ── 마켓 ────────────────────────────────────────────────
+// ── 마켓(Market) ─────────────────────────────────────────────
 export function MarketPage() {
   const [tab, setTab] = useState('deal')
-  const TABS = [{ key: 'deal', label: '핫딜' }, { key: 'coupon', label: '쿠폰' }, { key: 'used', label: '중고거래' }, { key: 'event', label: '이벤트' }]
+  const TABS = [
+    { key: 'deal', label: '핫딜' }, { key: 'coupon', label: '쿠폰/할인' }, { key: 'used', label: '중고거래' },
+  ]
   return (
     <div className="fade-up">
-      <PageHeader title="마켓" subtitle="핫딜, 쿠폰, 중고거래, 이벤트" />
+      <PageHeader title="마켓" subtitle="뽐뿌 · 퀘이사존 · Slickdeals 기반 핫딜/할인" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={tab === 'deal' || tab === 'used' ? 'market.deal' : 'market.coupon'} title={TABS.find(t => t.key === tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`market.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
     </div>
   )
 }
 
-// ── 라이브 ──────────────────────────────────────────────
+// ── 게임(Game) ───────────────────────────────────────────────
+export function GamePage() {
+  const [tab, setTab] = useState('news')
+  const TABS = [
+    { key: 'news', label: '게임 뉴스' }, { key: 'indie', label: '인디게임' }, { key: 'review', label: '게임 리뷰' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="게임" subtitle="Inven · IGN · GameSpot 기반 게임 뉴스" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`game.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 주식/코인(Finance) ───────────────────────────────────────
+export function FinancePage() {
+  const [tab, setTab] = useState('stock')
+  const TABS = [
+    { key: 'stock', label: '주식' }, { key: 'crypto', label: '코인' }, { key: 'invest', label: '투자' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="주식/코인" subtitle="TradingView · CoinMarketCap · Investing.com 기반" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`finance.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 취업(Job) ────────────────────────────────────────────────
+export function JobPage() {
+  const [tab, setTab] = useState('dev')
+  const TABS = [
+    { key: 'dev', label: '개발 채용' }, { key: 'startup', label: '스타트업 채용' }, { key: 'remote', label: '원격 근무' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="취업" subtitle="원티드 · 로켓펀치 · LinkedIn Jobs 기반 채용 정보" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`job.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 학습(Learn) ──────────────────────────────────────────────
+export function LearnPage() {
+  const [tab, setTab] = useState('tutorial')
+  const TABS = [
+    { key: 'tutorial', label: '튜토리얼' }, { key: 'course', label: '강의/코스' }, { key: 'book', label: '도서' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="학습/강의" subtitle="Inflearn · Coursera · Udemy 기반 교육 콘텐츠" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`learn.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 논문/리서치(Research) ────────────────────────────────────
+export function ResearchPage() {
+  const [tab, setTab] = useState('ai')
+  const TABS = [
+    { key: 'ai', label: 'AI 논문' }, { key: 'paper', label: '최신 논문' }, { key: 'data', label: '데이터 사이언스' },
+  ]
+  return (
+    <div className="fade-up">
+      <PageHeader title="논문/리서치" subtitle="arXiv · Google Scholar · Semantic Scholar 기반" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`research.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 유머/밈(Humor) ───────────────────────────────────────────
+export function HumorPage() {
+  const [tab, setTab] = useState('meme')
+  const TABS = [{ key: 'meme', label: '밈' }, { key: 'funny', label: '유머' }]
+  return (
+    <div className="fade-up">
+      <PageHeader title="유머/밈" subtitle="9GAG · Imgur · Reddit Memes 기반 밈 콘텐츠" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <CrawlFeed topicKey={`humor.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+    </div>
+  )
+}
+
+// ── 영상(Video) ──────────────────────────────────────────────
+export function VideoPage() {
+  const [tab, setTab] = useState('trending')
+  const TABS = [{ key: 'trending', label: '인기 영상' }, { key: 'shorts', label: '숏폼' }]
+  return (
+    <div className="fade-up">
+      <PageHeader title="영상" subtitle="YouTube Trending · TikTok · Vimeo 기반 인기 영상" />
+      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      {tab === 'trending' && <CrawlFeed topicKey="video.trending" title="인기 영상" limit={10} />}
+      {tab === 'shorts'   && <ShortformFeed topicKey="home.shortform" />}
+    </div>
+  )
+}
+
+// ── 라이브(Live) ─────────────────────────────────────────────
 export function LivePage() {
   const [tab, setTab] = useState('issue')
-  const TABS = [{ key: 'issue', label: '🔴 라이브 이슈' }, { key: 'chat', label: '실시간 채팅' }, { key: 'stream', label: '스트리밍' }]
+  const TABS = [
+    { key: 'issue', label: '🔴 라이브 이슈' },
+    { key: 'chat',  label: '실시간 채팅' },
+  ]
   return (
     <div className="fade-up">
       <PageHeader title="라이브" subtitle="지금 이 순간, 실시간 소통" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'issue' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 'var(--space-6)', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'start' }}>
           <CrawlFeed topicKey="trending.realtime" title="실시간 이슈 피드" limit={10} />
           <LiveIssueRanking />
         </div>
       )}
-      {tab === 'chat' && (
-        <div style={{ paddingTop: 'var(--space-5)' }}>
-          <LiveChatPanel channel="free" />
-        </div>
-      )}
-      {tab === 'stream' && <ComingSoon name="스트리밍" />}
+      {tab === 'chat' && <div style={{ paddingTop: '20px' }}><LiveChatPanel channel="free" /></div>}
     </div>
   )
 }
 
-// ── AI 허브 ─────────────────────────────────────────────
+// ── AI 허브(AIHub) ───────────────────────────────────────────
 export function AIHubPage() {
   const [tab, setTab] = useState('trend')
-  const TABS = [{ key: 'trend', label: 'AI 트렌드' }, { key: 'summary', label: 'AI 요약' }, { key: 'search', label: 'AI 검색' }]
+  const TABS = [
+    { key: 'trend',   label: 'AI 트렌드' },
+    { key: 'summary', label: 'AI 요약' },
+    { key: 'tools',   label: 'AI 도구' },
+  ]
   return (
     <div className="fade-up">
       <PageHeader title="AI 허브" subtitle="AI로 더 스마트하게 탐색하기" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'trend'   && <CrawlFeed topicKey="aihub.trend" title="AI 트렌드" limit={10} />}
       {tab === 'summary' && <CrawlFeed topicKey="aihub.summary" title="AI 요약" limit={10} />}
-      {tab === 'search'  && <ComingSoon name="AI 검색" />}
+      {tab === 'tools'   && <CrawlFeed topicKey="ai.tools" title="AI 도구" limit={10} />}
     </div>
   )
 }
 
-// ── 알림 ────────────────────────────────────────────────
+// ── 알림(Notification) ───────────────────────────────────────
 export function NotificationPage({ navigate }) {
   const { currentUser } = useAuth()
   const [tab, setTab] = useState('comment')
-  const TABS = [{ key: 'comment', label: '댓글' }, { key: 'mention', label: '멘션' }, { key: 'follow', label: '팔로우' }, { key: 'system', label: '시스템' }]
-  if (!currentUser) return <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn-primary">로그인</button></div>
+  const TABS = [
+    { key: 'comment', label: '댓글' }, { key: 'mention', label: '멘션' },
+    { key: 'follow', label: '팔로우' }, { key: 'system', label: '시스템' },
+  ]
+  if (!currentUser) return <LoginPrompt navigate={navigate} />
   return (
     <div className="fade-up">
       <PageHeader title="알림" subtitle="나의 활동 알림" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ fontSize: 'var(--text-md)', color: 'var(--color-muted)' }}>새로운 알림이 없습니다.</p></div>
+      <div style={{ padding: '64px 0', textAlign: 'center' }}>
+        <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)' }}>새로운 알림이 없습니다.</p>
+      </div>
     </div>
   )
 }
 
-// ── 마이 ────────────────────────────────────────────────
+// ── 마이(My) ─────────────────────────────────────────────────
 export function MyPage({ navigate }) {
   const { currentUser, logout } = useAuth()
   const { getPostsByAuthor } = useApp()
   const [tab, setTab] = useState('profile')
-  const TABS = [{ key: 'profile', label: '프로필' }, { key: 'posts', label: '작성글' }, { key: 'saved', label: '저장글' }, { key: 'settings', label: '계정 설정' }]
-
-  if (!currentUser) return (
-    <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}>
-      <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-muted)', marginBottom: 'var(--space-5)' }}>로그인이 필요합니다.</p>
-      <button onClick={() => navigate('login')} className="btn-primary">로그인</button>
-    </div>
-  )
-
+  const TABS = [
+    { key: 'profile', label: '프로필' }, { key: 'posts', label: '작성글' },
+    { key: 'saved', label: '저장글' }, { key: 'settings', label: '계정 설정' },
+  ]
+  if (!currentUser) return <LoginPrompt navigate={navigate} />
   const myPosts = getPostsByAuthor(currentUser.id)
   return (
     <div className="fade-up">
-      <div style={{ padding: 'var(--space-8) 0 var(--space-6)', borderBottom: '1px solid var(--color-border-soft)', display: 'flex', alignItems: 'center', gap: 'var(--space-5)', flexWrap: 'wrap' }}>
-        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 800 }}>{currentUser.nickname[0]}</div>
+      <div style={{ padding: 'var(--sp-section) 0 var(--sp-xxl)', borderBottom: '1px solid var(--color-divider)', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 600 }}>{currentUser.nickname[0]}</div>
         <div>
           <h1 style={{ fontSize: 'var(--text-display-md)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.374px' }}>{currentUser.nickname}</h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', marginTop: 'var(--space-1)' }}>{currentUser.email}</p>
-          <div style={{ display: 'flex', gap: 'var(--space-5)', marginTop: 'var(--space-3)' }}>
+          <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', marginTop: '4px' }}>{currentUser.email}</p>
+          <div style={{ display: 'flex', gap: '24px', marginTop: '12px' }}>
             {[{ label: '게시글', value: myPosts.length }, { label: '팔로워', value: currentUser.followers.length }, { label: '팔로잉', value: currentUser.following.length }].map(s => (
-              <div key={s.label}><span style={{ fontSize: 'var(--text-lg)', fontWeight: 800, color: 'var(--color-ink)' }}>{s.value}</span><span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)', marginLeft: 'var(--space-1)' }}>{s.label}</span></div>
+              <div key={s.label}><span style={{ fontSize: 'var(--text-tagline)', fontWeight: 600, color: 'var(--color-ink)' }}>{s.value}</span><span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', marginLeft: '4px' }}>{s.label}</span></div>
             ))}
           </div>
         </div>
         <div style={{ flex: 1 }} />
-        <button onClick={() => navigate(`profile/${currentUser.id}`)} className="btn-secondary" style={{ height: '36px' }}>프로필 보기</button>
+        <button onClick={() => navigate(`profile/${currentUser.id}`)} className="btn-secondary" style={{ height: '36px', padding: '0 20px', minWidth: 'unset', fontSize: 'var(--text-caption)' }}>프로필 보기</button>
       </div>
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'profile' && <div style={{ padding: 'var(--space-6) 0' }}>{currentUser.bio && <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-body)', marginBottom: 'var(--space-5)' }}>{currentUser.bio}</p>}{currentUser.expertise?.length > 0 && <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>{currentUser.expertise.map(e => <span key={e} style={{ fontSize: 'var(--text-sm)', padding: '4px 14px', borderRadius: '99px', border: '1px solid var(--color-border)', color: 'var(--color-body)', fontWeight: 700 }}>{e}</span>)}</div>}</div>}
-      {tab === 'posts' && (myPosts.length > 0 ? <div>{myPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)', marginBottom: 'var(--space-5)' }}>작성한 글이 없습니다.</p><button onClick={() => navigate('write')} className="btn-primary">글 작성하기</button></div>)}
-      {tab === 'saved' && <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)' }}>저장된 글이 없습니다.</p></div>}
+      {tab === 'profile' && <div style={{ padding: '24px 0' }}>{currentUser.bio && <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-body)', marginBottom: '20px' }}>{currentUser.bio}</p>}{currentUser.expertise?.length > 0 && <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>{currentUser.expertise.map(e => <span key={e} style={{ fontSize: 'var(--text-caption)', padding: '6px 16px', borderRadius: 'var(--r-pill)', border: '2px solid var(--color-primary)', color: 'var(--color-primary)', fontWeight: 600 }}>⚡ {e}</span>)}</div>}</div>}
+      {tab === 'posts' && (myPosts.length > 0 ? <div>{myPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <div style={{ padding: '64px 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted-48)', marginBottom: '20px', fontSize: 'var(--text-body)' }}>작성한 글이 없습니다.</p><button onClick={() => navigate('write')} className="btn-primary">글 작성하기</button></div>)}
+      {tab === 'saved' && <div style={{ padding: '64px 0', textAlign: 'center' }}><p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)' }}>저장된 글이 없습니다.</p></div>}
       {tab === 'settings' && (
-        <div style={{ padding: 'var(--space-6) 0', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', maxWidth: '400px' }}>
+        <div style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px' }}>
           {[{ label: '닉네임', value: currentUser.nickname }, { label: '이메일', value: currentUser.email }, { label: '가입일', value: currentUser.createdAt }].map(f => (
-            <div key={f.label} style={{ borderBottom: '1px solid var(--color-border-soft)', paddingBottom: 'var(--space-4)' }}>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted)', marginBottom: 'var(--space-1)', fontWeight: 700 }}>{f.label}</p>
-              <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-ink)' }}>{f.value}</p>
+            <div key={f.label} style={{ borderBottom: '1px solid var(--color-divider)', paddingBottom: '16px' }}>
+              <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', marginBottom: '4px', fontWeight: 600 }}>{f.label}</p>
+              <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-ink)' }}>{f.value}</p>
             </div>
           ))}
-          <button onClick={() => logout()} className="btn-secondary" style={{ marginTop: 'var(--space-4)', alignSelf: 'flex-start' }}>로그아웃</button>
+          <button onClick={() => logout()} className="btn-secondary" style={{ marginTop: '16px', alignSelf: 'flex-start' }}>로그아웃</button>
         </div>
       )}
     </div>
   )
 }
 
-// ── 홈 ─────────────────────────────────────────────────
-export function HomePage({ navigate }) {
-  const [tab, setTab] = useState('trending')
-  const { currentUser } = useAuth()
-  const { posts, comments } = useApp()
-
-  const TABS = [
-    { key: 'trending',  label: '오늘의 인기글' },
-    { key: 'rising',    label: '🔥 실시간 급상승' },
-    { key: 'ai_feed',   label: 'AI 추천 피드' },
-    { key: 'shortform', label: '숏폼' },
-    { key: 'following', label: '팔로잉' },
-  ]
-
-  const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
-  const hotPosts    = posts.map(p => ({ ...p, _s: sortPosts([p], commentsMap, 'hot')[0]?._score || 0 })).sort((a, b) => b._s - a._s).slice(0, 10)
-  const risingPosts = posts.filter(p => (Date.now() - new Date(p.createdAt).getTime()) < 3 * 3600000).sort((a, b) => (b.likes?.length + b.views) - (a.likes?.length + a.views)).slice(0, 10)
-  const followPosts = currentUser ? posts.filter(p => currentUser.following.includes(p.authorId)) : []
-
+// ── 공통 컴포넌트 ─────────────────────────────────────────────
+function LoginPrompt({ navigate }) {
   return (
-    <div className="fade-up">
-      <div style={{ padding: 'var(--space-8) 0 var(--space-6)', borderBottom: '1px solid var(--color-border-soft)' }}>
-        <h1 style={{ fontSize: 'var(--text-display-lg)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '0', lineHeight: 1.2, marginBottom: 'var(--space-2)' }}>
-          <span style={{ color: 'var(--color-accent)' }}>aha!</span>
-        </h1>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)' }}>전문 정보 큐레이션 & 공유 커뮤니티</p>
-        {!currentUser && (
-          <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
-            <button onClick={() => navigate('signup')} className="btn-primary">지금 가입하기</button>
-            <button onClick={() => navigate('board')} className="btn-secondary">게시판 둘러보기</button>
-          </div>
-        )}
-      </div>
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'trending'  && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="home.trending" title="오늘의 인기글" limit={10} showRank />)}
-      {tab === 'rising'    && (risingPosts.length > 0 ? <div>{risingPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="home.rising" title="실시간 급상승" limit={10} showRank />)}
-      {tab === 'ai_feed'   && <CrawlFeed topicKey="home.ai_feed" title="AI 추천 피드" limit={10} />}
-      {tab === 'shortform' && <ShortformFeed topicKey="home.shortform" />}
-      {tab === 'following' && (
-        currentUser
-          ? followPosts.length > 0
-            ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div>
-            : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted)' }}>팔로잉 게시글이 없습니다.</p></div>
-          : <div style={{ padding: 'var(--space-8) 0', textAlign: 'center' }}><button onClick={() => navigate('login')} className="btn-primary">로그인</button></div>
-      )}
+    <div style={{ padding: '80px 0', textAlign: 'center' }}>
+      <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', marginBottom: '20px' }}>로그인이 필요합니다.</p>
+      <button onClick={() => navigate?.('login')} className="btn-primary">로그인</button>
     </div>
   )
 }
-
-// ── 인기 ────────────────────────────────────────────────
-export function TrendingPage({ navigate }) {
-  const [tab, setTab] = useState('realtime')
-  const { posts, comments } = useApp()
-  const TABS = [
-    { key: 'realtime', label: '🔴 실시간 인기' },
-    { key: 'daily',    label: '일간 베스트' },
-    { key: 'weekly',   label: '주간 베스트' },
-    { key: 'debate',   label: '💬 논쟁중' },
-  ]
-  const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
-  const hotPosts    = sortPosts(posts, commentsMap, 'hot').slice(0, 15)
-  const topPosts    = sortPosts(posts, commentsMap, 'top').slice(0, 15)
-  const debatePosts = posts.filter(p => (commentsMap[p.id] || 0) >= 2).sort((a, b) => (commentsMap[b.id] || 0) - (commentsMap[a.id] || 0)).slice(0, 15)
-
-  return (
-    <div className="fade-up">
-      <PageHeader title="인기" subtitle="지금 가장 뜨거운 콘텐츠 — Hot Score 알고리즘 기반" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'realtime' && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="trending.realtime" title="실시간 인기" limit={15} showRank />)}
-      {tab === 'daily'    && (topPosts.length > 0 ? <div>{topPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="trending.daily" title="일간 베스트" limit={15} showRank />)}
-      {tab === 'weekly'   && <CrawlFeed topicKey="trending.weekly" title="주간 베스트" limit={15} showRank />}
-      {tab === 'debate'   && (debatePosts.length > 0 ? <div>{debatePosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}</div> : <CrawlFeed topicKey="trending.debate" title="논쟁중" limit={15} />)}
-    </div>
-  )
+function Empty({ msg }) {
+  return <div style={{ padding: '64px 0', textAlign: 'center' }}><p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)' }}>{msg}</p></div>
 }
