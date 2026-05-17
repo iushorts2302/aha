@@ -43,7 +43,7 @@ export function HomePage({ navigate }) {
       {tab === 'trending'  && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.trending" title="오늘의 인기글" limit={10} showRank navigate={navigate} />)}
       {tab === 'rising'    && (risingPosts.length > 0 ? <div>{risingPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.rising" title="실시간 급상승" limit={10} showRank navigate={navigate} />)}
       {tab === 'ai_feed'   && <CrawlFeed topicKey="home.ai_feed" title="AI 추천 피드" limit={10} navigate={navigate} />}
-      {tab === 'shortform' && <ShortformFeed topicKey="home.shortform" />}
+      {tab === 'shortform' && <ShortformFeed topicKey="home.shortform" navigate={navigate} />}
       {tab === 'following' && (
         currentUser
           ? followPosts.length > 0
@@ -105,7 +105,7 @@ export function FeedPage({ navigate }) {
       {tab === 'following'  && (currentUser ? (followPosts.length > 0 ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <Empty msg="팔로잉 게시글이 없습니다." />) : <LoginPrompt navigate={navigate} />)}
       {tab === 'latest'     && <div>{latestPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>}
       {tab === 'recommended'&& <CrawlFeed topicKey="home.trending" title="추천글" limit={10} navigate={navigate} />}
-      {tab === 'shortform'  && <ShortformFeed topicKey="home.shortform" />}
+      {tab === 'shortform'  && <ShortformFeed topicKey="home.shortform" navigate={navigate} />}
       {tab === 'ai'         && <CrawlFeed topicKey="home.ai_feed" title="AI 맞춤 피드" limit={10} navigate={navigate} />}
     </div>
   )
@@ -162,7 +162,7 @@ export function BoardPageNew({ navigate, searchQuery }) {
         </div>
       )}
       {tab === 'free' && userPosts.length > 0 && <div style={{ marginBottom: '24px' }}>{userPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>}
-      <CrawlFeed topicKey={`board.${tab}`} title={TABS.find(t=>t.key===tab)?.label + ' 게시판 HOT'} limit={10} />
+      <CrawlFeed topicKey={`board.${tab}`} title={TABS.find(t=>t.key===tab)?.label + ' 게시판 HOT'} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -181,7 +181,7 @@ export function AIPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="AI 뉴스" subtitle="TechCrunch AI · The Verge · VentureBeat 기반 최신 AI 소식" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`ai.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`ai.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -198,7 +198,7 @@ export function StartupPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="스타트업" subtitle="Product Hunt · Y Combinator · Crunchbase 기반" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`startup.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`startup.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -218,7 +218,7 @@ export function DevPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="개발" subtitle="GitHub Trending · Dev.to · Stack Overflow 기반" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`dev.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`dev.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -235,7 +235,7 @@ export function OSSPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="오픈소스" subtitle="GitHub · Awesome Lists · GitLab 기반" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`oss.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`oss.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -253,7 +253,7 @@ export function DesignPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="디자인" subtitle="Dribbble · Behance · Awwwards 기반 UI/UX 레퍼런스" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`design.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`design.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -271,7 +271,7 @@ export function ITNewsPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="IT 뉴스" subtitle="ZDNet · GeekNews · Ars Technica 기반 기술 뉴스" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`it.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`it.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -288,7 +288,7 @@ export function GalleryPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="갤러리" subtitle="Pinterest · Unsplash · Pexels 기반 이미지 큐레이션" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`image.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`image.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -304,7 +304,7 @@ export function CommunityPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="커뮤니티" subtitle="관심사 기반 전문 커뮤니티" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`community.${tab}`} title={TABS.find(t=>t.key===tab)?.label + ' 커뮤니티'} limit={10} />
+      <CrawlFeed topicKey={`community.${tab}`} title={TABS.find(t=>t.key===tab)?.label + ' 커뮤니티'} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -320,7 +320,7 @@ export function KnowledgePage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="정보" subtitle="검증된 지식과 정보" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`knowledge.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`knowledge.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -335,7 +335,7 @@ export function MarketPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="마켓" subtitle="뽐뿌 · 퀘이사존 · Slickdeals 기반 핫딜/할인" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`market.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`market.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -350,7 +350,7 @@ export function GamePage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="게임" subtitle="Inven · IGN · GameSpot 기반 게임 뉴스" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`game.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`game.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -365,7 +365,7 @@ export function FinancePage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="주식/코인" subtitle="TradingView · CoinMarketCap · Investing.com 기반" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`finance.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`finance.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -380,7 +380,7 @@ export function JobPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="취업" subtitle="원티드 · 로켓펀치 · LinkedIn Jobs 기반 채용 정보" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`job.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`job.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -395,7 +395,7 @@ export function LearnPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="학습/강의" subtitle="Inflearn · Coursera · Udemy 기반 교육 콘텐츠" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`learn.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`learn.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -410,7 +410,7 @@ export function ResearchPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="논문/리서치" subtitle="arXiv · Google Scholar · Semantic Scholar 기반" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`research.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`research.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -423,7 +423,7 @@ export function HumorPage({ navigate }) {
     <div className="fade-up">
       <PageHeader title="유머/밈" subtitle="9GAG · Imgur · Reddit Memes 기반 밈 콘텐츠" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`humor.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} />
+      <CrawlFeed topicKey={`humor.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -437,13 +437,13 @@ export function VideoPage({ navigate }) {
       <PageHeader title="영상" subtitle="YouTube Trending · TikTok · Vimeo 기반 인기 영상" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'trending' && <CrawlFeed topicKey="video.trending" title="인기 영상" limit={10} navigate={navigate} />}
-      {tab === 'shorts'   && <ShortformFeed topicKey="home.shortform" />}
+      {tab === 'shorts'   && <ShortformFeed topicKey="home.shortform" navigate={navigate} />}
     </div>
   )
 }
 
 // ── 라이브(Live) ─────────────────────────────────────────────
-export function LivePage() {
+export function LivePage({ navigate }) {
   const [tab, setTab] = useState('issue')
   const TABS = [
     { key: 'issue', label: '🔴 라이브 이슈' },
