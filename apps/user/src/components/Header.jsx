@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 
 const NAV_ITEMS = [
@@ -23,126 +23,105 @@ const NAV_ITEMS = [
 
 export default function Header({ currentPage, navigate }) {
   const { currentUser, logout } = useAuth()
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const collapseRef = useRef(null)
 
   function handleSearch(e) {
     e.preventDefault()
     const q = search.trim()
-    if (q) { navigate(`search?q=${encodeURIComponent(q)}`); setSearch('') }
+    if (q) {
+      navigate(`search?q=${encodeURIComponent(q)}`)
+      setSearch('')
+      // 모바일 메뉴 닫기
+      const bsCollapse = window.bootstrap?.Collapse.getInstance(collapseRef.current)
+      bsCollapse?.hide()
+    }
+  }
+
+  function handleNav(key) {
+    navigate(key)
+    const bsCollapse = window.bootstrap?.Collapse.getInstance(collapseRef.current)
+    bsCollapse?.hide()
   }
 
   return (
-    <header style={{
-      position: 'sticky', top: 0, zIndex: 100,
-      height: 'var(--nav-height)',
-      background: 'var(--color-nav-black)',
-      backdropFilter: 'saturate(180%) blur(20px)',
-      WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-      display: 'flex', alignItems: 'center',
-      padding: '0 22px', gap: '16px',
-    }}>
-      {/* 워드마크 */}
-      <button onClick={() => navigate('home')} style={{
-        fontSize: '17px', fontWeight: 600, letterSpacing: '-0.374px',
-        color: '#FFFFFF', flexShrink: 0,
-        transition: 'opacity var(--transition)',
-      }}
-        onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
-        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-      >aha!</button>
+    <nav className="navbar navbar-expand-lg sticky-top" style={{ zIndex: 1030 }}>
+      <div className="container-fluid px-3">
 
-      {/* 스크롤 가능한 네비 */}
-      <nav style={{ display: 'flex', gap: '2px', flex: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
-        {NAV_ITEMS.map(item => (
-          <button key={item.key} onClick={() => navigate(item.key)} style={{
-            height: '28px', padding: '0 9px',
-            fontSize: 'var(--text-fine)', fontWeight: 400,
-            letterSpacing: '-0.12px',
-            color: currentPage === item.key ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
-            borderRadius: 'var(--r-xs)',
-            background: currentPage === item.key ? 'rgba(255,255,255,0.12)' : 'transparent',
-            transition: 'color var(--transition), background-color var(--transition)',
-            whiteSpace: 'nowrap', flexShrink: 0,
-          }}
-            onMouseEnter={e => { if (currentPage !== item.key) e.currentTarget.style.color = '#fff' }}
-            onMouseLeave={e => { if (currentPage !== item.key) e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}
-          >{item.label}</button>
-        ))}
-      </nav>
+        {/* 브랜드 */}
+        <button className="navbar-brand fw-semibold" onClick={() => handleNav('home')}
+          style={{ color: '#fff', letterSpacing: '-0.374px', fontSize: '17px' }}>
+          aha!
+        </button>
 
-      {/* 검색 */}
-      <form onSubmit={handleSearch} style={{ flexShrink: 0 }}>
-        <div style={{ position: 'relative' }}>
-          <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.45)', pointerEvents: 'none' }}
-            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input style={{
-            width: '140px', height: '26px', padding: '0 10px 0 28px',
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.14)',
-            borderRadius: 'var(--r-pill)',
-            fontSize: '12px', color: '#fff', outline: 'none',
-            transition: 'width var(--transition), background-color var(--transition)',
-          }}
-            placeholder="검색" value={search}
-            onChange={e => setSearch(e.target.value)}
-            onFocus={e => { e.target.style.width = '190px'; e.target.style.background = 'rgba(255,255,255,0.16)' }}
-            onBlur={e => { e.target.style.width = '140px'; e.target.style.background = 'rgba(255,255,255,0.1)' }}
-          />
-        </div>
-      </form>
+        {/* 모바일 토글 */}
+        <button className="navbar-toggler border-0" type="button"
+          data-bs-toggle="collapse" data-bs-target="#mainNav"
+          aria-controls="mainNav" aria-expanded="false" aria-label="메뉴 열기">
+          <span className="navbar-toggler-icon" />
+        </button>
 
-      {/* 유저 */}
-      {currentUser ? (
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <button onClick={() => setUserMenuOpen(v => !v)} style={{
-            display: 'flex', alignItems: 'center', gap: '5px',
-            height: '26px', padding: '0 9px',
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.14)',
-            borderRadius: 'var(--r-sm)',
-            fontSize: '12px', color: '#fff',
-          }}>
-            <span style={{ width: '16px', height: '16px', borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 600 }}>
-              {currentUser.nickname[0]}
-            </span>
-            {currentUser.nickname}
-          </button>
-          {userMenuOpen && (
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setUserMenuOpen(false)} />
-              <div style={{ position: 'absolute', right: 0, top: '34px', background: 'rgba(29,29,31,0.96)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '6px', minWidth: '170px', zIndex: 200, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
-                {[
-                  { label: '마이페이지',  action: () => { navigate('my'); setUserMenuOpen(false) } },
-                  { label: '내 프로필',   action: () => { navigate(`profile/${currentUser.id}`); setUserMenuOpen(false) } },
-                  { label: '글 작성',     action: () => { navigate('write'); setUserMenuOpen(false) } },
-                  null,
-                  { label: '로그아웃',    action: () => { logout(); setUserMenuOpen(false) }, danger: true },
-                ].map((item, i) => item === null
-                  ? <div key={i} style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
-                  : <button key={item.label} onClick={item.action} style={{ width: '100%', textAlign: 'left', padding: '7px 12px', borderRadius: '8px', fontSize: '13px', color: item.danger ? '#FF453A' : 'rgba(255,255,255,0.85)', transition: 'background-color var(--transition)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >{item.label}</button>
-                )}
-              </div>
-            </>
+        {/* 네비 + 검색 + 유저 */}
+        <div className="collapse navbar-collapse" id="mainNav" ref={collapseRef}>
+          {/* 메인 링크 (가로 스크롤) */}
+          <ul className="navbar-nav me-auto flex-row flex-wrap gap-0"
+            style={{ overflowX: 'auto', flexWrap: 'nowrap', scrollbarWidth: 'none' }}>
+            {NAV_ITEMS.map(item => (
+              <li className="nav-item" key={item.key}>
+                <button
+                  className={`nav-link px-2 py-1${currentPage === item.key ? ' active fw-semibold' : ''}`}
+                  onClick={() => handleNav(item.key)}
+                  style={{ fontSize: '12px', whiteSpace: 'nowrap', background: 'none', border: 'none' }}>
+                  {item.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* 검색 */}
+          <form className="d-flex me-2 my-2 my-lg-0" onSubmit={handleSearch} style={{ minWidth: 0 }}>
+            <div className="input-group input-group-sm">
+              <input
+                className="form-control"
+                style={{ borderRadius: 'var(--r-pill) 0 0 var(--r-pill)', fontSize: '13px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', minWidth: '120px' }}
+                placeholder="검색..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <button className="btn btn-sm btn-outline-light" type="submit"
+                style={{ borderRadius: '0 var(--r-pill) var(--r-pill) 0' }}>
+                🔍
+              </button>
+            </div>
+          </form>
+
+          {/* 유저 */}
+          {currentUser ? (
+            <div className="dropdown my-2 my-lg-0">
+              <button className="btn btn-sm d-flex align-items-center gap-2"
+                style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: 'var(--r-sm)', fontSize: '12px' }}
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 600, flexShrink: 0 }}>
+                  {currentUser.nickname[0]}
+                </span>
+                <span className="d-none d-sm-inline">{currentUser.nickname}</span>
+              </button>
+              <ul className="dropdown-menu dropdown-menu-end">
+                <li><button className="dropdown-item" onClick={() => handleNav('my')}>마이페이지</button></li>
+                <li><button className="dropdown-item" onClick={() => handleNav(`profile/${currentUser.id}`)}>내 프로필</button></li>
+                <li><button className="dropdown-item" onClick={() => handleNav('write')}>글 작성</button></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><button className="dropdown-item text-danger" onClick={() => { logout(); handleNav('home') }}>로그아웃</button></li>
+              </ul>
+            </div>
+          ) : (
+            <div className="d-flex gap-2 my-2 my-lg-0">
+              <button className="btn btn-sm btn-outline-light" style={{ borderRadius: 'var(--r-sm)', fontSize: '12px' }} onClick={() => handleNav('login')}>로그인</button>
+              <button className="btn btn-sm btn-primary" style={{ fontSize: '12px' }} onClick={() => handleNav('signup')}>회원가입</button>
+            </div>
           )}
         </div>
-      ) : (
-        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-          <button onClick={() => navigate('login')} style={{ height: '26px', padding: '0 10px', fontSize: '12px', color: 'rgba(255,255,255,0.7)', borderRadius: 'var(--r-sm)', transition: 'color var(--transition)' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
-          >로그인</button>
-          <button onClick={() => navigate('signup')} style={{ height: '26px', padding: '0 12px', background: 'var(--color-primary)', color: '#fff', fontSize: '12px', fontWeight: 600, borderRadius: 'var(--r-pill)', transition: 'background-color var(--transition)' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-hover)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'var(--color-primary)'}
-          >회원가입</button>
-        </div>
-      )}
-    </header>
+      </div>
+    </nav>
   )
 }

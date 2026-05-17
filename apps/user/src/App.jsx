@@ -91,7 +91,7 @@ function AppInner() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
       <Header currentPage={page} navigate={navigate} />
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '0 var(--sp-lg) var(--sp-xxl)' }}>
+      <main className="container" style={{ maxWidth: '960px', paddingTop: '8px', paddingBottom: '80px' }}>
         {renderPage()}
       </main>
       <MobileTabBar currentPage={page} navigate={navigate} />

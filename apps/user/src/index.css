@@ -1,416 +1,253 @@
-/* ─────────────────────────────────────────────────────────
-   aha! Design System — Apple Design Language
-   Single accent: Action Blue #0066CC
-   Font: Inter (SF Pro substitute)
-───────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────
+   aha! — Bootstrap 5 + Apple Design Token 통합
+───────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
+/* Bootstrap 변수 오버라이드 */
 :root {
-  /* ── Brand & Accent ─────────────────────────────────── */
-  --color-primary:         #0066CC;   /* Action Blue — every interactive element */
-  --color-primary-focus:   #0071E3;   /* Focus ring — marginally brighter */
-  --color-primary-dark:    #4DA3FF;   /* On dark tile — Sky Link Blue */
-  --color-primary-hover:   #0077ED;   /* Hover state */
+  /* 컬러 */
+  --bs-primary:           #0066CC;
+  --bs-primary-rgb:       0, 102, 204;
+  --bs-link-color:        #0066CC;
+  --bs-link-hover-color:  #0077ED;
+  --bs-body-font-family:  'Inter', system-ui, -apple-system, sans-serif;
+  --bs-body-font-size:    1.0625rem;   /* 17px */
+  --bs-body-color:        #1D1D1F;
+  --bs-body-bg:           #FFFFFF;
+  --bs-border-color:      #E0E0E0;
+  --bs-border-radius:     11px;
+  --bs-border-radius-sm:  8px;
+  --bs-border-radius-lg:  18px;
+  --bs-border-radius-pill:9999px;
 
-  /* ── Surfaces ───────────────────────────────────────── */
-  --color-canvas:          #FFFFFF;   /* Pure White — dominant canvas */
-  --color-parchment:       #F5F5F7;   /* Apple Parchment — alternate light tile */
-  --color-pearl:           #FAFAFC;   /* Pearl Button fill */
-  --color-tile-dark-1:     #272729;   /* Near-Black — primary dark tile */
-  --color-tile-dark-2:     #2A2A2C;   /* Micro-step lighter dark */
-  --color-tile-dark-3:     #252527;   /* Micro-step darker dark */
-  --color-nav-black:       #000000;   /* Global nav — true black */
+  /* aha 디자인 토큰 */
+  --color-primary:        #0066CC;
+  --color-primary-hover:  #0077ED;
+  --color-primary-focus:  #0071E3;
+  --color-primary-dark:   #4DA3FF;
+  --color-canvas:         #FFFFFF;
+  --color-parchment:      #F5F5F7;
+  --color-pearl:          #FAFAFC;
+  --color-nav-black:      #000000;
+  --color-ink:            #1D1D1F;
+  --color-body:           #1D1D1F;
+  --color-muted-48:       #7A7A7A;
+  --color-muted-80:       #333333;
+  --color-placeholder:    #7A7A7A;
+  --color-divider:        #F0F0F0;
+  --color-hairline:       #E0E0E0;
+  --color-hairline-rgb:   rgba(0,0,0,0.08);
+  --color-danger:         #D70015;
+  --color-hot:            #FF4500;
+  --color-rising:         #FF6B35;
 
-  /* ── Text ───────────────────────────────────────────── */
-  --color-ink:             #1D1D1F;   /* Near-Black Ink — all text on light */
-  --color-body:            #1D1D1F;   /* Same as ink */
-  --color-body-on-dark:    #FFFFFF;   /* All text on dark tiles */
-  --color-muted-on-dark:   #CCCCCC;   /* Secondary on dark */
-  --color-muted-80:        #333333;   /* Body on Pearl surface */
-  --color-muted-48:        #7A7A7A;   /* Disabled / fine-print */
-  --color-placeholder:     #7A7A7A;
+  /* 레거시 alias */
+  --color-bg:             var(--color-canvas);
+  --color-surface:        var(--color-parchment);
+  --color-surface2:       #ECEDEF;
+  --color-border:         var(--color-hairline);
+  --color-border-soft:    var(--color-divider);
+  --color-accent:         var(--color-primary);
+  --color-accent-text:    #FFFFFF;
+  --color-muted:          var(--color-muted-48);
 
-  /* ── Semantic ───────────────────────────────────────── */
-  --color-danger:          #D70015;   /* Apple red */
-  --color-hot:             #FF4500;   /* HOT 배지 (reddit orange) */
-  --color-rising:          #FF6B35;   /* 급상승 */
-  --color-success:         #28C840;
+  /* 타이포 */
+  --font:                 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display:         var(--font);
+  --font-body:            var(--font);
+  --text-micro:    10px;
+  --text-fine:     12px;
+  --text-caption:  14px;
+  --text-body:     17px;
+  --text-tagline:  21px;
+  --text-lead:     24px;
+  --text-lead-lg:  28px;
+  --text-display:  34px;
+  --text-display-lg:40px;
+  --text-hero:     56px;
+  --text-xs:   12px; --text-sm: 14px; --text-md: 15px;
+  --text-lg:   16px; --text-xl: 17px; --text-2xl:19px;
+  --text-3xl:  21px; --text-4xl:34px;
 
-  /* ── Hairlines ──────────────────────────────────────── */
-  --color-divider:         #F0F0F0;   /* Divider Soft */
-  --color-hairline:        #E0E0E0;   /* 1px card border */
-  --color-hairline-rgb:    rgba(0, 0, 0, 0.08);
+  /* 스페이싱 */
+  --sp-xxs:4px; --sp-xs:8px; --sp-sm:12px; --sp-md:17px;
+  --sp-lg:24px; --sp-xl:32px; --sp-xxl:48px; --sp-section:80px;
+  --space-1:5px; --space-2:8px; --space-3:10px; --space-4:12px;
+  --space-5:18px; --space-6:24px; --space-7:26px; --space-8:28px;
 
-  /* ── Legacy aliases (크롤링 카드 호환) ─────────────── */
-  --color-bg:              var(--color-canvas);
-  --color-surface:         var(--color-parchment);
-  --color-surface2:        #ECEDEF;
-  --color-border:          var(--color-hairline);
-  --color-border-soft:     var(--color-divider);
-  --color-accent:          var(--color-primary);
-  --color-accent-dark:     var(--color-primary-hover);
-  --color-accent-text:     #FFFFFF;
+  /* shape */
+  --r-none:0; --r-xs:5px; --r-sm:8px; --r-md:11px;
+  --r-lg:18px; --r-pill:9999px;
+  --radius-btn:var(--r-sm); --radius-card:var(--r-lg); --radius-pill:var(--r-pill);
 
-  /* ── Typography — Apple-inspired ───────────────────── */
-  --font-display:  'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body:     'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font:          var(--font-body);
+  /* nav */
+  --nav-height:       52px;
+  --subnav-height:    48px;
+  --tab-bar-height:   60px;
 
-  /* Type scale — Apple spec */
-  --text-micro:    10px;    /* micro-legal */
-  --text-fine:     12px;    /* fine-print, nav-link */
-  --text-caption:  14px;    /* caption, button-utility */
-  --text-body:     17px;    /* body — Apple uses 17px, not 16px */
-  --text-tagline:  21px;    /* tagline, sub-nav category */
-  --text-lead:     24px;    /* lead-airy */
-  --text-lead-lg:  28px;    /* lead */
-  --text-display:  34px;    /* display-md */
-  --text-display-lg: 40px; /* display-lg — tile headlines */
-  --text-hero:     56px;    /* hero-display */
-
-  /* Legacy aliases */
-  --text-xs:   var(--text-fine);
-  --text-sm:   var(--text-caption);
-  --text-md:   15px;
-  --text-lg:   16px;
-  --text-xl:   var(--text-body);
-  --text-2xl:  19px;
-  --text-3xl:  var(--text-tagline);
-  --text-4xl:  var(--text-display);
-
-  /* ── Spacing — 8px base ─────────────────────────────── */
-  --sp-xxs:   4px;
-  --sp-xs:    8px;
-  --sp-sm:   12px;
-  --sp-md:   17px;
-  --sp-lg:   24px;
-  --sp-xl:   32px;
-  --sp-xxl:  48px;
-  --sp-section: 80px;
-
-  /* Legacy aliases */
-  --space-1: 5px; --space-2: 8px; --space-3: 10px; --space-4: 12px;
-  --space-5: 18px; --space-6: 24px; --space-7: 26px; --space-8: 28px;
-
-  /* ── Shape — Apple radius scale ─────────────────────── */
-  --r-none:   0px;
-  --r-xs:     5px;
-  --r-sm:     8px;    /* compact utility buttons */
-  --r-md:     11px;   /* Pearl button capsule */
-  --r-lg:     18px;   /* utility cards */
-  --r-pill:   9999px; /* primary CTAs, search, chips */
-
-  /* Legacy aliases */
-  --radius-btn:   var(--r-sm);
-  --radius-card:  var(--r-lg);
-  --radius-pill:  var(--r-pill);
-
-  /* ── Motion ─────────────────────────────────────────── */
-  --ease:        cubic-bezier(0.4, 0, 0.2, 1);
-  --duration:    0.2s;
-  --transition:  var(--duration) var(--ease);
-
-  /* ── Layout ─────────────────────────────────────────── */
-  --nav-height:       44px;   /* Apple global nav = 44px */
-  --subnav-height:    52px;   /* Sub-nav frosted */
-  --tab-bar-height:   56px;   /* Mobile bottom bar */
-  --content-max:      980px;  /* Text sections */
-  --store-max:        1440px; /* Product grids */
+  /* motion */
+  --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
 }
 
-/* ─── Reset ──────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+/* ── 전역 리셋 ────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 body {
   font-family: var(--font-body);
-  font-size: var(--text-body);   /* 17px — Apple body standard */
+  font-size: var(--text-body);
   font-weight: 400;
   line-height: 1.47;
   background: var(--color-canvas);
   color: var(--color-body);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
   word-break: keep-all;
 }
 a { color: var(--color-primary); text-decoration: none; }
-a:hover { text-decoration: underline; }
-button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
-input, textarea, select { font-family: inherit; color: inherit; }
+a:hover { color: var(--color-primary-hover); text-decoration: underline; }
+button { cursor: pointer; font-family: inherit; }
 img { max-width: 100%; display: block; }
 
-/* ─── Focus Visible — WCAG 2.2 AA ───────────────────── */
-:focus-visible {
-  outline: 2px solid var(--color-primary-focus);
-  outline-offset: 2px;
-}
-
-/* ─── Scrollbar ──────────────────────────────────────── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: var(--color-hairline); border-radius: var(--r-pill); }
-
-/* ═══════════════════════════════════════════════════════
-   BUTTONS — Apple Button Grammar
-═══════════════════════════════════════════════════════ */
-
-/* Primary — Blue Pill (signature Apple action) */
+/* ── Bootstrap btn 오버라이드 ─────────────────────────── */
 .btn-primary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  height: 44px; padding: 11px 22px;
-  background: var(--color-primary);
-  color: #FFFFFF;
-  font-family: var(--font-body);
-  font-size: var(--text-body);   /* 17px */
+  --bs-btn-bg:           var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg:     var(--color-primary-hover);
+  --bs-btn-hover-border-color: var(--color-primary-hover);
+  --bs-btn-active-bg:    var(--color-primary);
+  --bs-btn-color:        #fff;
+  border-radius: var(--r-pill);
   font-weight: 400;
   letter-spacing: -0.374px;
+}
+.btn-outline-primary {
+  --bs-btn-color:        var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg:     var(--color-primary);
+  --bs-btn-hover-color:  #fff;
   border-radius: var(--r-pill);
-  border: none;
-  white-space: nowrap;
-  transition: background-color var(--transition);
-  cursor: pointer;
-}
-.btn-primary:hover  { background: var(--color-primary-hover); }
-.btn-primary:active { background: var(--color-primary); transform: scale(0.95); }
-.btn-primary:focus-visible { outline: 2px solid var(--color-primary-focus); outline-offset: 3px; }
-
-/* Secondary Ghost Pill */
-.btn-secondary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  height: 44px; padding: 11px 22px;
-  background: transparent;
-  color: var(--color-primary);
-  font-family: var(--font-body);
-  font-size: var(--text-body);
-  font-weight: 400;
-  letter-spacing: -0.374px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--color-primary);
-  white-space: nowrap;
-  transition: background-color var(--transition), color var(--transition);
-  cursor: pointer;
-}
-.btn-secondary:hover  { background: rgba(0, 102, 204, 0.06); }
-.btn-secondary:active { transform: scale(0.95); }
-
-/* Utility Rect — nav actions */
-.btn-utility {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  height: 32px; padding: 8px 15px;
-  background: var(--color-ink);
-  color: #FFFFFF;
-  font-size: var(--text-caption);   /* 14px */
-  font-weight: 400;
-  letter-spacing: -0.224px;
-  border-radius: var(--r-sm);       /* 8px */
-  white-space: nowrap;
-  transition: opacity var(--transition);
-  cursor: pointer;
-}
-.btn-utility:hover  { opacity: 0.88; }
-.btn-utility:active { transform: scale(0.95); }
-
-/* Pearl Capsule — secondary card action */
-.btn-pearl {
-  display: inline-flex; align-items: center; justify-content: center;
-  height: 36px; padding: 8px 14px;
-  background: var(--color-pearl);
-  color: var(--color-muted-80);
-  font-size: var(--text-caption);
-  font-weight: 400;
-  letter-spacing: -0.224px;
-  border-radius: var(--r-md);       /* 11px */
-  border: 3px solid var(--color-divider);
-  white-space: nowrap;
-  transition: background-color var(--transition);
-  cursor: pointer;
-}
-.btn-pearl:hover  { background: var(--color-parchment); }
-.btn-pearl:active { transform: scale(0.95); }
-
-/* Small size modifier */
-.btn-sm { height: 34px; padding: 8px 16px; font-size: var(--text-caption); }
-.btn-xs { height: 28px; padding: 5px 12px; font-size: 12px; }
-
-/* Danger */
-.btn-danger { background: var(--color-danger); color: #fff; border-radius: var(--r-pill); }
-
-/* Generic .btn — backwards compat */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 11px 22px; border-radius: var(--r-pill);
-  font-family: var(--font-body); font-size: var(--text-body); font-weight: 400;
-  letter-spacing: -0.374px; white-space: nowrap; cursor: pointer;
-  border: none; transition: background-color var(--transition), transform var(--transition);
 }
 .btn:active { transform: scale(0.95); }
 
-/* ═══════════════════════════════════════════════════════
-   INPUTS — Pill-shaped (Apple search grammar)
-═══════════════════════════════════════════════════════ */
-.input {
-  width: 100%; height: 44px; padding: 12px 20px;
-  background: var(--color-canvas);
-  border: 1px solid var(--color-hairline-rgb);
-  border-radius: var(--r-pill);   /* Pill — matches Apple search */
-  font-family: var(--font-body);
-  font-size: var(--text-body);    /* 17px */
-  color: var(--color-ink);
-  outline: none;
-  transition: border-color var(--transition), box-shadow var(--transition);
-}
-.input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.12);
-}
-.input::placeholder { color: var(--color-placeholder); }
-.input:disabled { opacity: 0.5; cursor: not-allowed; background: var(--color-parchment); }
-textarea.input { height: auto; padding: 14px 20px; border-radius: 18px; resize: vertical; line-height: 1.47; }
-select.input { cursor: pointer; padding-right: 36px; border-radius: var(--r-pill); }
-
-/* ═══════════════════════════════════════════════════════
-   CARDS — Apple Card Grammar
-═══════════════════════════════════════════════════════ */
-/* Utility card — store grid */
+/* ── Bootstrap card 오버라이드 ────────────────────────── */
 .card {
-  background: var(--color-canvas);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--r-lg);   /* 18px */
-  padding: var(--sp-lg);        /* 24px */
+  border-color: var(--color-hairline);
+  border-radius: var(--r-lg);
 }
-/* Tag chip */
-.tag {
-  display: inline-flex; align-items: center; height: 22px; padding: 0 10px;
-  border-radius: var(--r-pill);
-  font-size: var(--text-caption); color: var(--color-muted-80);
+.card-header {
   background: var(--color-parchment);
-  transition: color var(--transition), background-color var(--transition);
-}
-.tag:hover { color: var(--color-ink); background: #E8E8ED; }
-
-/* ═══════════════════════════════════════════════════════
-   BADGES
-═══════════════════════════════════════════════════════ */
-.badge-hot {
-  display: inline-flex; align-items: center;
-  height: 18px; padding: 0 6px;
-  background: var(--color-hot); color: #fff;
-  border-radius: var(--r-pill);
-  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
-}
-.badge-rising {
-  display: inline-flex; align-items: center;
-  height: 18px; padding: 0 6px;
-  background: var(--color-rising); color: #fff;
-  border-radius: var(--r-pill);
-  font-size: 10px; font-weight: 600;
-}
-.badge-new {
-  display: inline-flex; align-items: center;
-  height: 18px; padding: 0 6px;
-  background: var(--color-primary); color: #fff;
-  border-radius: var(--r-pill);
-  font-size: 10px; font-weight: 600;
-}
-
-/* ═══════════════════════════════════════════════════════
-   DIVIDER
-═══════════════════════════════════════════════════════ */
-.divider { height: 1px; background: var(--color-divider); margin: var(--sp-lg) 0; }
-
-/* ═══════════════════════════════════════════════════════
-   LAYOUT
-═══════════════════════════════════════════════════════ */
-.layout-main {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 var(--sp-lg);
-}
-@media (max-width: 768px) {
-  .layout-main { padding: 0 var(--sp-xs); }
-}
-
-/* ═══════════════════════════════════════════════════════
-   TYPOGRAPHY UTILITIES
-═══════════════════════════════════════════════════════ */
-/* Hero headline — Apple tight */
-.type-hero {
-  font-size: var(--text-hero);     /* 56px */
+  border-bottom-color: var(--color-hairline);
   font-weight: 600;
-  line-height: 1.07;
-  letter-spacing: -0.28px;
-  font-family: var(--font-display);
 }
-/* Tile headline */
-.type-display {
-  font-size: var(--text-display-lg); /* 40px */
-  font-weight: 600;
-  line-height: 1.10;
-  letter-spacing: 0;
-  font-family: var(--font-display);
+
+/* ── Bootstrap nav/navbar 오버라이드 ──────────────────── */
+.navbar {
+  --bs-navbar-color: rgba(255,255,255,0.6);
+  --bs-navbar-hover-color: #fff;
+  --bs-navbar-active-color: #fff;
+  background: var(--color-nav-black) !important;
+  min-height: var(--nav-height);
 }
-/* Section head */
-.type-display-md {
-  font-size: var(--text-display);  /* 34px */
-  font-weight: 600;
-  line-height: 1.47;
-  letter-spacing: -0.374px;
+.navbar-brand { color: #fff !important; font-weight: 600; letter-spacing: -0.374px; }
+.nav-link { font-size: var(--text-fine); letter-spacing: -0.12px; }
+.nav-link.active { color: #fff !important; }
+.navbar-toggler { border-color: rgba(255,255,255,0.3); }
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255,255,255,0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
-/* Body — 17px/400 Apple standard */
-.type-body {
+
+/* ── Bootstrap form 오버라이드 ────────────────────────── */
+.form-control, .form-select {
+  border-color: var(--color-hairline-rgb);
+  border-radius: var(--r-pill);
   font-size: var(--text-body);
-  font-weight: 400;
-  line-height: 1.47;
-  letter-spacing: -0.374px;
+  color: var(--color-ink);
 }
-/* Caption */
-.type-caption {
+.form-control:focus, .form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 0.2rem rgba(0,102,204,0.15);
+}
+.form-control::placeholder { color: var(--color-placeholder); }
+
+/* ── Bootstrap badge ──────────────────────────────────── */
+.badge.bg-hot   { background: var(--color-hot)    !important; }
+.badge.bg-rising{ background: var(--color-rising)  !important; }
+
+/* ── Bootstrap table 오버라이드 ───────────────────────── */
+.table th { font-size: var(--text-caption); font-weight: 600; color: var(--color-muted-48); text-transform: uppercase; letter-spacing: 0.05em; }
+.table td { vertical-align: middle; font-size: var(--text-caption); }
+
+/* ── Bootstrap tabs 오버라이드 ────────────────────────── */
+.nav-tabs {
+  border-bottom-color: var(--color-divider);
+}
+.nav-tabs .nav-link {
+  color: var(--color-muted-48);
   font-size: var(--text-caption);
   font-weight: 400;
-  line-height: 1.43;
-  letter-spacing: -0.224px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 12px 18px;
 }
+.nav-tabs .nav-link.active {
+  color: var(--color-ink);
+  font-weight: 600;
+  background: transparent;
+  border-bottom-color: var(--color-ink);
+}
+.nav-tabs .nav-link:hover:not(.active) {
+  color: var(--color-ink);
+  border-bottom-color: transparent;
+}
+.tab-content { padding-top: 24px; }
 
-/* ═══════════════════════════════════════════════════════
-   MOBILE BOTTOM TAB BAR
-═══════════════════════════════════════════════════════ */
+/* ── 모바일 하단 탭 바 ────────────────────────────────── */
 .mobile-tabbar {
   display: none;
   position: fixed; bottom: 0; left: 0; right: 0;
   height: var(--tab-bar-height);
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255,255,255,0.95);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-top: 1px solid var(--color-divider);
-  z-index: 200;
+  z-index: 1030;
 }
-@media (max-width: 834px) {
+@media (max-width: 991.98px) {
   .mobile-tabbar { display: flex; }
   body { padding-bottom: var(--tab-bar-height); }
 }
 
-/* ═══════════════════════════════════════════════════════
-   SKELETON / LOADING
-═══════════════════════════════════════════════════════ */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.45; }
-}
-.skeleton {
+/* ── 커스텀 컴포넌트 ──────────────────────────────────── */
+.tag {
+  display: inline-flex; align-items: center;
+  height: 22px; padding: 0 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--text-caption); color: var(--color-muted-80);
   background: var(--color-parchment);
-  border-radius: var(--r-sm);
-  animation: pulse 1.6s ease infinite;
 }
+.badge-hot    { background: var(--color-hot)   !important; color: #fff; font-size: 10px; font-weight: 600; border-radius: var(--r-pill); padding: 2px 8px; }
+.badge-rising { background: var(--color-rising) !important; color: #fff; font-size: 10px; font-weight: 600; border-radius: var(--r-pill); padding: 2px 8px; }
 
-/* ═══════════════════════════════════════════════════════
-   ANIMATIONS
-═══════════════════════════════════════════════════════ */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ── 애니메이션 ───────────────────────────────────────── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+.fade-up { animation: fadeUp 0.28s cubic-bezier(0.4,0,0.2,1) both; }
+
+/* ── 스크롤바 ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--color-hairline); border-radius: var(--r-pill); }
+
+/* ── 레거시 클래스 호환 (기존 코드 호환용) ──────────── */
+.btn-secondary-aha {
+  background: transparent; color: var(--color-primary);
+  border: 1px solid var(--color-primary); border-radius: var(--r-pill);
+  padding: 10px 22px; font-size: var(--text-body); font-weight: 400;
+  transition: background-color var(--transition);
 }
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-8px); }
-  to   { opacity: 1; transform: translateX(0); }
+.btn-secondary-aha:hover { background: rgba(0,102,204,0.06); }
+.input {
+  width: 100%; padding: 10px 20px;
+  border: 1px solid var(--color-hairline-rgb);
+  border-radius: var(--r-pill); font-size: var(--text-body);
+  color: var(--color-ink); outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
-.fade-up  { animation: fadeUp  0.28s var(--ease) both; }
-.slide-in { animation: slideIn 0.22s var(--ease) both; }
+.input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(0,102,204,0.12); }

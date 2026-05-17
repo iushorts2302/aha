@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AdminProvider, useAdmin } from './context/AdminContext'
-import { AdminHeader, AdminSidebar } from './components/AdminLayout'
+import { AdminHeader, AdminSidebar, AdminOffcanvas } from './components/AdminLayout'
 import AdminLoginPage from './pages/AdminLoginPage'
 import { DashboardPage, CategoryManager, TopicManager, SourceManager, UserManager, PostManager } from './pages/AdminPages'
 import CrawlerDashboard from './pages/CrawlerDashboard'
@@ -27,10 +27,20 @@ function AdminApp() {
   }
 
   return (
-    <div className="admin-layout">
-      <div className="admin-header"><AdminHeader navigate={navigate} /></div>
-      <div className="admin-sidebar"><AdminSidebar currentPage={page} navigate={navigate} /></div>
-      <main className="admin-main">{renderPage()}</main>
+    <div className="admin-root">
+      {/* 모바일 오프캔버스 사이드바 */}
+      <AdminOffcanvas currentPage={page} navigate={navigate} />
+
+      {/* 헤더 */}
+      <AdminHeader navigate={navigate} />
+
+      {/* 바디: 사이드바 + 컨텐츠 */}
+      <div className="admin-body">
+        <AdminSidebar currentPage={page} navigate={navigate} />
+        <main className="admin-content fade-up">
+          {renderPage()}
+        </main>
+      </div>
     </div>
   )
 }
