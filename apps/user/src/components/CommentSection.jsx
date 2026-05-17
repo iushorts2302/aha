@@ -7,105 +7,150 @@ function timeAgo(d) {
   const m = Math.floor(diff / 60000)
   if (m < 1) return '방금 전'
   if (m < 60) return `${m}분 전`
-  return `${Math.floor(m / 60 < 24 ? m / 60 : m / 1440)}${m / 60 < 24 ? '시간' : '일'} 전`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}시간 전`
+  return `${Math.floor(h / 24)}일 전`
 }
 
 export default function CommentSection({ postId, navigate }) {
   const { currentUser, getUserById } = useAuth()
   const { getCommentsByPostId, addComment, deleteComment } = useApp()
   const [body, setBody] = useState('')
+
+  // 매 렌더마다 최신 댓글 목록 참조
   const comments = getCommentsByPostId(postId)
 
-  function handleSubmit(e) {
-    e.preventDefault()
+  function handleSubmit() {
     if (!body.trim() || !currentUser) return
     addComment(postId, currentUser.id, body.trim())
     setBody('')
   }
 
   return (
-    <section style={{ marginTop: '48px' }}>
-      {/* 헤더 */}
-      <h4 style={{
-        fontSize: 'var(--text-tagline)',   /* 21px */
-        fontWeight: 600, lineHeight: 1.19, letterSpacing: '0.231px',
-        color: 'var(--color-ink)', marginBottom: '20px',
-      }}>
-        댓글 <span style={{ color: 'var(--color-muted-48)', fontWeight: 400, fontSize: 'var(--text-body)' }}>{comments.length}</span>
+    <section style={{ marginTop: 40 }}>
+      <h4 style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 20 }}>
+        댓글{' '}
+        <span style={{ color: 'var(--color-muted-48)', fontWeight: 400, fontSize: 14 }}>
+          {comments.length}
+        </span>
       </h4>
 
-      {/* 입력 */}
+      {/* 입력 영역 */}
       {currentUser ? (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '32px' }}>
-          <textarea className="input" style={{
-            minHeight: '88px', marginBottom: '10px',
-            fontSize: 'var(--text-body)', borderRadius: '18px',
-          }}
+        <div style={{ marginBottom: 28 }}>
+          <textarea
+            style={{
+              width: '100%', minHeight: 88,
+              padding: '12px 16px', marginBottom: 10,
+              fontSize: 15, lineHeight: 1.6,
+              border: '1px solid var(--color-hairline)',
+              borderRadius: 16, outline: 'none',
+              resize: 'vertical', boxSizing: 'border-box',
+              fontFamily: 'inherit',
+              background: '#fff', color: 'var(--color-ink)',
+              transition: 'border-color 0.15s',
+            }}
             placeholder="댓글을 입력하세요..."
-            value={body} onChange={e => setBody(e.target.value)}
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            onFocus={e => e.target.style.borderColor = 'var(--color-primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--color-hairline)'}
+            onKeyDown={e => {
+              // Ctrl+Enter / Cmd+Enter 로 제출
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleSubmit()
+            }}
           />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn-primary btn-sm" disabled={!body.trim()} style={{ opacity: body.trim() ? 1 : 0.4 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-muted-48)' }}>
+              Ctrl+Enter
+            </span>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!body.trim()}
+              style={{
+                background: body.trim() ? 'var(--color-primary)' : 'var(--color-hairline)',
+                color: body.trim() ? '#fff' : 'var(--color-muted-48)',
+                border: 'none',
+                borderRadius: 'var(--r-pill)',
+                padding: '8px 20px',
+                fontSize: 14, fontWeight: 500,
+                cursor: body.trim() ? 'pointer' : 'not-allowed',
+                transition: 'background-color 0.15s',
+                outline: 'none',
+              }}>
               댓글 작성
             </button>
           </div>
-        </form>
+        </div>
       ) : (
         <div style={{
-          padding: '20px', background: 'var(--color-parchment)',
-          borderRadius: 'var(--r-lg)', marginBottom: '24px',
-          textAlign: 'center', fontSize: 'var(--text-body)', color: 'var(--color-muted-48)',
+          padding: 20, background: 'var(--color-parchment)',
+          borderRadius: 'var(--r-lg)', marginBottom: 24,
+          textAlign: 'center', fontSize: 15, color: 'var(--color-muted-48)',
         }}>
-          <button onClick={() => navigate('login')} style={{ color: 'var(--color-primary)', fontWeight: 600 }}>로그인</button>하면 댓글을 작성할 수 있습니다.
+          <button
+            type="button"
+            onClick={() => navigate('login')}
+            style={{ color: 'var(--color-primary)', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 15 }}>
+            로그인
+          </button>
+          {' '}후 댓글을 작성할 수 있습니다.
         </div>
       )}
 
-      {/* 목록 */}
+      {/* 댓글 목록 */}
       <div>
         {comments.length === 0 && (
-          <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', padding: '24px 0', fontWeight: 400 }}>
+          <p style={{ fontSize: 15, color: 'var(--color-muted-48)', padding: '20px 0' }}>
             첫 번째 댓글을 남겨보세요.
           </p>
         )}
         {comments.map(comment => {
-          const author = getUserById(comment.authorId)
+          const author  = getUserById(comment.authorId)
           const isOwner = currentUser?.id === comment.authorId
           return (
-            <div key={comment.id} style={{ padding: '20px 0', borderBottom: '1px solid var(--color-divider)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button onClick={() => navigate(`profile/${comment.authorId}`)} style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    fontSize: 'var(--text-body)', fontWeight: 600,
-                    letterSpacing: '-0.374px', color: 'var(--color-ink)',
-                    transition: 'color var(--transition)',
-                  }}
+            <div key={comment.id} style={{ padding: '16px 0', borderBottom: '1px solid var(--color-divider)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`profile/${comment.authorId}`)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      background: 'transparent', border: 'none', padding: 0,
+                      fontSize: 14, fontWeight: 600, color: 'var(--color-ink)',
+                      cursor: 'pointer', outline: 'none',
+                    }}
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--color-ink)'}
                   >
                     <span style={{
-                      width: '24px', height: '24px', borderRadius: '50%',
+                      width: 24, height: 24, borderRadius: '50%',
                       background: 'var(--color-ink)', color: '#fff',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '10px', fontWeight: 600,
+                      fontSize: 10, fontWeight: 600, flexShrink: 0,
                     }}>{author?.nickname?.[0] ?? '?'}</span>
                     {author?.nickname ?? '알 수 없음'}
                   </button>
-                  <span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-muted-48)' }}>
                     {timeAgo(comment.createdAt)}
                   </span>
                 </div>
                 {isOwner && (
-                  <button onClick={() => deleteComment(comment.id)} style={{
-                    fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)',
-                    transition: 'color var(--transition)',
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'var(--color-danger)'}
+                  <button
+                    type="button"
+                    onClick={() => deleteComment(comment.id)}
+                    style={{
+                      background: 'transparent', border: 'none', padding: 0,
+                      fontSize: 12, color: 'var(--color-muted-48)', cursor: 'pointer', outline: 'none',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#dc3545'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted-48)'}
                   >삭제</button>
                 )}
               </div>
-              <p style={{ fontSize: 'var(--text-body)', fontWeight: 400, lineHeight: 1.47, letterSpacing: '-0.374px', color: 'var(--color-body)' }}>
+              <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--color-body)', margin: 0 }}>
                 {comment.body}
               </p>
             </div>

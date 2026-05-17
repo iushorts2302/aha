@@ -13,26 +13,32 @@ function timeAgo(d) {
   return `${Math.floor(h / 24)}일 전`
 }
 
-export default function PostCard({ post, navigate }) {
+export default function PostCard({ post: postProp, navigate }) {
   const { currentUser, toggleBookmark, getUserById } = useAuth()
-  const { toggleLike, categories, comments } = useApp()
+  // allPosts에서 실시간 참조 — incrementView/toggleLike 후 즉시 반영
+  const { allPosts, toggleLike, categories, comments } = useApp()
+  const post = allPosts.find(p => p.id === postProp.id) ?? postProp
+
   const author       = getUserById(post.authorId)
   const category     = categories.find(c => c.id === post.categoryId)
   const commentCount = comments.filter(c => c.postId === post.id).length
-  const isLiked      = post.likes.includes(currentUser?.id)
-  const isBookmarked = currentUser?.bookmarks?.includes(post.id)
+  const likes        = Array.isArray(post.likes) ? post.likes : []
+  const isLiked      = !!currentUser && likes.includes(currentUser.id)
+  const isBookmarked = currentUser?.bookmarks?.includes(post.id) ?? false
   const score        = ahaScore(post, commentCount)
-  const isViral      = score > 8
-  const isRising     = score > 3 && (Date.now() - new Date(post.createdAt).getTime()) < 3 * 3600000
-  const isHot        = score > 5
 
   return (
-    <article className="py-3 border-bottom" style={{ cursor: 'pointer' }} onClick={() => navigate(`post/${post.id}`)}>
+    <article
+      className="py-3 border-bottom"
+      style={{ cursor: 'pointer' }}
+      onClick={() => navigate(`post/${post.id}`)}
+    >
       {/* 메타 */}
       <div className="d-flex align-items-center gap-2 flex-wrap mb-1">
-        {isViral  && <span className="badge badge-hot">🔥 바이럴</span>}
-        {!isViral && isRising && <span className="badge badge-rising">↑ 급상승</span>}
-        {!isViral && !isRising && isHot && <span className="badge badge-hot">HOT</span>}
+        {score > 8  && <span className="badge badge-hot">🔥 바이럴</span>}
+        {score > 5 && score <= 8 && <span className="badge badge-hot">HOT</span>}
+        {score > 3 && score <= 5 && (Date.now() - new Date(post.createdAt).getTime()) < 3*3600000 &&
+          <span className="badge badge-rising">↑ 급상승</span>}
         {post.type === 'crawled' && (
           <span className="badge rounded-pill fw-normal" style={{ fontSize: 10, color: 'var(--color-primary)', border: '1px solid rgba(0,102,204,0.25)', background: 'transparent' }}>큐레이션</span>
         )}
@@ -77,13 +83,17 @@ export default function PostCard({ post, navigate }) {
           <div onClick={e => e.stopPropagation()}>
             <ReactionBar postId={post.id} compact />
           </div>
-          <small className="text-muted">👁 {post.views}</small>
+          {/* 조회수 — allPosts 실시간 반영 */}
+          <small className="text-muted">👁 {post.views ?? 0}</small>
+          {/* 좋아요 */}
           <button className="border-0 bg-transparent p-0 small"
             style={{ color: isLiked ? 'var(--color-primary)' : '#aaa', transition: 'color 0.2s' }}
             onClick={e => { e.stopPropagation(); if (currentUser) toggleLike(post.id, currentUser.id) }}>
-            ♥ {post.likes.length}
+            ♥ {likes.length}
           </button>
+          {/* 댓글 수 */}
           <small className="text-muted">💬 {commentCount}</small>
+          {/* 북마크 */}
           <button className="border-0 bg-transparent p-0"
             style={{ color: isBookmarked ? 'var(--color-primary)' : '#aaa', transition: 'color 0.2s' }}
             onClick={e => { e.stopPropagation(); if (currentUser) toggleBookmark(post.id) }}>
