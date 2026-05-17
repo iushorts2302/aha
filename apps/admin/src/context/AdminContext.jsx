@@ -1,6 +1,17 @@
 import { createContext, useContext, useState } from 'react'
 import { blockPost, unblockPost, getBlockedIds } from '../store/blockedStore.js'
 
+const ADMIN_API = 'https://admin-vert-psi.vercel.app'
+async function syncBlock(id, action) {
+  try {
+    await fetch(`${ADMIN_API}/api/blocked`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, action }),
+    })
+  } catch {}
+}
+
 const AdminContext = createContext(null)
 
 const ADMIN_CREDENTIALS = { email: 'admin@aha.com', password: 'admin1234' }
@@ -80,17 +91,20 @@ export function AdminProvider({ children }) {
 
   // Posts — 삭제/숨김 시 localStorage 차단 목록에 등록
   function hidePost(id) {
-    blockPost(id)   // ← localStorage에 기록 → 사용자 앱 즉시 반영
+    blockPost(id)
+    syncBlock(id, 'block')  // ← 서버 API 동기화 (크로스 도메인)
     setPosts(p => p.map(post => post.id === id ? { ...post, status: 'hidden' } : post))
   }
 
   function deletePost(id) {
-    blockPost(id)   // ← localStorage에 기록 → 사용자 앱 즉시 반영
+    blockPost(id)
+    syncBlock(id, 'block')  // ← 서버 API 동기화 (크로스 도메인)
     setPosts(p => p.filter(post => post.id !== id))
   }
 
   function restorePost(id) {
-    unblockPost(id) // ← 차단 해제 → 사용자 앱에서 다시 노출
+    unblockPost(id)
+    syncBlock(id, 'unblock')  // ← 서버 API 동기화
     setPosts(p => p.map(post => post.id === id ? { ...post, status: 'published' } : post))
   }
 

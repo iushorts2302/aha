@@ -34,3 +34,10 @@ export function unblockPost(id) {
 export function isBlocked(id) {
   return getBlockedIds().has(id)
 }
+
+/** 외부에서 Set을 직접 주입 (서버 폴링 결과 반영) */
+export function setBlockedIds(idSet) {
+  try {
+    localStorage.setItem(BLOCKED_KEY, JSON.stringify([...idSet]))
+  } catch {}
+}

@@ -140,15 +140,39 @@ img { max-width: 100%; display: block; }
 
 /* ── Bootstrap nav/navbar 오버라이드 ──────────────────── */
 .navbar {
-  --bs-navbar-color: rgba(255,255,255,0.6);
-  --bs-navbar-hover-color: #fff;
-  --bs-navbar-active-color: #fff;
+  --bs-navbar-color:        rgba(255,255,255,0.55);
+  --bs-navbar-hover-color:  #FFFFFF;
+  --bs-navbar-active-color: #FFFFFF;
   background: var(--color-nav-black) !important;
   min-height: var(--nav-height);
 }
-.navbar-brand { color: #fff !important; font-weight: 600; letter-spacing: -0.374px; }
-.nav-link { font-size: var(--text-fine); letter-spacing: -0.12px; }
-.nav-link.active { color: #fff !important; }
+/* 로고 배경 투명 */
+.navbar-brand {
+  color: #FFFFFF !important;
+  font-weight: 600;
+  letter-spacing: -0.374px;
+  background: transparent !important;
+}
+/* 메뉴 링크 기본 */
+.navbar .nav-link {
+  font-size: 12px;
+  letter-spacing: -0.12px;
+  color: rgba(255,255,255,0.55) !important;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding-bottom: 6px !important;
+}
+/* 메뉴 링크 hover */
+.navbar .nav-link:hover {
+  color: #FFFFFF !important;
+}
+/* 메뉴 링크 active — 흰색 + 하단 밑줄 */
+.navbar .nav-link.active,
+.navbar .nav-link[aria-current] {
+  color: #FFFFFF !important;
+  font-weight: 700;
+  border-bottom-color: #FFFFFF;
+}
 .navbar-toggler { border-color: rgba(255,255,255,0.3); }
 .navbar-toggler-icon {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255,255,255,0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");

@@ -1,5 +1,15 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { getBlockedIds, BLOCKED_KEY } from '../store/blockedStore.js'
+import { createContext, useContext, useState, useEffect } from 'react'
+import { getBlockedIds, BLOCKED_KEY, setBlockedIds as saveBlockedIds } from '../store/blockedStore.js'
+
+const ADMIN_API = 'https://admin-vert-psi.vercel.app'
+async function fetchServerBlocked() {
+  try {
+    const res = await fetch(`${ADMIN_API}/api/blocked`, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return null
+    const data = await res.json()
+    return new Set(data.blocked || [])
+  } catch { return null }
+}
 
 const AppContext = createContext(null)
 
@@ -77,17 +87,26 @@ export function AppProvider({ children }) {
   const [comments, setComments] = useState(MOCK_COMMENTS)
   const [blockedIds, setBlockedIds] = useState(() => getBlockedIds())
 
-  // localStorage 변경 감지 (관리자 앱에서 삭제 시 즉시 반영)
+  // 서버 차단 목록 폴링 (크로스 도메인 동기화 — 10초마다)
   useEffect(() => {
-    function onStorage(e) {
-      if (e.key === BLOCKED_KEY) {
-        setBlockedIds(getBlockedIds())
+    async function syncBlocked() {
+      const serverIds = await fetchServerBlocked()
+      if (serverIds) {
+        // 서버 + localStorage 합집합 적용
+        const localIds = getBlockedIds()
+        const merged = new Set([...serverIds, ...localIds])
+        setBlockedIds(merged)
       }
     }
+    syncBlocked()  // 마운트 즉시
+    const t = setInterval(syncBlocked, 10000)  // 10초마다
+
+    // 같은 도메인 탭 간 storage 이벤트도 유지
+    function onStorage(e) {
+      if (e.key === BLOCKED_KEY) setBlockedIds(getBlockedIds())
+    }
     window.addEventListener('storage', onStorage)
-    // 같은 탭에서도 5초마다 폴링 (storage 이벤트는 타 탭에서만 발생)
-    const t = setInterval(() => setBlockedIds(getBlockedIds()), 5000)
-    return () => { window.removeEventListener('storage', onStorage); clearInterval(t) }
+    return () => { clearInterval(t); window.removeEventListener('storage', onStorage) }
   }, [])
 
   // 차단되지 않은 게시글만 노출
