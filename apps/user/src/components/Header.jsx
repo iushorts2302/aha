@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 
 const NAV_ITEMS = [
@@ -23,146 +23,282 @@ const NAV_ITEMS = [
 
 export default function Header({ currentPage, navigate }) {
   const { currentUser, logout } = useAuth()
+  const [mobileOpen, setMobileOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const collapseRef = useRef(null)
-
-  function closeMenu() {
-    const el = collapseRef.current
-    if (el?.classList.contains('show')) {
-      window.bootstrap?.Collapse.getInstance(el)?.hide()
-    }
-  }
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   function handleNav(key) {
     navigate(key)
-    closeMenu()
+    setMobileOpen(false)
+    setUserMenuOpen(false)
   }
 
   function handleSearch(e) {
     e.preventDefault()
     const q = search.trim()
-    if (q) { navigate(`search?q=${encodeURIComponent(q)}`); setSearch(''); closeMenu() }
+    if (q) {
+      navigate(`search?q=${encodeURIComponent(q)}`)
+      setSearch('')
+      setMobileOpen(false)
+    }
   }
 
   return (
-    <nav className="navbar navbar-expand-lg sticky-top"
-      style={{ background: 'var(--color-nav-black)', zIndex: 1030, minHeight: 'var(--nav-height)' }}>
-      <div className="container-fluid px-3">
+    <>
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 1030,
+        background: 'var(--color-nav-black)',
+        minHeight: 'var(--nav-height)',
+      }}>
+        {/* ── 상단 바 ── */}
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px', height: 'var(--nav-height)', gap: 12 }}>
 
-        {/* 워드마크 — 배경 투명 */}
-        <button
-          onClick={() => handleNav('home')}
-          className="navbar-brand border-0 p-0 bg-transparent"
-          style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 17, letterSpacing: '-0.374px' }}>
-          aha!
-        </button>
+          {/* 로고 */}
+          <button type="button" onClick={() => handleNav('home')} style={{
+            background: 'transparent', border: 'none', padding: 0,
+            color: '#fff', fontWeight: 600, fontSize: 17,
+            letterSpacing: '-0.374px', cursor: 'pointer', flexShrink: 0,
+          }}>aha!</button>
 
-        {/* 모바일 토글 */}
-        <button className="navbar-toggler border-0 p-1" type="button"
-          data-bs-toggle="collapse" data-bs-target="#mainNav"
-          aria-controls="mainNav" aria-expanded="false" aria-label="메뉴 열기">
-          <span className="navbar-toggler-icon" />
-        </button>
-
-        {/* 콜랩스 영역 */}
-        <div className="collapse navbar-collapse" id="mainNav" ref={collapseRef}>
-
-          {/* 메인 링크 */}
-          <ul className="navbar-nav me-auto" style={{ flexDirection: 'row', flexWrap: 'nowrap', overflowX: 'auto', scrollbarWidth: 'none', gap: 0 }}>
+          {/* 데스크톱 메뉴 (992px+) */}
+          <nav className="d-none d-lg-flex" style={{
+            flex: 1, overflowX: 'auto', scrollbarWidth: 'none',
+            display: 'flex', gap: 0,
+          }}>
             {NAV_ITEMS.map(item => {
-              const isActive = currentPage === item.key
+              const active = currentPage === item.key
               return (
-                <li className="nav-item flex-shrink-0" key={item.key}>
-                  <button
-                    onClick={() => handleNav(item.key)}
-                    className="nav-link border-0 bg-transparent px-2 py-1"
-                    style={{
-                      fontSize: 12,
-                      fontWeight: isActive ? 700 : 400,
-                      color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
-                      // 선택 메뉴: 흰색 하단 밑줄 + 배경 강조
-                      borderBottom: isActive ? '2px solid #FFFFFF' : '2px solid transparent',
-                      borderRadius: 0,
-                      whiteSpace: 'nowrap',
-                      transition: 'color 0.15s, border-color 0.15s',
-                      paddingBottom: 6,
-                    }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#FFFFFF' }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}>
-                    {item.label}
-                  </button>
-                </li>
+                <button key={item.key} type="button"
+                  onClick={() => handleNav(item.key)}
+                  style={{
+                    background: 'transparent', border: 'none',
+                    borderBottom: active ? '2px solid #fff' : '2px solid transparent',
+                    borderRadius: 0,
+                    padding: '6px 8px',
+                    fontSize: 12, fontWeight: active ? 700 : 400,
+                    color: active ? '#fff' : 'rgba(255,255,255,0.55)',
+                    whiteSpace: 'nowrap', cursor: 'pointer',
+                    transition: 'color 0.15s, border-color 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#fff' }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}
+                >{item.label}</button>
               )
             })}
-          </ul>
+          </nav>
 
-          {/* 검색 */}
-          <form className="d-flex me-2 my-2 my-lg-0" onSubmit={handleSearch}>
-            <div className="input-group input-group-sm" style={{ minWidth: 0 }}>
+          {/* 검색 (데스크톱) */}
+          <form className="d-none d-lg-flex" onSubmit={handleSearch} style={{ flexShrink: 0 }}>
+            <div style={{ display: 'flex' }}>
               <input
-                className="form-control form-control-sm"
                 style={{
-                  borderRadius: 'var(--r-pill) 0 0 var(--r-pill)',
-                  fontSize: 12,
+                  width: 120, height: 26, padding: '0 10px',
                   background: 'rgba(255,255,255,0.12)',
                   border: '1px solid rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  minWidth: 110,
+                  borderRight: 'none',
+                  borderRadius: 'var(--r-pill) 0 0 var(--r-pill)',
+                  fontSize: 12, color: '#fff', outline: 'none',
                 }}
                 placeholder="검색..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
-              <button className="btn btn-sm btn-outline-light" type="submit"
-                style={{ borderRadius: '0 var(--r-pill) var(--r-pill) 0', fontSize: 12 }}>
-                🔍
-              </button>
+              <button type="submit" style={{
+                height: 26, padding: '0 10px',
+                background: 'rgba(255,255,255,0.15)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '0 var(--r-pill) var(--r-pill) 0',
+                color: '#fff', fontSize: 12, cursor: 'pointer',
+              }}>🔍</button>
             </div>
           </form>
 
-          {/* 유저 영역 */}
-          {currentUser ? (
-            <div className="dropdown my-2 my-lg-0">
-              <button
-                className="btn btn-sm d-flex align-items-center gap-2"
-                style={{
-                  background: 'rgba(255,255,255,0.12)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  borderRadius: 'var(--r-sm)',
-                  fontSize: 12,
-                }}
-                data-bs-toggle="dropdown">
-                <span style={{
-                  width: 18, height: 18, borderRadius: '50%',
-                  background: 'var(--color-primary)', color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 9, fontWeight: 700, flexShrink: 0,
-                }}>
-                  {currentUser.nickname[0]}
-                </span>
-                <span className="d-none d-sm-inline">{currentUser.nickname}</span>
-              </button>
-              <ul className="dropdown-menu dropdown-menu-end">
-                <li><button className="dropdown-item" onClick={() => handleNav('my')}>마이페이지</button></li>
-                <li><button className="dropdown-item" onClick={() => handleNav(`profile/${currentUser.id}`)}>내 프로필</button></li>
-                <li><button className="dropdown-item" onClick={() => handleNav('write')}>글 작성</button></li>
-                <li><hr className="dropdown-divider" /></li>
-                <li><button className="dropdown-item text-danger" onClick={() => { logout(); handleNav('home') }}>로그아웃</button></li>
-              </ul>
-            </div>
-          ) : (
-            <div className="d-flex gap-2 my-2 my-lg-0">
-              <button className="btn btn-sm btn-outline-light"
-                style={{ borderRadius: 'var(--r-sm)', fontSize: 12 }}
-                onClick={() => handleNav('login')}>로그인</button>
-              <button className="btn btn-sm btn-primary"
-                style={{ fontSize: 12 }}
-                onClick={() => handleNav('signup')}>회원가입</button>
-            </div>
-          )}
+          {/* 유저 (데스크톱) */}
+          <div className="d-none d-lg-block" style={{ flexShrink: 0, position: 'relative' }}>
+            {currentUser ? (
+              <>
+                <button type="button"
+                  onClick={() => setUserMenuOpen(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    background: 'rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 'var(--r-sm)', padding: '4px 10px',
+                    color: '#fff', fontSize: 12, cursor: 'pointer',
+                  }}>
+                  <span style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: 'var(--color-primary)', color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9, fontWeight: 700, flexShrink: 0,
+                  }}>{currentUser.nickname[0]}</span>
+                  {currentUser.nickname}
+                </button>
+                {userMenuOpen && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 1040 }} onClick={() => setUserMenuOpen(false)} />
+                    <div style={{
+                      position: 'absolute', right: 0, top: 34, zIndex: 1050,
+                      background: 'rgba(29,29,31,0.97)', backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 12, padding: 6, minWidth: 160,
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                    }}>
+                      {[
+                        { label: '마이페이지', key: 'my' },
+                        { label: '내 프로필',  key: `profile/${currentUser.id}` },
+                        { label: '글 작성',    key: 'write' },
+                      ].map(m => (
+                        <button key={m.key} type="button"
+                          onClick={() => handleNav(m.key)}
+                          style={{ width: '100%', textAlign: 'left', padding: '7px 12px', borderRadius: 8, fontSize: 13, color: 'rgba(255,255,255,0.85)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >{m.label}</button>
+                      ))}
+                      <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+                      <button type="button"
+                        onClick={() => { logout(); handleNav('home') }}
+                        style={{ width: '100%', textAlign: 'left', padding: '7px 12px', borderRadius: 8, fontSize: 13, color: '#FF453A', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >로그아웃</button>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" onClick={() => handleNav('login')} style={{ height: 26, padding: '0 12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 'var(--r-sm)', color: '#fff', fontSize: 12, cursor: 'pointer' }}>로그인</button>
+                <button type="button" onClick={() => handleNav('signup')} style={{ height: 26, padding: '0 12px', background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--r-pill)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>회원가입</button>
+              </div>
+            )}
+          </div>
+
+          {/* 햄버거 (모바일) — d-lg-none */}
+          <button
+            type="button"
+            className="d-lg-none"
+            onClick={() => setMobileOpen(v => !v)}
+            style={{
+              marginLeft: 'auto', background: 'transparent', border: 'none',
+              padding: 6, cursor: 'pointer', color: '#fff',
+            }}
+            aria-label="메뉴 열기"
+          >
+            {mobileOpen ? (
+              /* X 아이콘 */
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            ) : (
+              /* 햄버거 아이콘 */
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M3 6h18M3 12h18M3 18h18"/>
+              </svg>
+            )}
+          </button>
         </div>
-      </div>
-    </nav>
+
+        {/* ── 모바일 드롭다운 패널 ── */}
+        {mobileOpen && (
+          <div className="d-lg-none" style={{
+            background: 'rgba(18,18,18,0.98)',
+            backdropFilter: 'blur(20px)',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            padding: '12px 0 20px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+          }}>
+            {/* 검색 */}
+            <div style={{ padding: '0 16px 12px' }}>
+              <form onSubmit={handleSearch} style={{ display: 'flex' }}>
+                <input
+                  style={{
+                    flex: 1, height: 36, padding: '0 14px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRight: 'none',
+                    borderRadius: 'var(--r-pill) 0 0 var(--r-pill)',
+                    fontSize: 13, color: '#fff', outline: 'none',
+                  }}
+                  placeholder="검색..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+                <button type="submit" style={{
+                  height: 36, padding: '0 14px',
+                  background: 'var(--color-primary)', border: 'none',
+                  borderRadius: '0 var(--r-pill) var(--r-pill) 0',
+                  color: '#fff', fontSize: 13, cursor: 'pointer',
+                }}>🔍</button>
+              </form>
+            </div>
+
+            {/* 메뉴 목록 */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {NAV_ITEMS.map(item => {
+                const active = currentPage === item.key
+                return (
+                  <button key={item.key} type="button"
+                    onClick={() => handleNav(item.key)}
+                    style={{
+                      padding: '11px 20px',
+                      textAlign: 'left', background: 'transparent', border: 'none',
+                      fontSize: 15,
+                      fontWeight: active ? 700 : 400,
+                      color: active ? '#fff' : 'rgba(255,255,255,0.7)',
+                      borderLeft: active ? '3px solid var(--color-primary)' : '3px solid transparent',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.1s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >{item.label}</button>
+                )
+              })}
+            </div>
+
+            {/* 유저 영역 */}
+            <div style={{ padding: '12px 16px 0', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8 }}>
+              {currentUser ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: '0 0 6px' }}>
+                    {currentUser.nickname} 님
+                  </p>
+                  {[
+                    { label: '마이페이지', key: 'my' },
+                    { label: '내 프로필', key: `profile/${currentUser.id}` },
+                    { label: '글 작성', key: 'write' },
+                  ].map(m => (
+                    <button key={m.key} type="button"
+                      onClick={() => handleNav(m.key)}
+                      style={{ padding: '9px 0', textAlign: 'left', background: 'transparent', border: 'none', fontSize: 14, color: 'rgba(255,255,255,0.85)', cursor: 'pointer' }}>
+                      {m.label}
+                    </button>
+                  ))}
+                  <button type="button"
+                    onClick={() => { logout(); handleNav('home') }}
+                    style={{ padding: '9px 0', textAlign: 'left', background: 'transparent', border: 'none', fontSize: 14, color: '#FF453A', cursor: 'pointer' }}>
+                    로그아웃
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button type="button" onClick={() => handleNav('login')}
+                    style={{ flex: 1, height: 40, background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 'var(--r-pill)', color: '#fff', fontSize: 14, cursor: 'pointer' }}>
+                    로그인
+                  </button>
+                  <button type="button" onClick={() => handleNav('signup')}
+                    style={{ flex: 1, height: 40, background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--r-pill)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                    회원가입
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
+    </>
   )
 }
