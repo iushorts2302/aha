@@ -18,13 +18,11 @@ function isStale(iso) {
   return Date.now() - new Date(iso).getTime() > INTERVAL_MS
 }
 
-// 카테고리별 그룹핑
-const CATEGORIES = ['home', 'trending', 'feed', 'board', 'gallery', 'community', 'knowledge', 'market', 'aihub']
-const CAT_LABELS = {
-  home: '홈', trending: '인기', feed: '피드', board: '게시판',
-  gallery: '갤러리', community: '커뮤니티', knowledge: '정보',
-  market: '마켓', aihub: 'AI 허브',
-}
+// 카테고리 — MENU_TOPICS에서 동적 추출
+const CATEGORIES = [...new Set(Object.values(MENU_TOPICS).map(v => v.category))]
+const CAT_LABELS = Object.fromEntries(
+  CATEGORIES.map(c => [c, MENU_TOPICS[Object.keys(MENU_TOPICS).find(k => MENU_TOPICS[k].category === c)]?.label?.split(' ')[0] || c])
+)
 
 export default function CrawlerDashboard() {
   const [status, setStatus] = useState({}) // topicKey → 'idle'|'loading'|'success'|'error'
