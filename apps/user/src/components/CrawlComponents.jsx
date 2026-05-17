@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchFromServer, getItems } from '../store/crawlStore.js'
 import { saveDetail } from '../store/crawlDetailStore.js'
+import { getCrawlViews, getCrawlLikes } from '../store/crawlInteractionStore.js'
 
 function timeAgo(iso) {
   if (!iso) return ''
@@ -13,6 +14,24 @@ function timeAgo(iso) {
 
 /** 크롤링 카드 */
 export function CrawlCard({ item, onClick, rank, navigate }) {
+  const [liveViews, setLiveViews] = useState(() => getCrawlViews(item.id))
+  const [liveLikes, setLiveLikes] = useState(() => getCrawlLikes(item.id))
+
+  // localStorage 변경 감지 (다른 탭/상세 진입 후 복귀)
+  useEffect(() => {
+    function onStorage() {
+      setLiveViews(getCrawlViews(item.id))
+      setLiveLikes(getCrawlLikes(item.id))
+    }
+    window.addEventListener('storage', onStorage)
+    // 포커스 복귀 시에도 갱신 (같은 탭에서 상세 → 목록 복귀)
+    window.addEventListener('focus', onStorage)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', onStorage)
+    }
+  }, [item.id])
+
   return (
     <article
       className="py-3 border-bottom"
@@ -53,9 +72,11 @@ export function CrawlCard({ item, onClick, rank, navigate }) {
             <span key={tag} className="tag">{tag}</span>
           ))}
           <div className="ms-auto d-flex gap-3">
-            {[{i:'👁',v:item.views?.toLocaleString()},{i:'♥',v:item.likes},{i:'💬',v:item.comments}].map(s => (
-              <small key={s.i} className="text-muted">{s.i} {s.v}</small>
-            ))}
+            <div className="d-flex gap-3">
+              <small className="text-muted">👁 {liveViews}</small>
+              <small className="text-muted" style={{ color: liveLikes.liked ? 'var(--color-primary)' : '' }}>♥ {liveLikes.count}</small>
+              <small className="text-muted">💬 0</small>
+            </div>
           </div>
         </div>
       </div>

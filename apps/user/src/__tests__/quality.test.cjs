@@ -119,6 +119,18 @@ test('NV-02','LivePage navigate 수신', ()=> subp.includes('LivePage({ navigate
 test('NV-03','Crawl btn-secondary 없음', ()=> !crawl.includes('btn-secondary'))
 test('NV-04','Post btn-secondary 없음',  ()=> !detail.includes('btn-secondary'))
 
+
+// ── CrawlCard 통계 동기화 ─────────────────────────────
+const crawlcomp = read('components/CrawlComponents.jsx')
+test('CC-01','CrawlCard crawlInteractionStore import',  ()=> crawlcomp.includes('crawlInteractionStore'))
+test('CC-02','CrawlCard getCrawlViews 사용',            ()=> crawlcomp.includes('getCrawlViews'))
+test('CC-03','CrawlCard getCrawlLikes 사용',            ()=> crawlcomp.includes('getCrawlLikes'))
+test('CC-04','CrawlCard liveViews state',               ()=> crawlcomp.includes('liveViews'))
+test('CC-05','CrawlCard liveLikes state',               ()=> crawlcomp.includes('liveLikes'))
+test('CC-06','CrawlCard item.views 정적값 미사용',       ()=> !crawlcomp.includes("v:item.views"))
+test('CC-07','CrawlCard focus 이벤트 갱신',             ()=> crawlcomp.includes("'focus'"))
+test('CC-08','CrawlCard storage 이벤트 갱신',           ()=> crawlcomp.includes("'storage'"))
+
 // ── 결과 출력 ─────────────────────────────────────────
 const pass = R.filter(r => r.pass).length
 const fail = R.filter(r => !r.pass).length
