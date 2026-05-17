@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { ahaScore } from '../store/algorithm.js'
@@ -22,60 +22,52 @@ function renderBody(body) {
     if (line.startsWith('# '))  return <h2 key={i} style={{ fontSize: 'var(--text-display-lg)', fontWeight: 600, color: 'var(--color-ink)', margin: '40px 0 16px' }}>{line.slice(2)}</h2>
     if (line.startsWith('- '))  return <li key={i} style={{ fontSize: 'var(--text-body)', lineHeight: 1.75, color: 'var(--color-body)', marginLeft: 20, marginBottom: 4 }}>{line.slice(2)}</li>
     if (/^\d+\./.test(line))    return <li key={i} style={{ fontSize: 'var(--text-body)', lineHeight: 1.75, color: 'var(--color-body)', marginLeft: 20, marginBottom: 4 }}>{line.replace(/^\d+\.\s/, '')}</li>
-    if (line === '')             return <div key={i} style={{ height: 12 }} />
+    if (!line.trim())            return <div key={i} style={{ height: 12 }} />
     return <p key={i} style={{ fontSize: 'var(--text-body)', lineHeight: 1.85, color: 'var(--color-body)', marginBottom: 4 }}>{line}</p>
   })
 }
 
 export default function PostDetailPage({ postId, navigate, prevPage }) {
   const { currentUser, toggleBookmark, getUserById, toggleFollow } = useAuth()
-  // allPosts: 원본 전체 (toggleLike/incrementView 후 즉시 반영)
-  const { allPosts, blockedIds, toggleLike, categories, comments, incrementView } = useApp()
+  const { allPosts, blockedIds, toggleLike, categories, getCommentsByPostId, incrementView } = useApp()
   const [copied, setCopied] = useState(false)
   const hasViewed = useRef(false)
 
-  // allPosts에서 직접 find → toggleLike 즉시 반영
-  const post = blockedIds?.has(postId)
-    ? null
-    : (allPosts || []).find(p => p.id === postId) || null
+  // allPosts에서 직접 find → toggleLike/incrementView 후 즉시 반영
+  const post = blockedIds?.has(postId) ? null : (allPosts || []).find(p => p.id === postId) ?? null
 
-  // 조회수: 마운트 시 1회만
+  // 조회수: 이 인스턴스 마운트 시 1회만
   useEffect(() => {
-    if (!hasViewed.current) {
+    if (!hasViewed.current && postId) {
       hasViewed.current = true
       incrementView(postId)
     }
-  }, []) // 빈 배열 — 마운트 1회만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // 뒤로가기: prevPage가 있으면 그곳으로, 없으면 board
   function goBack() {
-    if (prevPage) {
-      navigate(prevPage)
-    } else {
-      navigate('board')
-    }
+    // prevPage는 ref에서 읽은 값이라 항상 정확
+    navigate(prevPage || 'board')
   }
 
   if (!post) return (
     <div className="text-center py-5">
       <p className="text-muted mb-3">게시글을 찾을 수 없습니다.</p>
-      <button type="button" className="btn btn-outline-primary btn-sm"
-        onClick={() => navigate('board')}>게시판으로</button>
+      <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => navigate('board')}>
+        게시판으로
+      </button>
     </div>
   )
 
   const likes        = Array.isArray(post.likes) ? post.likes : []
+  const comments     = getCommentsByPostId(post.id)
   const author       = getUserById(post.authorId)
   const category     = categories.find(c => c.id === post.categoryId)
-  const commentCount = comments.filter(c => c.postId === post.id).length
-  const isLiked      = currentUser ? likes.includes(currentUser.id) : false
+  const isLiked      = !!currentUser && likes.includes(currentUser.id)
   const isBookmarked = currentUser?.bookmarks?.includes(post.id) ?? false
   const isFollowing  = currentUser?.following?.includes(post.authorId) ?? false
   const isMe         = currentUser?.id === post.authorId
-  const score        = ahaScore(post, commentCount)
-  const isViral      = score > 8
-  const isRising     = score > 3 && (Date.now() - new Date(post.createdAt).getTime()) < 3 * 3600000
-  const isHot        = score > 5
+  const score        = ahaScore(post, comments.length)
 
   function handleShare() {
     navigator.clipboard?.writeText(window.location.href).then(() => {
@@ -83,18 +75,21 @@ export default function PostDetailPage({ postId, navigate, prevPage }) {
     })
   }
 
-  const ghost = (active) => ({
+  // 투명 아웃라인 버튼 (Bootstrap 간섭 없는 순수 인라인)
+  const ghostBtn = (active, danger) => ({
     background: 'transparent',
     border: `1px solid ${active ? 'var(--color-primary)' : 'var(--color-hairline)'}`,
     borderRadius: 'var(--r-pill)',
-    padding: '7px 16px',
-    fontSize: 'var(--text-caption)',
-    color: active ? 'var(--color-primary)' : 'var(--color-muted-48)',
+    padding: '6px 14px',
+    fontSize: 14,
+    color: danger ? '#dc3545' : active ? 'var(--color-primary)' : 'var(--color-muted-48)',
     cursor: 'pointer',
-    display: 'inline-flex', alignItems: 'center', gap: 6,
-    transition: 'border-color 0.15s, color 0.15s',
-    whiteSpace: 'nowrap',
+    display: 'inline-flex', alignItems: 'center', gap: 5,
+    transition: 'all 0.15s',
     userSelect: 'none',
+    outline: 'none',
+    boxShadow: 'none',
+    lineHeight: 1.4,
   })
 
   return (
@@ -104,8 +99,9 @@ export default function PostDetailPage({ postId, navigate, prevPage }) {
       <button type="button" onClick={goBack} style={{
         background: 'transparent', border: 'none', padding: 0,
         display: 'flex', alignItems: 'center', gap: 6,
-        fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)',
-        marginBottom: 24, cursor: 'pointer', transition: 'color 0.15s',
+        fontSize: 14, color: 'var(--color-muted-48)',
+        marginBottom: 24, cursor: 'pointer',
+        outline: 'none', boxShadow: 'none',
       }}
         onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
         onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted-48)'}
@@ -117,76 +113,70 @@ export default function PostDetailPage({ postId, navigate, prevPage }) {
       </button>
 
       {/* 배지 */}
-      <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
-        {isViral  && <span className="badge badge-hot">🔥 바이럴</span>}
-        {!isViral && isRising && <span className="badge badge-rising">↑ 급상승</span>}
-        {!isViral && !isRising && isHot && <span className="badge badge-hot">HOT</span>}
-        {category && <small className="text-muted">{category.icon} {category.name}</small>}
-        <small className="text-muted">· {timeAgo(post.createdAt)}</small>
-        <small className="text-muted">· 조회 {post.views ?? 0}</small>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        {score > 8  && <span className="badge badge-hot">🔥 바이럴</span>}
+        {score > 5 && score <= 8 && <span className="badge badge-hot">HOT</span>}
+        {category   && <small style={{ color: 'var(--color-muted-48)' }}>{category.icon} {category.name}</small>}
+        <small style={{ color: 'var(--color-muted-48)' }}>· {timeAgo(post.createdAt)}</small>
+        <small style={{ color: 'var(--color-muted-48)' }}>· 조회 {post.views ?? 0}</small>
       </div>
 
       {/* 제목 */}
-      <h1 style={{ fontSize: 'clamp(24px,5vw,40px)', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--color-ink)', marginBottom: 20 }}>
+      <h1 style={{ fontSize: 'clamp(22px,5vw,38px)', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--color-ink)', marginBottom: 20 }}>
         {post.title}
       </h1>
 
       {/* 작성자 + 액션 */}
-      <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 pb-4"
-        style={{ borderBottom: '1px solid var(--color-divider)', marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, paddingBottom: 20, borderBottom: '1px solid var(--color-divider)', marginBottom: 28 }}>
         <button type="button" onClick={() => navigate(`profile/${post.authorId}`)}
-          style={{ background: 'transparent', border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          style={{ background: 'transparent', border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', outline: 'none' }}>
           <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
             {author?.nickname?.[0] ?? '?'}
           </span>
           <div style={{ textAlign: 'left' }}>
-            <p style={{ margin: 0, fontSize: 'var(--text-body)', fontWeight: 600, color: 'var(--color-ink)' }}>{author?.nickname}</p>
-            <p style={{ margin: 0, fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>팔로워 {author?.followers?.length ?? 0}명</p>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--color-ink)' }}>{author?.nickname}</p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--color-muted-48)' }}>팔로워 {author?.followers?.length ?? 0}명</p>
           </div>
         </button>
 
-        <div className="d-flex gap-2 flex-wrap">
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {!isMe && currentUser && (
-            <button type="button" onClick={() => toggleFollow(post.authorId)}
-              style={ghost(isFollowing)}>
+            <button type="button" onClick={() => toggleFollow(post.authorId)} style={ghostBtn(isFollowing)}>
               {isFollowing ? '✓ 팔로잉' : '+ 팔로우'}
             </button>
           )}
-          {/* 좋아요 — currentUser 없으면 로그인 안내 */}
           <button type="button"
-            onClick={() => {
-              if (!currentUser) return navigate('login')
-              toggleLike(post.id, currentUser.id)
-            }}
-            style={ghost(isLiked)}>
+            onClick={() => currentUser ? toggleLike(post.id, currentUser.id) : navigate('login')}
+            style={ghostBtn(isLiked)}
+            title={currentUser ? '좋아요' : '로그인 후 이용 가능'}>
             ♥ {likes.length}
           </button>
           <button type="button"
-            onClick={() => { if (!currentUser) return navigate('login'); toggleBookmark(post.id) }}
-            style={ghost(isBookmarked)}>
+            onClick={() => currentUser ? toggleBookmark(post.id) : navigate('login')}
+            style={ghostBtn(isBookmarked)}>
             {isBookmarked ? '★ 저장됨' : '☆ 저장'}
           </button>
-          <button type="button" onClick={handleShare} style={ghost(copied)}>
+          <button type="button" onClick={handleShare} style={ghostBtn(copied)}>
             {copied ? '✓ 복사됨' : '↗ 공유'}
           </button>
         </div>
       </div>
 
       {/* 본문 */}
-      <div style={{ paddingBottom: 32 }}>{renderBody(post.body)}</div>
+      <div style={{ paddingBottom: 28 }}>{renderBody(post.body)}</div>
 
       {/* 태그 */}
       {post.tags?.length > 0 && (
-        <div className="d-flex flex-wrap gap-2 mb-4">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 24 }}>
           {post.tags.map(tag => (
-            <span key={tag} style={{ fontSize: 'var(--text-caption)', padding: '4px 14px', borderRadius: 'var(--r-pill)', background: 'var(--color-parchment)', color: 'var(--color-muted-80)' }}>#{tag}</span>
+            <span key={tag} style={{ fontSize: 13, padding: '4px 12px', borderRadius: 'var(--r-pill)', background: 'var(--color-parchment)', color: 'var(--color-muted-80)' }}>#{tag}</span>
           ))}
         </div>
       )}
 
       {/* 이모지 반응 */}
-      <div style={{ padding: '20px 0', borderTop: '1px solid var(--color-divider)', borderBottom: '1px solid var(--color-divider)', marginBottom: 40 }}>
-        <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', marginBottom: 12, fontWeight: 600 }}>이 글 어떠셨나요?</p>
+      <div style={{ padding: '18px 0', borderTop: '1px solid var(--color-divider)', borderBottom: '1px solid var(--color-divider)', marginBottom: 36 }}>
+        <p style={{ fontSize: 13, color: 'var(--color-muted-48)', marginBottom: 12, fontWeight: 600 }}>이 글 어떠셨나요?</p>
         <ReactionBar postId={post.id} compact={false} />
       </div>
 
