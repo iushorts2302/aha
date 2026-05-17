@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { getBlockedIds, BLOCKED_KEY } from '../store/blockedStore.js'
 
 const AppContext = createContext(null)
 
@@ -74,11 +75,31 @@ export function AppProvider({ children }) {
   const [categories] = useState(MOCK_CATEGORIES)
   const [posts, setPosts] = useState(MOCK_POSTS)
   const [comments, setComments] = useState(MOCK_COMMENTS)
+  const [blockedIds, setBlockedIds] = useState(() => getBlockedIds())
 
-  function getPostById(id) { return posts.find(p => p.id === id) }
+  // localStorage 변경 감지 (관리자 앱에서 삭제 시 즉시 반영)
+  useEffect(() => {
+    function onStorage(e) {
+      if (e.key === BLOCKED_KEY) {
+        setBlockedIds(getBlockedIds())
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    // 같은 탭에서도 5초마다 폴링 (storage 이벤트는 타 탭에서만 발생)
+    const t = setInterval(() => setBlockedIds(getBlockedIds()), 5000)
+    return () => { window.removeEventListener('storage', onStorage); clearInterval(t) }
+  }, [])
+
+  // 차단되지 않은 게시글만 노출
+  const visiblePosts = posts.filter(p => !blockedIds.has(p.id))
+
+  function getPostById(id) {
+    if (blockedIds.has(id)) return null   // 차단된 게시글은 상세도 안 보임
+    return posts.find(p => p.id === id)
+  }
   function getCommentsByPostId(postId) { return comments.filter(c => c.postId === postId) }
-  function getPostsByCategory(categoryId) { return posts.filter(p => p.categoryId === categoryId) }
-  function getPostsByAuthor(authorId) { return posts.filter(p => p.authorId === authorId) }
+  function getPostsByCategory(categoryId) { return visiblePosts.filter(p => p.categoryId === categoryId) }
+  function getPostsByAuthor(authorId) { return visiblePosts.filter(p => p.authorId === authorId) }
 
   function addPost(post) {
     const newPost = {
@@ -122,7 +143,7 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      categories, posts, comments,
+      categories, posts: visiblePosts, comments,
       getPostById, getCommentsByPostId, getPostsByCategory, getPostsByAuthor,
       addPost, toggleLike, addComment, deleteComment, incrementView,
     }}>

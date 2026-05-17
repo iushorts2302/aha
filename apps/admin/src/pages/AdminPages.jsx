@@ -387,7 +387,7 @@ export function UserManager() {
 
 // ── PostManager ─────────────────────────────────────────
 export function PostManager() {
-  const { posts, categories, hidePost, deletePost } = useAdmin()
+  const { posts, categories, hidePost, deletePost, restorePost } = useAdmin()
 
   return (
     <div className="fade-up">
@@ -417,7 +417,11 @@ export function PostManager() {
                       {p.status === 'published' && (
                         <button onClick={() => hidePost(p.id)} className="btn btn-secondary btn-xs">숨김</button>
                       )}
-                      <button onClick={() => deletePost(p.id)} className="btn btn-xs" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-border)' }}>삭제</button>
+                      {p.status !== 'hidden'
+                        ? <button onClick={() => hidePost(p.id)} className="btn btn-xs" style={{ color: '#E08B00', border: '1px solid var(--color-border)' }}>숨김</button>
+                        : <button onClick={() => restorePost(p.id)} className="btn btn-xs" style={{ color: 'var(--color-accent)', border: '1px solid var(--color-border)' }}>복원</button>
+                      }
+                      <button onClick={() => { if (confirm('삭제하면 사용자 페이지에서 즉시 숨겨집니다. 삭제하시겠습니까?')) deletePost(p.id) }} className="btn btn-xs" style={{ color: 'var(--color-danger)', border: '1px solid var(--color-border)' }}>삭제</button>
                     </div>
                   </td>
                 </tr>

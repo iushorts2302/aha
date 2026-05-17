@@ -1,11 +1,12 @@
 import { createContext, useContext, useState } from 'react'
+import { blockPost, unblockPost, getBlockedIds } from '../store/blockedStore.js'
 
 const AdminContext = createContext(null)
 
 const ADMIN_CREDENTIALS = { email: 'admin@aha.com', password: 'admin1234' }
 
 const INIT_CATEGORIES = [
-  { id: 'c1', name: 'DIY', icon: '🔧', description: '직접 만들고 고치는 모든 것' },
+  { id: 'c1', name: 'DIY',  icon: '🔧', description: '직접 만들고 고치는 모든 것' },
   { id: 'c2', name: '테크', icon: '💻', description: '최신 기술 트렌드와 리뷰' },
   { id: 'c3', name: '요리', icon: '🍳', description: '레시피와 맛집 정보' },
   { id: 'c4', name: '여행', icon: '✈️', description: '국내외 여행 정보와 경험담' },
@@ -13,16 +14,16 @@ const INIT_CATEGORIES = [
 ]
 
 const INIT_TOPICS = [
-  { id: 't1', categoryId: 'c1', name: '목공', description: '나무를 이용한 DIY' },
+  { id: 't1', categoryId: 'c1', name: '목공',     description: '나무를 이용한 DIY' },
   { id: 't2', categoryId: 'c1', name: '전기/전자', description: '전기 및 전자 DIY' },
-  { id: 't3', categoryId: 'c2', name: '모바일', description: '스마트폰 관련' },
-  { id: 't4', categoryId: 'c2', name: '개발', description: '소프트웨어 개발' },
-  { id: 't5', categoryId: 'c3', name: '한식', description: '한국 요리' },
+  { id: 't3', categoryId: 'c2', name: '모바일',   description: '스마트폰 관련' },
+  { id: 't4', categoryId: 'c2', name: '개발',     description: '소프트웨어 개발' },
+  { id: 't5', categoryId: 'c3', name: '한식',     description: '한국 요리' },
 ]
 
 const INIT_SOURCES = [
-  { id: 's1', categoryId: 'c2', label: 'Hacker News', url: 'https://news.ycombinator.com/rss', active: true },
-  { id: 's2', categoryId: 'c2', label: 'Dev.to', url: 'https://dev.to/feed', active: true },
+  { id: 's1', categoryId: 'c2', label: 'Hacker News',  url: 'https://news.ycombinator.com/rss',    active: true },
+  { id: 's2', categoryId: 'c2', label: 'Dev.to',       url: 'https://dev.to/feed',                  active: true },
   { id: 's3', categoryId: 'c1', label: 'Instructables', url: 'https://www.instructables.com/feed/', active: false },
 ]
 
@@ -32,20 +33,24 @@ const INIT_USERS = [
 ]
 
 const INIT_POSTS = [
-  { id: 'p1', categoryId: 'c1', authorNickname: '이지은', title: '3만원으로 만든 원목 선반 후기', status: 'published', views: 342, likes: 1, createdAt: '2024-05-10' },
-  { id: 'p2', categoryId: 'c2', authorNickname: '김민준', title: 'M3 맥북 에어 3개월 사용 리뷰', status: 'published', views: 1204, likes: 1, createdAt: '2024-05-08' },
-  { id: 'p3', categoryId: 'c3', authorNickname: '이지은', title: '에어프라이어 닭강정 레시피', status: 'published', views: 876, likes: 2, createdAt: '2024-05-06' },
-  { id: 'p4', categoryId: 'c4', authorNickname: '김민준', title: '후쿠오카 3박 4일 혼행 가이드', status: 'published', views: 512, likes: 0, createdAt: '2024-05-04' },
-  { id: 'p5', categoryId: 'c2', authorNickname: '이지은', title: '[크롤링] Vite 5.3 릴리즈 정리', status: 'published', views: 2341, likes: 1, createdAt: '2024-05-12' },
+  { id: 'p1', categoryId: 'c1', authorNickname: '이지은', title: '3만원으로 만든 원목 선반 후기',       status: 'published', views: 342,  likes: 1, createdAt: '2024-05-10' },
+  { id: 'p2', categoryId: 'c2', authorNickname: '김민준', title: 'M3 맥북 에어 3개월 사용 리뷰',       status: 'published', views: 1204, likes: 1, createdAt: '2024-05-08' },
+  { id: 'p3', categoryId: 'c3', authorNickname: '이지은', title: '에어프라이어 닭강정 레시피',           status: 'published', views: 876,  likes: 2, createdAt: '2024-05-06' },
+  { id: 'p4', categoryId: 'c4', authorNickname: '김민준', title: '후쿠오카 3박 4일 혼행 가이드',        status: 'published', views: 512,  likes: 0, createdAt: '2024-05-04' },
+  { id: 'p5', categoryId: 'c2', authorNickname: '이지은', title: '[크롤링] Vite 5.3 릴리즈 정리',      status: 'published', views: 2341, likes: 1, createdAt: '2024-05-12' },
 ]
 
 export function AdminProvider({ children }) {
-  const [admin, setAdmin] = useState(null)
+  const [admin, setAdmin]           = useState(null)
   const [categories, setCategories] = useState(INIT_CATEGORIES)
-  const [topics, setTopics] = useState(INIT_TOPICS)
-  const [sources, setSources] = useState(INIT_SOURCES)
-  const [users, setUsers] = useState(INIT_USERS)
-  const [posts, setPosts] = useState(INIT_POSTS)
+  const [topics, setTopics]         = useState(INIT_TOPICS)
+  const [sources, setSources]       = useState(INIT_SOURCES)
+  const [users, setUsers]           = useState(INIT_USERS)
+  const [posts, setPosts]           = useState(() => {
+    // 초기 로드 시 이미 차단된 게시글은 hidden 상태로 표시
+    const blocked = getBlockedIds()
+    return INIT_POSTS.map(p => blocked.has(p.id) ? { ...p, status: 'hidden' } : p)
+  })
 
   function login(email, password) {
     if (email !== ADMIN_CREDENTIALS.email || password !== ADMIN_CREDENTIALS.password)
@@ -55,33 +60,46 @@ export function AdminProvider({ children }) {
   function logout() { setAdmin(null) }
 
   // Categories CRUD
-  function addCategory(cat) { setCategories(p => [...p, { ...cat, id: `c${Date.now()}` }]) }
-  function updateCategory(id, data) { setCategories(p => p.map(c => c.id === id ? { ...c, ...data } : c)) }
-  function deleteCategory(id) { setCategories(p => p.filter(c => c.id !== id)) }
+  function addCategory(cat)          { setCategories(p => [...p, { ...cat, id: `c${Date.now()}` }]) }
+  function updateCategory(id, data)  { setCategories(p => p.map(c => c.id === id ? { ...c, ...data } : c)) }
+  function deleteCategory(id)        { setCategories(p => p.filter(c => c.id !== id)) }
 
   // Topics CRUD
-  function addTopic(t) { setTopics(p => [...p, { ...t, id: `t${Date.now()}` }]) }
-  function updateTopic(id, data) { setTopics(p => p.map(t => t.id === id ? { ...t, ...data } : t)) }
-  function deleteTopic(id) { setTopics(p => p.filter(t => t.id !== id)) }
+  function addTopic(t)               { setTopics(p => [...p, { ...t, id: `t${Date.now()}` }]) }
+  function updateTopic(id, data)     { setTopics(p => p.map(t => t.id === id ? { ...t, ...data } : t)) }
+  function deleteTopic(id)           { setTopics(p => p.filter(t => t.id !== id)) }
 
   // Sources CRUD
-  function addSource(s) { setSources(p => [...p, { ...s, id: `s${Date.now()}` }]) }
-  function updateSource(id, data) { setSources(p => p.map(s => s.id === id ? { ...s, ...data } : s)) }
-  function deleteSource(id) { setSources(p => p.filter(s => s.id !== id)) }
-  function toggleSource(id) { setSources(p => p.map(s => s.id === id ? { ...s, active: !s.active } : s)) }
+  function addSource(s)              { setSources(p => [...p, { ...s, id: `s${Date.now()}` }]) }
+  function updateSource(id, data)    { setSources(p => p.map(s => s.id === id ? { ...s, ...data } : s)) }
+  function deleteSource(id)          { setSources(p => p.filter(s => s.id !== id)) }
+  function toggleSource(id)          { setSources(p => p.map(s => s.id === id ? { ...s, active: !s.active } : s)) }
 
   // Users
-  function toggleUserStatus(id) { setUsers(p => p.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'suspended' : 'active' } : u)) }
+  function toggleUserStatus(id)      { setUsers(p => p.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'suspended' : 'active' } : u)) }
 
-  // Posts
-  function hidePost(id) { setPosts(p => p.map(post => post.id === id ? { ...post, status: 'hidden' } : post)) }
-  function deletePost(id) { setPosts(p => p.filter(post => post.id !== id)) }
+  // Posts — 삭제/숨김 시 localStorage 차단 목록에 등록
+  function hidePost(id) {
+    blockPost(id)   // ← localStorage에 기록 → 사용자 앱 즉시 반영
+    setPosts(p => p.map(post => post.id === id ? { ...post, status: 'hidden' } : post))
+  }
+
+  function deletePost(id) {
+    blockPost(id)   // ← localStorage에 기록 → 사용자 앱 즉시 반영
+    setPosts(p => p.filter(post => post.id !== id))
+  }
+
+  function restorePost(id) {
+    unblockPost(id) // ← 차단 해제 → 사용자 앱에서 다시 노출
+    setPosts(p => p.map(post => post.id === id ? { ...post, status: 'published' } : post))
+  }
 
   const stats = {
-    totalUsers: users.length,
-    activeUsers: users.filter(u => u.status === 'active').length,
-    totalPosts: posts.length,
-    totalViews: posts.reduce((sum, p) => sum + p.views, 0),
+    totalUsers:    users.length,
+    activeUsers:   users.filter(u => u.status === 'active').length,
+    totalPosts:    posts.length,
+    hiddenPosts:   posts.filter(p => p.status === 'hidden').length,
+    totalViews:    posts.reduce((sum, p) => sum + p.views, 0),
     activeSources: sources.filter(s => s.active).length,
   }
 
@@ -92,7 +110,7 @@ export function AdminProvider({ children }) {
       topics, addTopic, updateTopic, deleteTopic,
       sources, addSource, updateSource, deleteSource, toggleSource,
       users, toggleUserStatus,
-      posts, hidePost, deletePost,
+      posts, hidePost, deletePost, restorePost,
       stats,
     }}>
       {children}
