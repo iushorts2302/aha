@@ -59,7 +59,7 @@ function AppInner() {
   function renderPage() {
     // 상세 페이지
     if (page === 'post')         return <PostDetailPage  postId={id} navigate={navigate} prevPage={prevRouteRef.current} />
-    if (page === 'crawl-detail') return <CrawlDetailPage itemId={id} navigate={navigate} />
+    if (page === 'crawl-detail') return <CrawlDetailPage itemId={id} navigate={navigate} prevPage={prevRouteRef.current} />
     if (page === 'profile')      return <ProfilePage     userId={id} navigate={navigate} />
     if (page === 'category')     return <CategoryPage    categoryId={id} navigate={navigate} />
     // 특수 페이지

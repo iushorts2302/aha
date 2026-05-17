@@ -1,7 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { loadDetail, saveDetail } from '../store/crawlDetailStore.js'
 import { getItems } from '../store/crawlStore.js'
 import ReactionBar from '../components/ReactionBar.jsx'
+import { useAuth } from '../context/AuthContext'
+import {
+  getCrawlViews, incrementCrawlView,
+  getCrawlLikes, toggleCrawlLike,
+} from '../store/crawlInteractionStore.js'
 
 function timeAgo(iso) {
   if (!iso) return ''
@@ -14,47 +19,85 @@ function timeAgo(iso) {
   return `${Math.floor(h / 24)}일 전`
 }
 
-/** source URL에서 도메인 추출 */
 function getDomain(url) {
-  try { return new URL(url).hostname.replace('www.', '') }
-  catch { return url }
+  try { return new URL(url).hostname.replace('www.', '') } catch { return url }
 }
 
-/** source 타입 판별 */
 function getSourceType(source = '') {
-  if (source.includes('github.com'))  return { label: 'GitHub',  color: '#24292F', icon: '⑆' }
-  if (source.includes('npmjs.com'))   return { label: 'NPM',     color: '#CC3534', icon: '⬡' }
-  if (source.includes('pypi.org'))    return { label: 'PyPI',    color: '#3775A9', icon: '🐍' }
-  if (source.includes('vercel.com'))  return { label: 'Vercel',  color: '#000000', icon: '▲' }
-  return { label: getDomain(source),  color: '#555',             icon: '🔗' }
+  if (source.includes('github.com')) return { label: 'GitHub', color: '#24292F' }
+  if (source.includes('npmjs.com'))  return { label: 'NPM',    color: '#CC3534' }
+  if (source.includes('pypi.org'))   return { label: 'PyPI',   color: '#3775A9' }
+  return { label: getDomain(source), color: '#555' }
 }
 
-/** GitHub URL이면 README iframe 가능 여부 판단 */
-function isGitHub(url = '') { return url.includes('github.com') && url.split('/').length >= 5 }
+function isGitHub(url = '') {
+  return url.includes('github.com') && url.split('/').length >= 5
+}
 
-export default function CrawlDetailPage({ itemId, navigate }) {
-  const [item, setItem] = useState(null)
+// 공통 고스트 버튼
+const ghostBtn = (active) => ({
+  background: 'transparent',
+  border: `1px solid ${active ? 'var(--color-primary)' : 'var(--color-hairline)'}`,
+  borderRadius: 'var(--r-pill)',
+  padding: '7px 16px',
+  fontSize: 14,
+  color: active ? 'var(--color-primary)' : 'var(--color-muted-48)',
+  cursor: 'pointer',
+  display: 'inline-flex', alignItems: 'center', gap: 5,
+  outline: 'none', boxShadow: 'none',
+  transition: 'all 0.15s', userSelect: 'none',
+})
+
+export default function CrawlDetailPage({ itemId, navigate, prevPage }) {
+  const { currentUser } = useAuth()
+  const [item, setItem]     = useState(null)
   const [related, setRelated] = useState([])
   const [copied, setCopied] = useState(false)
-  const [iframeError, setIframeError] = useState(false)
+  const [views, setViews]   = useState(0)
+  const [likes, setLikes]   = useState({ count: 0, liked: false })
+  const hasViewed = useRef(false)
 
   useEffect(() => {
-    // sessionStorage에서 아이템 복원
     const saved = loadDetail()
     if (saved && saved.id === itemId) {
       setItem(saved)
-      // 같은 토픽의 연관 아이템
       const rel = getItems(saved.topicKey, 20).filter(i => i.id !== itemId).slice(0, 5)
       setRelated(rel)
+      // 저장된 조회수/좋아요 로드
+      setViews(getCrawlViews(itemId))
+      setLikes(getCrawlLikes(itemId))
     }
   }, [itemId])
 
+  // 조회수: 마운트 1회만
+  useEffect(() => {
+    if (!hasViewed.current && itemId) {
+      hasViewed.current = true
+      setViews(incrementCrawlView(itemId))
+    }
+  }, [])
+
+  function goBack() {
+    navigate(prevPage || 'home')
+  }
+
+  function handleLike() {
+    if (!currentUser) return navigate('login')
+    setLikes(toggleCrawlLike(itemId))
+  }
+
+  function handleCopy() {
+    navigator.clipboard?.writeText(item?.source || window.location.href).then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   if (!item) return (
     <div style={{ padding: '80px 0', textAlign: 'center' }}>
-      <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', marginBottom: '20px' }}>
+      <p style={{ fontSize: 15, color: 'var(--color-muted-48)', marginBottom: 20 }}>
         콘텐츠를 찾을 수 없습니다.
       </p>
-      <button onClick={() => navigate('home')} className="btn-secondary" style={{ minWidth: 'unset', height: '40px', padding: '0 20px', fontSize: 'var(--text-caption)' }}>
+      <button type="button" onClick={() => navigate('home')} style={ghostBtn(false)}>
         홈으로
       </button>
     </div>
@@ -62,21 +105,16 @@ export default function CrawlDetailPage({ itemId, navigate }) {
 
   const srcType = getSourceType(item.source)
 
-  function handleCopy() {
-    navigator.clipboard?.writeText(item.source || window.location.href).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
   return (
-    <article className="fade-up" style={{ maxWidth: '720px', paddingTop: '24px' }}>
+    <article className="fade-up" style={{ maxWidth: 720, paddingTop: 24 }}>
 
       {/* 뒤로가기 */}
-      <button onClick={() => history.back()} style={{
-        display: 'flex', alignItems: 'center', gap: '6px',
-        fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)',
-        marginBottom: '28px', transition: 'color var(--transition)',
+      <button type="button" onClick={goBack} style={{
+        background: 'transparent', border: 'none', padding: 0,
+        display: 'flex', alignItems: 'center', gap: 6,
+        fontSize: 14, color: 'var(--color-muted-48)',
+        marginBottom: 28, cursor: 'pointer',
+        outline: 'none', boxShadow: 'none',
       }}
         onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
         onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted-48)'}
@@ -87,48 +125,41 @@ export default function CrawlDetailPage({ itemId, navigate }) {
         뒤로
       </button>
 
-      {/* 배지 + 메타 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        {item.hot && (
-          <span style={{ fontSize: '10px', fontWeight: 600, padding: '3px 9px', background: '#FF4500', color: '#fff', borderRadius: 'var(--r-pill)' }}>🔥 HOT</span>
-        )}
-        {/* 소스 출처 배지 */}
+      {/* 배지 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <span style={{
-          fontSize: '11px', fontWeight: 600, padding: '3px 10px',
+          fontSize: 11, fontWeight: 600, padding: '3px 10px',
           borderRadius: 'var(--r-pill)',
-          background: srcType.color + '14',
+          background: srcType.color + '18',
           color: srcType.color === '#000000' ? '#333' : srcType.color,
-          border: `1px solid ${srcType.color}28`,
+          border: `1px solid ${srcType.color}30`,
         }}>{srcType.label}</span>
-        <span style={{ fontSize: 'var(--text-fine)', color: 'var(--color-muted-48)' }}>{item.topicLabel}</span>
-        <span style={{ fontSize: 'var(--text-fine)', color: 'var(--color-muted-48)' }}>· {timeAgo(item.crawledAt)}</span>
+        <span style={{ fontSize: 12, color: 'var(--color-muted-48)' }}>{item.topicLabel}</span>
+        <span style={{ fontSize: 12, color: 'var(--color-muted-48)' }}>· {timeAgo(item.crawledAt)}</span>
       </div>
 
       {/* 제목 */}
       <h1 style={{
-        fontSize: 'var(--text-display-lg)', fontWeight: 600,
-        lineHeight: 1.10, letterSpacing: 0,
-        color: 'var(--color-ink)', marginBottom: '20px',
+        fontSize: 'clamp(22px,5vw,38px)', fontWeight: 600,
+        lineHeight: 1.15, color: 'var(--color-ink)', marginBottom: 16,
       }}>{item.title}</h1>
 
       {/* 요약 */}
       {item.summary && (
-        <p style={{
-          fontSize: 'var(--text-lead-lg)', fontWeight: 400, lineHeight: 1.47,
-          letterSpacing: '0.196px', color: 'var(--color-muted-48)',
-          marginBottom: '24px',
-        }}>{item.summary}</p>
+        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--color-muted-80)', marginBottom: 20 }}>
+          {item.summary}
+        </p>
       )}
 
       {/* 태그 */}
       {item.tags?.length > 0 && (
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 24 }}>
           {item.tags.map(tag => (
             <span key={tag} style={{
-              fontSize: 'var(--text-caption)', padding: '5px 14px',
+              fontSize: 13, padding: '4px 12px',
               borderRadius: 'var(--r-pill)',
               background: 'var(--color-parchment)',
-              color: 'var(--color-muted-80)', fontWeight: 400,
+              color: 'var(--color-muted-80)',
             }}>#{tag}</span>
           ))}
         </div>
@@ -137,79 +168,75 @@ export default function CrawlDetailPage({ itemId, navigate }) {
       {/* 통계 + 액션 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 0', borderTop: '1px solid var(--color-divider)',
+        padding: '14px 0', borderTop: '1px solid var(--color-divider)',
         borderBottom: '1px solid var(--color-divider)',
-        marginBottom: '32px', flexWrap: 'wrap', gap: '12px',
+        marginBottom: 28, flexWrap: 'wrap', gap: 12,
       }}>
-        <div style={{ display: 'flex', gap: '20px' }}>
-          {[
-            { icon: '👁', val: item.views?.toLocaleString() },
-            { icon: '♥', val: item.likes },
-            { icon: '💬', val: item.comments },
-          ].map(s => (
-            <span key={s.icon} style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {s.icon} {s.val}
-            </span>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={handleCopy} className="btn-secondary" style={{
-            height: '36px', padding: '0 16px', minWidth: 'unset',
-            fontSize: 'var(--text-caption)',
-            color: copied ? 'var(--color-primary)' : undefined,
+        {/* 통계 — 클릭 가능한 버튼 */}
+        <div style={{ display: 'flex', gap: 16 }}>
+          {/* 조회수 */}
+          <span style={{ fontSize: 14, color: 'var(--color-muted-48)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            👁 {views}
+          </span>
+          {/* 좋아요 — 클릭 가능 */}
+          <button type="button" onClick={handleLike} style={{
+            background: 'transparent', border: 'none', padding: 0,
+            display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: 14,
+            color: likes.liked ? 'var(--color-primary)' : 'var(--color-muted-48)',
+            cursor: 'pointer', outline: 'none',
+            transition: 'color 0.15s',
           }}>
+            {likes.liked ? '♥' : '♡'} {likes.count}
+          </button>
+          {/* 댓글 — 현재 미지원 */}
+          <span style={{ fontSize: 14, color: 'var(--color-muted-48)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            💬 0
+          </span>
+        </div>
+
+        {/* 액션 버튼 */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" onClick={handleCopy} style={ghostBtn(copied)}>
             {copied ? '✓ 복사됨' : '↗ 공유'}
           </button>
           {item.source && (
             <a href={item.source} target="_blank" rel="noopener noreferrer" style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              height: '36px', padding: '0 18px',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              height: 36, padding: '0 18px',
               background: 'var(--color-primary)', color: '#fff',
-              fontSize: 'var(--text-caption)', fontWeight: 400,
+              fontSize: 14, fontWeight: 500,
               borderRadius: 'var(--r-pill)',
               textDecoration: 'none',
-              transition: 'background-color var(--transition)',
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-hover)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-primary)'}
-            >
+            }}>
               원문 보기 ↗
             </a>
           )}
         </div>
       </div>
 
-      {/* 반응 */}
-      <div style={{ marginBottom: '40px' }}>
-        <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', marginBottom: '12px', fontWeight: 600 }}>
+      {/* 이모지 반응 */}
+      <div style={{ marginBottom: 36, paddingBottom: 28, borderBottom: '1px solid var(--color-divider)' }}>
+        <p style={{ fontSize: 13, color: 'var(--color-muted-48)', marginBottom: 12, fontWeight: 600 }}>
           이 글 어떠셨나요?
         </p>
         <ReactionBar postId={item.id} compact={false} />
       </div>
 
-      {/* 원문 콘텐츠 미리보기 */}
-      {item.source && !iframeError && (
-        <section style={{ marginBottom: '40px' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: '14px',
-          }}>
-            <h2 style={{ fontSize: 'var(--text-tagline)', fontWeight: 600, color: 'var(--color-ink)' }}>
-              원문 내용
-            </h2>
+      {/* 원문 콘텐츠 */}
+      {item.source && (
+        <section style={{ marginBottom: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-ink)' }}>원문 내용</h2>
             <a href={item.source} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: 'var(--text-caption)', color: 'var(--color-primary)' }}>
+              style={{ fontSize: 13, color: 'var(--color-primary)' }}>
               {getDomain(item.source)} ↗
             </a>
           </div>
-
-          {/* GitHub 레포: README 렌더링 */}
-          {isGitHub(item.source) ? (
-            <GitHubContent source={item.source} item={item} onError={() => setIframeError(true)} />
-          ) : (
-            /* 일반 소스: 상세 정보 카드 */
-            <SourceInfoCard item={item} srcType={srcType} />
-          )}
+          {isGitHub(item.source)
+            ? <GitHubContent source={item.source} item={item} />
+            : <SourceInfoCard item={item} srcType={srcType} />
+          }
         </section>
       )}
 
@@ -217,24 +244,20 @@ export default function CrawlDetailPage({ itemId, navigate }) {
       {related.length > 0 && (
         <section>
           <h2 style={{
-            fontSize: 'var(--text-tagline)', fontWeight: 600,
-            color: 'var(--color-ink)', marginBottom: '4px',
-            paddingBottom: '12px', borderBottom: '1px solid var(--color-ink)',
+            fontSize: 17, fontWeight: 600, color: 'var(--color-ink)',
+            marginBottom: 4, paddingBottom: 12,
+            borderBottom: '1px solid var(--color-divider)',
           }}>관련 콘텐츠</h2>
           {related.map(rel => (
-            <div key={rel.id} onClick={() => {
-              saveDetail(rel)
-              navigate(`crawl-detail/${rel.id}`)
-            }} style={{
-              padding: '16px 0', borderBottom: '1px solid var(--color-divider)',
-              cursor: 'pointer',
-            }}>
-              <p style={{ fontSize: 'var(--text-body)', fontWeight: 600, color: 'var(--color-ink)', marginBottom: '4px', letterSpacing: '-0.374px' }}
+            <div key={rel.id} onClick={() => { saveDetail(rel); navigate(`crawl-detail/${rel.id}`) }}
+              style={{ padding: '14px 0', borderBottom: '1px solid var(--color-divider)', cursor: 'pointer' }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 3 }}
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--color-ink)'}
               >{rel.title}</p>
               {rel.summary && (
-                <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', lineHeight: 1.47, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                <p style={{ fontSize: 13, color: 'var(--color-muted-48)', lineHeight: 1.4,
+                  display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {rel.summary}
                 </p>
               )}
@@ -246,152 +269,80 @@ export default function CrawlDetailPage({ itemId, navigate }) {
   )
 }
 
-/** GitHub 레포 상세 카드 — README 파싱 + 메타 정보 */
-function GitHubContent({ source, item, onError }) {
+function GitHubContent({ source, item }) {
   const [readme, setReadme] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [repoMeta, setRepoMeta] = useState(null)
 
   useEffect(() => {
-    // source: https://github.com/owner/repo
     const match = source.match(/github\.com\/([^/]+\/[^/]+)/)
-    if (!match) { onError(); return }
-    const repo = match[1]
+    if (!match) { setLoading(false); return }
+    const repo = match[1];
 
-    // GitHub raw README 가져오기
-    const branches = ['main', 'master']
-    async function fetchReadme() {
-      for (const branch of branches) {
+    (async () => {
+      for (const branch of ['main', 'master']) {
         try {
-          const res = await fetch(`https://raw.githubusercontent.com/${repo}/${branch}/README.md`, { signal: AbortSignal.timeout(6000) })
-          if (res.ok) {
-            const text = await res.text()
-            setReadme(text.slice(0, 6000)) // 6000자 제한
-            setLoading(false)
-            return
-          }
+          const res = await fetch(
+            `https://raw.githubusercontent.com/${repo}/${branch}/README.md`,
+            { signal: AbortSignal.timeout(6000) }
+          )
+          if (res.ok) { setReadme((await res.text()).slice(0, 6000)); break }
         } catch {}
       }
       setLoading(false)
-    }
-    fetchReadme()
+    })()
   }, [source])
 
   if (loading) return (
-    <div style={{ padding: '40px', background: 'var(--color-parchment)', borderRadius: 'var(--r-lg)', textAlign: 'center' }}>
-      <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)' }}>README 불러오는 중...</p>
+    <div style={{ padding: 32, background: 'var(--color-parchment)', borderRadius: 'var(--r-lg)', textAlign: 'center' }}>
+      <p style={{ fontSize: 13, color: 'var(--color-muted-48)' }}>README 불러오는 중...</p>
     </div>
   )
 
-  if (!readme) return <SourceInfoCard item={item} srcType={{ label: 'GitHub', color: '#24292F', icon: '⑆' }} />
+  if (!readme) return <SourceInfoCard item={item} srcType={{ label: 'GitHub', color: '#24292F' }} />
 
   return (
-    <div style={{
-      background: 'var(--color-parchment)',
-      border: '1px solid var(--color-hairline)',
-      borderRadius: 'var(--r-lg)',
-      overflow: 'hidden',
-    }}>
-      {/* GitHub 헤더 */}
-      <div style={{
-        padding: '12px 20px',
-        background: '#24292F', color: '#fff',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span style={{ fontSize: 'var(--text-caption)', fontWeight: 600 }}>
-          📄 README.md
-        </span>
-        <a href={source} target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: 'var(--text-caption)', color: '#58A6FF' }}>
+    <div style={{ border: '1px solid var(--color-hairline)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
+      <div style={{ padding: '10px 18px', background: '#24292F', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>📄 README.md</span>
+        <a href={source} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#58A6FF' }}>
           GitHub에서 보기 ↗
         </a>
       </div>
-      {/* README 내용 — 마크다운 렌더링 */}
-      <div style={{ padding: '24px', maxHeight: '600px', overflowY: 'auto' }}>
+      <div style={{ padding: 20, maxHeight: 560, overflowY: 'auto', background: '#fff' }}>
         <MarkdownView text={readme} />
       </div>
     </div>
   )
 }
 
-/** NPM/PyPI/일반 소스 정보 카드 */
 function SourceInfoCard({ item, srcType }) {
   return (
-    <div style={{
-      border: '1px solid var(--color-hairline)',
-      borderRadius: 'var(--r-lg)',
-      overflow: 'hidden',
-    }}>
-      {/* 소스 헤더 */}
-      <div style={{
-        padding: '14px 20px',
-        background: srcType.color === '#000000' ? '#111' : srcType.color + 'ee',
-        color: '#fff',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span style={{ fontSize: 'var(--text-caption)', fontWeight: 600 }}>
-          {srcType.label}
-        </span>
+    <div style={{ border: '1px solid var(--color-hairline)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 18px', background: srcType.color, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{srcType.label}</span>
         {item.source && (
-          <a href={item.source} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: 'var(--text-caption)', color: 'rgba(255,255,255,0.8)' }}>
+          <a href={item.source} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>
             원문 열기 ↗
           </a>
         )}
       </div>
-      {/* 콘텐츠 */}
-      <div style={{ padding: '28px 24px', background: '#fff' }}>
-        <h3 style={{ fontSize: 'var(--text-body)', fontWeight: 600, color: 'var(--color-ink)', marginBottom: '12px', letterSpacing: '-0.374px' }}>
-          {item.title}
-        </h3>
+      <div style={{ padding: '24px 20px', background: '#fff' }}>
+        <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 10 }}>{item.title}</p>
         {item.summary && (
-          <p style={{ fontSize: 'var(--text-body)', fontWeight: 400, lineHeight: 1.65, color: 'var(--color-body)', marginBottom: '20px', letterSpacing: '-0.374px' }}>
-            {item.summary}
-          </p>
+          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--color-body)', marginBottom: 18 }}>{item.summary}</p>
         )}
-
-        {/* 메타 정보 */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-          gap: '12px', padding: '16px', background: 'var(--color-parchment)',
-          borderRadius: 'var(--r-md)',
-        }}>
-          {[
-            { label: '조회수',  value: item.views?.toLocaleString() },
-            { label: '좋아요',  value: item.likes },
-            { label: '댓글',    value: item.comments },
-            { label: '카테고리',value: item.topicLabel },
-          ].map(m => (
-            <div key={m.label}>
-              <p style={{ fontSize: '11px', color: 'var(--color-muted-48)', marginBottom: '3px', fontWeight: 600 }}>{m.label}</p>
-              <p style={{ fontSize: 'var(--text-body)', fontWeight: 600, color: 'var(--color-ink)' }}>{m.value}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* 태그 */}
         {item.tags?.length > 0 && (
-          <div style={{ marginTop: '16px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
             {item.tags.map(tag => (
-              <span key={tag} style={{
-                fontSize: '12px', padding: '4px 12px',
-                borderRadius: 'var(--r-pill)',
-                background: 'var(--color-primary)',
-                color: '#fff', fontWeight: 600,
-              }}>#{tag}</span>
+              <span key={tag} style={{ fontSize: 12, padding: '3px 10px', borderRadius: 'var(--r-pill)', background: 'var(--color-primary)', color: '#fff' }}>#{tag}</span>
             ))}
           </div>
         )}
-
-        {/* 원문 링크 강조 */}
         {item.source && (
-          <div style={{ marginTop: '24px', padding: '16px', background: 'rgba(0,102,204,0.05)', borderRadius: 'var(--r-md)', border: '1px solid rgba(0,102,204,0.12)' }}>
-            <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', marginBottom: '8px' }}>원문 주소</p>
+          <div style={{ padding: 14, background: 'rgba(0,102,204,0.05)', borderRadius: 'var(--r-md)', border: '1px solid rgba(0,102,204,0.12)' }}>
+            <p style={{ fontSize: 12, color: 'var(--color-muted-48)', marginBottom: 6 }}>원문 주소</p>
             <a href={item.source} target="_blank" rel="noopener noreferrer"
-              style={{
-                fontSize: 'var(--text-caption)', color: 'var(--color-primary)',
-                wordBreak: 'break-all', lineHeight: 1.6,
-              }}>
+              style={{ fontSize: 13, color: 'var(--color-primary)', wordBreak: 'break-all', lineHeight: 1.5 }}>
               {item.source}
             </a>
           </div>
@@ -401,70 +352,28 @@ function SourceInfoCard({ item, srcType }) {
   )
 }
 
-/** 간단한 마크다운 → JSX 렌더러 */
 function MarkdownView({ text }) {
-  const lines = text.split('\n')
   return (
-    <div style={{ fontFamily: 'var(--font-body)' }}>
-      {lines.map((line, i) => {
-        // 이미지 제외 (외부 이미지 로딩 방지)
+    <div>
+      {text.split('\n').map((line, i) => {
         if (/!\[.*?\]\(.*?\)/.test(line)) return null
-        // H1
-        if (line.startsWith('# ')) return (
-          <h1 key={i} style={{ fontSize: 'var(--text-display)', fontWeight: 600, color: 'var(--color-ink)', margin: '24px 0 12px', letterSpacing: '-0.374px', lineHeight: 1.2 }}>
-            {line.slice(2)}
-          </h1>
-        )
-        // H2
-        if (line.startsWith('## ')) return (
-          <h2 key={i} style={{ fontSize: 'var(--text-body)', fontWeight: 600, color: 'var(--color-ink)', margin: '20px 0 8px', letterSpacing: '-0.374px' }}>
-            {line.slice(3)}
-          </h2>
-        )
-        // H3
-        if (line.startsWith('### ')) return (
-          <h3 key={i} style={{ fontSize: 'var(--text-caption)', fontWeight: 600, color: 'var(--color-ink)', margin: '16px 0 6px' }}>
-            {line.slice(4)}
-          </h3>
-        )
-        // 코드 블록 (``` 라인)
-        if (line.startsWith('```')) return (
-          <div key={i} style={{ height: '2px' }} />
-        )
-        // 구분선
-        if (/^[-*]{3,}$/.test(line.trim())) return (
-          <hr key={i} style={{ border: 'none', borderTop: '1px solid var(--color-divider)', margin: '16px 0' }} />
-        )
-        // 목록
+        if (line.startsWith('# '))   return <h1 key={i} style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-ink)', margin: '20px 0 8px' }}>{line.slice(2)}</h1>
+        if (line.startsWith('## '))  return <h2 key={i} style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', margin: '16px 0 6px' }}>{line.slice(3)}</h2>
+        if (line.startsWith('### ')) return <h3 key={i} style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', margin: '12px 0 4px' }}>{line.slice(4)}</h3>
+        if (line.startsWith('```'))  return <div key={i} style={{ height: 2 }} />
+        if (/^[-*]{3,}$/.test(line.trim())) return <hr key={i} style={{ border: 'none', borderTop: '1px solid var(--color-divider)', margin: '12px 0' }} />
         if (line.startsWith('- ') || line.startsWith('* ')) return (
-          <p key={i} style={{ fontSize: 'var(--text-caption)', lineHeight: 1.65, color: 'var(--color-body)', paddingLeft: '16px', marginBottom: '4px' }}>
-            • {inlineMarkdown(line.slice(2))}
+          <p key={i} style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--color-body)', paddingLeft: 14, marginBottom: 3 }}>
+            • {line.slice(2).replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1')}
           </p>
         )
-        if (/^\d+\. /.test(line)) return (
-          <p key={i} style={{ fontSize: 'var(--text-caption)', lineHeight: 1.65, color: 'var(--color-body)', paddingLeft: '16px', marginBottom: '4px' }}>
-            {line}
-          </p>
-        )
-        // 빈 줄
-        if (!line.trim()) return <div key={i} style={{ height: '8px' }} />
-        // 일반 텍스트
+        if (!line.trim()) return <div key={i} style={{ height: 6 }} />
         return (
-          <p key={i} style={{ fontSize: 'var(--text-caption)', lineHeight: 1.65, color: 'var(--color-body)', marginBottom: '4px' }}>
-            {inlineMarkdown(line)}
+          <p key={i} style={{ fontSize: 13, lineHeight: 1.65, color: 'var(--color-body)', marginBottom: 3 }}>
+            {line.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}
           </p>
         )
       })}
     </div>
   )
-}
-
-/** 인라인 마크다운 처리 (bold, code, link → 텍스트) */
-function inlineMarkdown(text) {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/__(.*?)__/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
 }
