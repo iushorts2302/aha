@@ -1,6 +1,6 @@
 """
-/api/cron.py — Vercel Cron / GitHub Actions 10분 자동 크롤링
-우선순위 토픽 순차 실행
+/api/cron.py — GitHub Actions 10분 자동 크롤링
+한국 기업 기반 우선순위 토픽 순차 실행
 """
 
 import json, os, sys, time, datetime
@@ -12,30 +12,37 @@ from crawl import TOPIC_CRAWLERS, enrich, TOPIC_LABELS
 _CACHE: dict = {}
 _CACHE_TS: dict = {}
 
-# 10분 Cron 실행 시 갱신할 우선순위 토픽
 PRIORITY_TOPICS = [
-    # 홈
+    # 홈 — 한국 기업 트렌딩
     "home.trending", "home.rising", "home.ai_feed",
-    # AI
-    "ai.news", "ai.tools", "ai.trend",
-    # 개발
+    # 개발 — 네이버/카카오/라인/토스
     "dev.trending", "dev.javascript", "dev.python",
-    # IT 뉴스
-    "it.news", "it.security",
-    # 스타트업
+    # AI — 크래프톤/카카오/네이버 AI
+    "ai.news", "ai.trend",
+    # 스타트업 — 토스/당근/배민
     "startup.new",
+    # IT 뉴스
+    "it.news", "it.cloud",
     # 오픈소스
-    "oss.trending", "oss.awesome",
-    # 인기
-    "trending.realtime", "trending.daily",
-    # 게시판
-    "board.it", "board.free",
+    "oss.trending",
+    # 게임 — 엔씨/크래프톤/넥슨
+    "game.news",
+    # 금융
+    "finance.crypto",
     # 학습
     "learn.tutorial",
+    # 취업
+    "job.dev",
+    # 인기
+    "trending.realtime",
+    # 게시판
+    "board.it",
 ]
 
 def get_cache(): return _CACHE
-def set_cache(k, v): _CACHE[k] = v; _CACHE_TS[k] = time.time()
+def set_cache(k, v):
+    _CACHE[k] = v
+    _CACHE_TS[k] = time.time()
 
 
 class handler(BaseHTTPRequestHandler):
