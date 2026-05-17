@@ -43,13 +43,7 @@ const INIT_USERS = [
   { id: 'u2', email: 'jane@aha.com', nickname: '이지은', role: 'user', status: 'active', postCount: 3, createdAt: '2024-02-01' },
 ]
 
-const INIT_POSTS = [
-  { id: 'p1', categoryId: 'c1', authorNickname: '이지은', title: '3만원으로 만든 원목 선반 후기',       status: 'published', views: 342,  likes: 1, createdAt: '2024-05-10' },
-  { id: 'p2', categoryId: 'c2', authorNickname: '김민준', title: 'M3 맥북 에어 3개월 사용 리뷰',       status: 'published', views: 1204, likes: 1, createdAt: '2024-05-08' },
-  { id: 'p3', categoryId: 'c3', authorNickname: '이지은', title: '에어프라이어 닭강정 레시피',           status: 'published', views: 876,  likes: 2, createdAt: '2024-05-06' },
-  { id: 'p4', categoryId: 'c4', authorNickname: '김민준', title: '후쿠오카 3박 4일 혼행 가이드',        status: 'published', views: 512,  likes: 0, createdAt: '2024-05-04' },
-  { id: 'p5', categoryId: 'c2', authorNickname: '이지은', title: '[크롤링] Vite 5.3 릴리즈 정리',      status: 'published', views: 2341, likes: 1, createdAt: '2024-05-12' },
-]
+const INIT_POSTS = []
 
 export function AdminProvider({ children }) {
   const [admin, setAdmin]           = useState(null)
