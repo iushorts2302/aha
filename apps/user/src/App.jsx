@@ -4,7 +4,7 @@ import { AppProvider } from './context/AppContext'
 import Header from './components/Header'
 import MobileTabBar from './components/MobileTabBar'
 
-import PostDetailPage from './pages/PostDetailPage'
+import PostDetailPage, { incNavCount } from './pages/PostDetailPage'
 import CrawlDetailPage from './pages/CrawlDetailPage'
 import WritePage from './pages/WritePage'
 import ProfilePage from './pages/ProfilePage'
@@ -63,7 +63,7 @@ function parseRoute(route) {
 function AppInner() {
   const [route, setRoute] = useState('home')
   const { page, id, params } = parseRoute(route)
-  function navigate(to) { setRoute(to); window.scrollTo(0, 0) }
+  function navigate(to) { incNavCount(); setRoute(to); window.scrollTo(0, 0) }
 
   const isAuth = page === 'login' || page === 'signup'
 

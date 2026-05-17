@@ -1,35 +1,23 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { getBlockedIds, BLOCKED_KEY, setBlockedIds as saveBlockedIds } from '../store/blockedStore.js'
 
-const ADMIN_API = 'https://admin-vert-psi.vercel.app'
+const ADMIN_API    = 'https://admin-vert-psi.vercel.app'
+const POSTS_KEY    = 'aha_posts_v1'
+const COMMENTS_KEY = 'aha_comments_v1'
+
+function readPosts()    { try { return JSON.parse(localStorage.getItem(POSTS_KEY)    || '[]') } catch { return [] } }
+function readComments() { try { return JSON.parse(localStorage.getItem(COMMENTS_KEY) || '[]') } catch { return [] } }
+function writePosts(p)  { try { localStorage.setItem(POSTS_KEY,    JSON.stringify(p)) } catch {} }
+function writeComments(c){ try { localStorage.setItem(COMMENTS_KEY, JSON.stringify(c)) } catch {} }
 
 async function fetchServerBlocked() {
   try {
     const res = await fetch(`${ADMIN_API}/api/blocked`, { signal: AbortSignal.timeout(5000) })
     if (!res.ok) return null
-    const data = await res.json()
-    return new Set(data.blocked || [])
+    return new Set((await res.json()).blocked || [])
   } catch { return null }
 }
 
-// ── localStorage 키 ──────────────────────────────────────
-const POSTS_KEY    = 'aha_posts_v1'
-const COMMENTS_KEY = 'aha_comments_v1'
-
-function readPosts() {
-  try { return JSON.parse(localStorage.getItem(POSTS_KEY) || '[]') } catch { return [] }
-}
-function writePosts(posts) {
-  try { localStorage.setItem(POSTS_KEY, JSON.stringify(posts)) } catch {}
-}
-function readComments() {
-  try { return JSON.parse(localStorage.getItem(COMMENTS_KEY) || '[]') } catch { return [] }
-}
-function writeComments(comments) {
-  try { localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments)) } catch {}
-}
-
-// ────────────────────────────────────────────────────────
 const AppContext = createContext(null)
 
 const CATEGORIES = [
@@ -41,18 +29,16 @@ const CATEGORIES = [
 ]
 
 export function AppProvider({ children }) {
-  const [categories]  = useState(CATEGORIES)
-  // localStorage에서 초기값 로드
+  const [categories] = useState(CATEGORIES)
   const [posts,    setPosts]    = useState(() => readPosts())
   const [comments, setComments] = useState(() => readComments())
   const [blockedIds, setBlockedIds] = useState(() => getBlockedIds())
 
-  // posts 변경 시 localStorage 동기화
-  useEffect(() => { writePosts(posts) }, [posts])
-  // comments 변경 시 localStorage 동기화
+  // posts/comments 변경 → localStorage 즉시 동기화
+  useEffect(() => { writePosts(posts) },    [posts])
   useEffect(() => { writeComments(comments) }, [comments])
 
-  // 서버 차단 목록 폴링 (10초마다)
+  // 서버 차단 목록 폴링 (10초)
   useEffect(() => {
     async function syncBlocked() {
       const serverIds = await fetchServerBlocked()
@@ -71,12 +57,13 @@ export function AppProvider({ children }) {
     return () => { clearInterval(t); window.removeEventListener('storage', onStorage) }
   }, [])
 
-  // 차단 제외 필터
+  // ── 조회 함수 (원본 posts 참조, 차단 필터 적용) ──────
   const visiblePosts = posts.filter(p => !blockedIds.has(p.id))
 
   function getPostById(id) {
     if (blockedIds.has(id)) return null
-    return posts.find(p => p.id === id)
+    // visiblePosts 아닌 원본 posts에서 찾아야 삭제 게시글도 null 처리 가능
+    return posts.find(p => p.id === id && !blockedIds.has(p.id)) || null
   }
   function getCommentsByPostId(postId) {
     return comments.filter(c => c.postId === postId)
@@ -88,7 +75,8 @@ export function AppProvider({ children }) {
     return visiblePosts.filter(p => p.authorId === authorId)
   }
 
-  // 게시글 추가 — views/likes 0에서 시작
+  // ── 쓰기 함수 ────────────────────────────────────────
+
   function addPost(post) {
     const newPost = {
       ...post,
@@ -102,16 +90,30 @@ export function AppProvider({ children }) {
     return newPost
   }
 
-  // 좋아요 토글 — localStorage 즉시 반영
-  function toggleLike(postId, userId) {
-    setPosts(prev => prev.map(p => {
-      if (p.id !== postId) return p
-      const liked = p.likes.includes(userId)
-      return { ...p, likes: liked ? p.likes.filter(id => id !== userId) : [...p.likes, userId] }
-    }))
-  }
+  // 좋아요 토글 — setState 함수형 업데이트로 최신 상태 보장
+  const toggleLike = useCallback((postId, userId) => {
+    setPosts(prev => {
+      const next = prev.map(p => {
+        if (p.id !== postId) return p
+        const liked = Array.isArray(p.likes) && p.likes.includes(userId)
+        return { ...p, likes: liked ? p.likes.filter(id => id !== userId) : [...(p.likes || []), userId] }
+      })
+      writePosts(next)   // useEffect 의존 없이 즉시 반영
+      return next
+    })
+  }, [])
 
-  // 댓글 추가 — localStorage 즉시 반영
+  // 조회수 — 함수형 업데이트
+  const incrementView = useCallback((postId) => {
+    setPosts(prev => {
+      const next = prev.map(p =>
+        p.id === postId ? { ...p, views: (p.views || 0) + 1 } : p
+      )
+      writePosts(next)
+      return next
+    })
+  }, [])
+
   function addComment(postId, authorId, body) {
     const newComment = {
       id:        `cm${Date.now()}`,
@@ -119,26 +121,36 @@ export function AppProvider({ children }) {
       likes:     [],
       createdAt: new Date().toISOString(),
     }
-    setComments(prev => [...prev, newComment])
+    setComments(prev => {
+      const next = [...prev, newComment]
+      writeComments(next)
+      return next
+    })
     return newComment
   }
 
   function deleteComment(commentId) {
-    setComments(prev => prev.filter(c => c.id !== commentId))
-  }
-
-  // 조회수 — localStorage 즉시 반영
-  function incrementView(postId) {
-    setPosts(prev => prev.map(p =>
-      p.id === postId ? { ...p, views: (p.views || 0) + 1 } : p
-    ))
+    setComments(prev => {
+      const next = prev.filter(c => c.id !== commentId)
+      writeComments(next)
+      return next
+    })
   }
 
   return (
     <AppContext.Provider value={{
-      categories, posts: visiblePosts, comments,
-      getPostById, getCommentsByPostId, getPostsByCategory, getPostsByAuthor,
-      addPost, toggleLike, addComment, deleteComment, incrementView,
+      categories,
+      posts: visiblePosts,
+      comments,
+      getPostById,
+      getCommentsByPostId,
+      getPostsByCategory,
+      getPostsByAuthor,
+      addPost,
+      toggleLike,
+      addComment,
+      deleteComment,
+      incrementView,
     }}>
       {children}
     </AppContext.Provider>
