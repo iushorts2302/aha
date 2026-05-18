@@ -11,7 +11,7 @@ DB_CONFIG = {
     "host":     os.environ.get("DB_HOST",     "0.tcp.jp.ngrok.io"),
     "port":     int(os.environ.get("DB_PORT", "10840")),
     "user":     os.environ.get("DB_USER",     "srvaha"),
-    "password": os.environ.get("DB_PASSWORD", ""),
+    "password": os.environ.get("DB_PASSWORD", "qwER12#$"),
     "database": os.environ.get("DB_NAME",     "aha_db"),
     "charset":  "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
