@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { fetchFromServer, getItems } from '../store/crawlStore.js'
+import { getItems } from '../store/crawlStore.js'
 import { saveDetail } from '../store/crawlDetailStore.js'
 import { getCrawlViews, getCrawlLikes } from '../store/crawlInteractionStore.js'
 
@@ -111,7 +111,7 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await fetchFromServer(topicKey, limit)
+      const data = await getItems(topicKey, limit)
       setItems(data); setSource(data.length > 0 ? 'fresh' : 'empty')
     } catch {
       setItems(getItems(topicKey, limit)); setSource('cache')
