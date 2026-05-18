@@ -401,6 +401,94 @@ def sources_delete(p, b):
     db.execute("DELETE FROM tb_crawl_source WHERE seq_no=%s", (sid,))
     return 200, {"ok": True}
 
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# CRAWL_ITEMS — 크롤링 아이템 CRUD + 통계
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def crawl_items_get(p, b):
+    topic_key  = p.get("topic_key",  [None])[0]
+    count_only = p.get("count_only", [None])[0]
+    limit = int(p.get("limit", ["20"])[0])
+    offset = int(p.get("offset", ["0"])[0])
+
+    where, args = ["blocked_yn='N'"], []
+    if topic_key:
+        where.append("t.topic_key=%s"); args.append(topic_key)
+
+    base = ("FROM tb_crawl_item ci LEFT JOIN tb_topic t ON t.seq_no=ci.topic_seq_no "
+            f"WHERE {' AND '.join(where)}")
+
+    # 수집 수 + 마지막 수집일만 반환
+    if count_only:
+        row = db.query_one(f"SELECT COUNT(*) cnt, MAX(ci.crawled_at) last_crawled {base}", args)
+        return 200, {"count": row["cnt"] or 0, "last_crawled": row["last_crawled"]}
+
+    rows = db.query(
+        f"SELECT ci.*,t.topic_key,t.label topic_label "
+        f"{base} ORDER BY ci.crawled_at DESC LIMIT %s OFFSET %s",
+        args + [limit, offset])
+
+    # 태그 첨부
+    for row in rows:
+        row["tags"] = [r["tag_name"] for r in db.query(
+            "SELECT tag_name FROM tb_crawl_item_tag WHERE item_seq_no=%s ORDER BY sort_order",
+            (row["seq_no"],))]
+
+    total = db.query_one(f"SELECT COUNT(*) c {base}", args)["c"]
+    return 200, {"items": rows, "total": total}
+
+def crawl_items_post(p, b):
+    """크롤링 아이템 저장 (cron에서 호출)"""
+    items = b.get("items", [])
+    if not items: return 400, {"error": "items 필수"}
+    inserted = 0
+    for item in items:
+        topic = db.query_one("SELECT seq_no FROM tb_topic WHERE topic_key=%s", (item.get("topicKey",""),))
+        if not topic: continue
+        source = None
+        if item.get("source"):
+            src = db.query_one("SELECT seq_no FROM tb_crawl_source WHERE source_value=%s", (item["source"][:500],))
+            if src: source = src["seq_no"]
+        # UPSERT
+        exist = db.query_one("SELECT seq_no FROM tb_crawl_item WHERE item_id=%s", (item.get("id",""),))
+        if exist:
+            db.execute("UPDATE tb_crawl_item SET title=%s,summary=%s,source_url=%s,topic_label=%s,category_id=%s WHERE seq_no=%s",
+                (item.get("title","")[:500], item.get("summary","")[:1000],
+                 item.get("source","")[:2000], item.get("topicLabel","")[:100],
+                 item.get("category","")[:50], exist["seq_no"]))
+            seq = exist["seq_no"]
+        else:
+            seq = db.execute(
+                "INSERT INTO tb_crawl_item (item_id,topic_seq_no,source_seq_no,title,summary,source_url,topic_label,category_id,hot_yn) "
+                "VALUES(%s,%s,%s,%s,%s,%s,%s,%s,'N')",
+                (item.get("id","")[:200], topic["seq_no"], source,
+                 item.get("title","")[:500], item.get("summary","")[:1000],
+                 item.get("source","")[:2000], item.get("topicLabel","")[:100],
+                 item.get("category","")[:50]))
+            inserted += 1
+        # 태그
+        if item.get("tags"):
+            db.execute("DELETE FROM tb_crawl_item_tag WHERE item_seq_no=%s", (seq,))
+            for i, tag in enumerate(item["tags"][:5]):
+                db.execute("INSERT IGNORE INTO tb_crawl_item_tag (item_seq_no,tag_name,sort_order) VALUES(%s,%s,%s)",
+                           (seq, str(tag)[:100], i))
+    return 201, {"ok": True, "inserted": inserted, "total": len(items)}
+
+def crawl_items_patch(p, b):
+    iid = b.get("id")
+    if not iid: return 400, {"error": "id 필수"}
+    sets, args = [], []
+    for col in ("blocked_yn","hot_yn","title","summary"):
+        if col in b: sets.append(f"{col}=%s"); args.append(b[col])
+    if sets: db.execute(f"UPDATE tb_crawl_item SET {','.join(sets)} WHERE seq_no=%s", args + [iid])
+    return 200, {"ok": True}
+
+def crawl_items_delete(p, b):
+    iid = b.get("id")
+    if not iid: return 400, {"error": "id 필수"}
+    db.execute("UPDATE tb_crawl_item SET blocked_yn='Y' WHERE seq_no=%s", (iid,))
+    return 200, {"ok": True}
+
 # ── 라우팅 테이블 ──────────────────────────────────────────
 ROUTES = {
     "auth":       {"POST": auth_post},
@@ -414,6 +502,7 @@ ROUTES = {
     "categories": {"GET": categories_get, "POST": categories_post, "PATCH": categories_patch, "DELETE": categories_delete},
     "topics":     {"GET": topics_get, "POST": topics_post, "PATCH": topics_patch, "DELETE": topics_delete},
     "sources":    {"GET": sources_get, "POST": sources_post, "PATCH": sources_patch, "DELETE": sources_delete},
+    "crawl_items":{"GET": crawl_items_get, "POST": crawl_items_post, "PATCH": crawl_items_patch, "DELETE": crawl_items_delete},
 }
 
 # ── Vercel Handler ─────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { REACTIONS, getReactions, getUserReaction, toggleReaction } from '../store/reactionStore.js'
+import { REACTIONS, getReactions, getUserReaction, toggleReaction, loadReactions } from '../store/reactionStore.js'
 import { useAuth } from '../context/AuthContext'
 
 export default function ReactionBar({ postId, compact = false }) {
@@ -13,6 +13,11 @@ export default function ReactionBar({ postId, compact = false }) {
   useEffect(() => {
     setCounts(getReactions(postId))
     setUserReact(currentUser ? getUserReaction(postId, currentUser.id) : null)
+    // DB에서 최신 반응 로드 (백그라운드)
+    loadReactions(postId, currentUser?.id || currentUser?.seq_no).then(() => {
+      setCounts(getReactions(postId))
+      if (currentUser) setUserReact(getUserReaction(postId, currentUser.id || currentUser.seq_no))
+    }).catch(() => {})
   }, [postId, currentUser])
 
   function handleReact(key) {

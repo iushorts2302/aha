@@ -1,97 +1,106 @@
 """
-/api/data.py — 크롤링 데이터 조회 API
-브라우저(사용자/관리자 앱)에서 30초마다 폴링
-cron.py가 갱신한 캐시를 반환. 없으면 즉시 크롤링.
+/api/data — 크롤링 데이터 조회 API
+사용자웹 CrawlFeed가 30초마다 폴링
+DB(tb_crawl_item) 우선 조회, 없으면 실시간 크롤링 후 DB 저장
 """
-
-import json
-import os
-import sys
-import time
+import json, os, sys, time
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.dirname(__file__))
-from crawl import TOPIC_CRAWLERS, enrich
 
-# cron.py와 캐시 공유 (같은 프로세스 인스턴스일 때)
-try:
-    from cron import get_cache, set_cache
-except ImportError:
-    _LOCAL_CACHE: dict = {}
-    _LOCAL_TS: dict = {}
-    def get_cache(): return _LOCAL_CACHE
-    def set_cache(k, v):
-        _LOCAL_CACHE[k] = v
-        _LOCAL_TS[k] = time.time()
+def _cors(h):
+    h.send_header("Access-Control-Allow-Origin", "*")
+    h.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+    h.send_header("Access-Control-Allow-Headers", "Content-Type")
 
+def _json(h, status, data):
+    body = json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
+    h.send_response(status); _cors(h)
+    h.send_header("Content-Type", "application/json; charset=utf-8")
+    h.send_header("Content-Length", str(len(body)))
+    h.end_headers(); h.wfile.write(body)
+
+def _db_items(topic_key, limit=20):
+    """DB에서 크롤링 아이템 조회"""
+    try:
+        import db
+        rows = db.query(
+            "SELECT ci.seq_no id, ci.item_id, t.topic_key topicKey, "
+            "ci.topic_label topicLabel, ci.category_id category, "
+            "ci.title, ci.summary, ci.source_url source, "
+            "ci.view_count views, ci.like_count likes, "
+            "0 comments, ci.hot_yn, ci.crawled_at crawledAt, 'crawled' type "
+            "FROM tb_crawl_item ci "
+            "LEFT JOIN tb_topic t ON t.seq_no = ci.topic_seq_no "
+            "WHERE t.topic_key=%s AND ci.blocked_yn='N' "
+            "ORDER BY ci.crawled_at DESC LIMIT %s",
+            (topic_key, limit)
+        )
+        for r in rows:
+            r["hot"] = r.pop("hot_yn", "N") == "Y"
+            # 태그
+            r["tags"] = [t["tag_name"] for t in db.query(
+                "SELECT tag_name FROM tb_crawl_item_tag WHERE item_seq_no=%s ORDER BY sort_order",
+                (r["id"],))]
+        return rows
+    except Exception:
+        return []
+
+def _save_to_db(items, topic_key):
+    """크롤링 결과를 DB에 저장"""
+    try:
+        import db
+        topic = db.query_one("SELECT seq_no FROM tb_topic WHERE topic_key=%s", (topic_key,))
+        if not topic: return
+        for item in items:
+            exist = db.query_one("SELECT seq_no FROM tb_crawl_item WHERE item_id=%s", (item.get("id",""),))
+            if exist: continue
+            seq = db.execute(
+                "INSERT INTO tb_crawl_item "
+                "(item_id,topic_seq_no,title,summary,source_url,topic_label,category_id,hot_yn) "
+                "VALUES(%s,%s,%s,%s,%s,%s,%s,'N')",
+                (item.get("id","")[:200], topic["seq_no"],
+                 item.get("title","")[:500], item.get("summary","")[:1000],
+                 item.get("source","")[:2000], item.get("topicLabel","")[:100],
+                 item.get("category","")[:50]))
+            for i, tag in enumerate((item.get("tags") or [])[:5]):
+                db.execute("INSERT IGNORE INTO tb_crawl_item_tag (item_seq_no,tag_name,sort_order) VALUES(%s,%s,%s)",
+                           (seq, str(tag)[:100], i))
+    except Exception:
+        pass
 
 class handler(BaseHTTPRequestHandler):
-
     def do_OPTIONS(self):
-        self.send_response(200)
-        self._set_cors()
-        self.end_headers()
+        self.send_response(200); _cors(self); self.end_headers()
 
     def do_GET(self):
-        # ?topic=board.it 파싱
-        parsed = urlparse(self.path)
-        params = parse_qs(parsed.query)
-        topic_key = params.get("topic", [""])[0]
+        params    = parse_qs(urlparse(self.path).query)
+        topic_key = params.get("topic", [None])[0]
+        limit     = min(50, int(params.get("limit", ["20"])[0]))
 
         if not topic_key:
-            # 전체 캐시 반환
-            cache = get_cache()
-            self._json(200, {
-                "topics": list(cache.keys()),
-                "counts": {k: len(v) for k, v in cache.items()},
-            })
-            return
+            return _json(self, 400, {"error": "topic parameter required"})
 
-        cache = get_cache()
+        # 1. DB에서 먼저 조회
+        db_items = _db_items(topic_key, limit)
+        if db_items:
+            return _json(self, 200, {"items": db_items, "count": len(db_items), "source": "db"})
 
-        if topic_key in cache and cache[topic_key]:
-            # 캐시 히트
-            self._json(200, {
-                "items": cache[topic_key],
-                "source": "cache",
-                "count": len(cache[topic_key]),
-            })
-            return
-
-        # 캐시 미스 → 즉시 크롤링
-        crawler_fn = TOPIC_CRAWLERS.get(topic_key)
-        if not crawler_fn:
-            self._json(404, {"error": f"Unknown topic: {topic_key}"})
-            return
-
+        # 2. DB에 없으면 실시간 크롤링 후 DB 저장
         try:
-            raw = crawler_fn()
-            label = topic_key.split(".")[-1].replace("_", " ").title()
-            category = topic_key.split(".")[0]
-            items = enrich(raw[:8], topic_key, label, category)
-            set_cache(topic_key, items)
-            self._json(200, {
-                "items": items,
-                "source": "fresh",
-                "count": len(items),
-            })
+            from crawl import TOPIC_CRAWLERS, enrich
+            fn = TOPIC_CRAWLERS.get(topic_key)
+            if not fn:
+                return _json(self, 200, {"items": [], "count": 0, "source": "empty"})
+            raw   = fn()
+            items = enrich(raw[:limit], topic_key,
+                           topic_key.split(".")[-1].replace("_"," ").title(),
+                           topic_key.split(".")[0])
+            # DB 저장 (백그라운드)
+            _save_to_db(items, topic_key)
+            return _json(self, 200, {"items": items, "count": len(items), "source": "fresh"})
         except Exception as e:
-            self._json(500, {"error": str(e)})
+            return _json(self, 500, {"error": str(e)})
 
-    def _set_cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-
-    def _json(self, status, data):
-        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
-        self.send_response(status)
-        self._set_cors()
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *args):
-        pass
+    def log_message(self, *a): pass
