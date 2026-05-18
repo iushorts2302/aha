@@ -1,7 +1,9 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { getBlockedIds, BLOCKED_KEY, setBlockedIds as saveBlockedIds } from '../store/blockedStore.js'
+import { postAPI, commentAPI, reactionAPI } from '../api/client.js'
 
 const ADMIN_API    = 'https://admin-vert-psi.vercel.app'
+// localStorage fallback keys (오프라인/비로그인 시 사용)
 const POSTS_KEY    = 'aha_posts_v1'
 const COMMENTS_KEY = 'aha_comments_v1'
 
@@ -33,23 +35,25 @@ export function AppProvider({ children }) {
   const [posts,    setPosts]    = useState(() => readLS(POSTS_KEY, []))
   const [comments, setComments] = useState(() => readLS(COMMENTS_KEY, []))
   const [blockedIds, setBlockedIds] = useState(() => getBlockedIds())
+  const [dbAvailable, setDbAvailable] = useState(false) // DB 연결 가능 여부
 
-  // posts ref — 함수 내부에서 항상 최신값 참조
-  const postsRef = useRef(posts)
-  useEffect(() => { postsRef.current = posts }, [posts])
-
-  // localStorage 동기화
-  useEffect(() => { writeLS(POSTS_KEY, posts) }, [posts])
+  useEffect(() => { writeLS(POSTS_KEY, posts) },    [posts])
   useEffect(() => { writeLS(COMMENTS_KEY, comments) }, [comments])
 
-  // 서버 차단 목록 폴링
+  // DB 연결 가능 여부 체크
+  useEffect(() => {
+    fetch(`${ADMIN_API}/api/categories`)
+      .then(r => { if (r.ok) setDbAvailable(true) })
+      .catch(() => setDbAvailable(false))
+  }, [])
+
+  // 차단 목록 폴링
   useEffect(() => {
     async function sync() {
       const srv = await fetchServerBlocked()
       if (srv) {
         const merged = new Set([...srv, ...getBlockedIds()])
-        saveBlockedIds(merged)
-        setBlockedIds(merged)
+        saveBlockedIds(merged); setBlockedIds(merged)
       }
     }
     sync()
@@ -59,58 +63,92 @@ export function AppProvider({ children }) {
     return () => { clearInterval(t); window.removeEventListener('storage', onStorage) }
   }, [])
 
-  // ── helpers ────────────────────────────────────────────
-  const isBlocked = id => blockedIds.has(id)
-  const visiblePosts = posts.filter(p => !isBlocked(p.id))
+  const visiblePosts = posts.filter(p => !blockedIds.has(String(p.id || p.seq_no)))
 
-  // ── 쓰기 (함수형 업데이트 + ref로 최신값 보장) ─────────
-
-  function addPost(post) {
-    const np = { ...post, id: `p${Date.now()}`, likes: [], views: 0, type: 'user', createdAt: new Date().toISOString() }
-    setPosts(prev => { const n = [np, ...prev]; writeLS(POSTS_KEY, n); return n })
-    return np
+  // ── 게시글 작성 ─────────────────────────────────────
+  async function addPost(post) {
+    const newPost = {
+      ...post,
+      id: `p${Date.now()}`, seq_no: null,
+      likes: [], views: 0, view_count: 0, like_count: 0,
+      type: 'user', post_type: 'user',
+      createdAt: new Date().toISOString(), created_at: new Date().toISOString(),
+    }
+    // DB 저장 시도
+    if (dbAvailable) {
+      try {
+        const res = await postAPI.create({
+          author_id: post.authorId || post.author_seq_no,
+          category_id: post.categoryId,
+          title: post.title, body: post.body,
+          tags: post.tags || [],
+          post_type: 'user',
+        })
+        newPost.seq_no = res.seq_no
+        newPost.id = String(res.seq_no)
+      } catch (e) { console.warn('DB 게시글 저장 실패, localStorage 사용:', e) }
+    }
+    setPosts(prev => { const n = [newPost, ...prev]; writeLS(POSTS_KEY, n); return n })
+    return newPost
   }
 
+  // ── 좋아요 토글 ─────────────────────────────────────
   const toggleLike = useCallback((postId, userId) => {
     setPosts(prev => {
       const n = prev.map(p => {
-        if (p.id !== postId) return p
+        const id = String(p.id || p.seq_no)
+        if (id !== String(postId)) return p
         const likes = Array.isArray(p.likes) ? p.likes : []
-        return { ...p, likes: likes.includes(userId) ? likes.filter(id => id !== userId) : [...likes, userId] }
+        const liked = likes.includes(userId)
+        return { ...p, likes: liked ? likes.filter(i => i !== userId) : [...likes, userId],
+                 like_count: liked ? Math.max(0, (p.like_count||0)-1) : (p.like_count||0)+1 }
       })
-      writeLS(POSTS_KEY, n)
-      return n
+      writeLS(POSTS_KEY, n); return n
     })
-  }, [])
+    // DB 동기화 (백그라운드)
+    if (dbAvailable) {
+      postAPI.toggleLike(postId, userId).catch(() => {})
+    }
+  }, [dbAvailable])
 
+  // ── 조회수 ─────────────────────────────────────────
   const incrementView = useCallback((postId) => {
     setPosts(prev => {
-      // 이미 이 세션에서 조회했으면 skip (ref 체크)
-      const n = prev.map(p => p.id === postId ? { ...p, views: (p.views || 0) + 1 } : p)
-      writeLS(POSTS_KEY, n)
-      return n
+      const n = prev.map(p => {
+        const id = String(p.id || p.seq_no)
+        if (id !== String(postId)) return p
+        return { ...p, views: (p.views||0)+1, view_count: (p.view_count||0)+1 }
+      })
+      writeLS(POSTS_KEY, n); return n
     })
   }, [])
 
+  // ── 댓글 ──────────────────────────────────────────
   function addComment(postId, authorId, body) {
-    const c = { id: `cm${Date.now()}`, postId, authorId, body, likes: [], createdAt: new Date().toISOString() }
+    const c = {
+      id: `cm${Date.now()}`, postId, authorId, body, likes: [],
+      createdAt: new Date().toISOString(),
+    }
     setComments(prev => { const n = [...prev, c]; writeLS(COMMENTS_KEY, n); return n })
+    // DB 동기화 (백그라운드)
+    if (dbAvailable) {
+      commentAPI.create(postId, authorId, body).catch(() => {})
+    }
     return c
   }
   function deleteComment(id) {
     setComments(prev => { const n = prev.filter(c => c.id !== id); writeLS(COMMENTS_KEY, n); return n })
+    if (dbAvailable) {
+      commentAPI.remove(id, null).catch(() => {})
+    }
   }
 
   return (
     <AppContext.Provider value={{
-      categories,
-      posts: visiblePosts,        // 목록용 (차단 제외)
-      allPosts: posts,            // 상세용 (원본 전체)
-      comments,
-      blockedIds,
-      getCommentsByPostId: postId => comments.filter(c => c.postId === postId),
-      getPostsByCategory:  catId  => visiblePosts.filter(p => p.categoryId === catId),
-      getPostsByAuthor:    uid    => visiblePosts.filter(p => p.authorId === uid),
+      categories, posts: visiblePosts, allPosts: posts, comments, blockedIds, dbAvailable,
+      getCommentsByPostId: pid => comments.filter(c => c.postId === String(pid) || c.postId === pid),
+      getPostsByCategory:  catId => visiblePosts.filter(p => p.categoryId === catId),
+      getPostsByAuthor:    uid   => visiblePosts.filter(p => p.authorId === uid || p.author_seq_no === uid),
       addPost, toggleLike, addComment, deleteComment, incrementView,
     }}>
       {children}
