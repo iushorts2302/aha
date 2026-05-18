@@ -1,14 +1,16 @@
 /**
  * api/client.js — MariaDB 연동 API 클라이언트
- * 모든 DB 작업은 이 모듈을 통해 수행
+ * 엔드포인트: /api/v1?resource=<resource>
  */
 
-const BASE = 'https://admin-vert-psi.vercel.app/api'
+const BASE = 'https://admin-vert-psi.vercel.app/api/v1'
 
-async function req(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
+async function req(resource, method = 'GET', body = null, params = {}) {
+  const qs = new URLSearchParams({ resource, ...params }).toString()
+  const res = await fetch(`${BASE}?${qs}`, {
+    method,
     headers: { 'Content-Type': 'application/json' },
-    ...options,
+    body: body ? JSON.stringify(body) : undefined,
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
@@ -18,65 +20,59 @@ async function req(path, options = {}) {
 // ── 인증 ────────────────────────────────────────────────
 export const authAPI = {
   login:  (email, password) =>
-    req('/auth', { method: 'POST', body: JSON.stringify({ email, password, type: 'user' }) }),
+    req('auth', 'POST', { email, password, type: 'user' }),
   signup: (email, password, nickname, bio = '', expertise = []) =>
-    req('/users', { method: 'POST', body: JSON.stringify({ email, password, nickname, bio, expertise }) }),
+    req('users', 'POST', { email, password, nickname, bio, expertise }),
 }
 
 // ── 사용자 ──────────────────────────────────────────────
 export const userAPI = {
-  get:          (id)     => req(`/users?id=${id}`),
-  update:       (id, data) => req('/users', { method: 'PATCH', body: JSON.stringify({ id, ...data }) }),
-  getBookmarks: (uid)    => req(`/bookmarks?user_id=${uid}`),
-  toggleBookmark: (uid, postId) =>
-    req('/bookmarks', { method: 'POST', body: JSON.stringify({ user_id: uid, post_id: postId }) }),
-  getFollowing: (uid)    => req(`/follows?user_id=${uid}&type=following`),
-  getFollowers: (uid)    => req(`/follows?user_id=${uid}&type=followers`),
-  toggleFollow: (fromId, toId) =>
-    req('/follows', { method: 'POST', body: JSON.stringify({ follower_id: fromId, followee_id: toId }) }),
+  get:    (id)       => req('users', 'GET', null, { id }),
+  update: (id, data) => req('users', 'PATCH', { id, ...data }),
+  delete: (id)       => req('users', 'DELETE', { id }),
+  getBookmarks: (uid)         => req('bookmarks', 'GET', null, { user_id: uid }),
+  toggleBookmark: (uid, postId) => req('bookmarks', 'POST', { user_id: uid, post_id: postId }),
+  getFollowing: (uid)  => req('follows', 'GET', null, { user_id: uid, type: 'following' }),
+  getFollowers: (uid)  => req('follows', 'GET', null, { user_id: uid, type: 'followers' }),
+  toggleFollow: (fromId, toId) => req('follows', 'POST', { follower_id: fromId, followee_id: toId }),
 }
 
 // ── 게시글 ──────────────────────────────────────────────
 export const postAPI = {
-  list: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([,v]) => v != null))
-    ).toString()
-    return req(`/posts${qs ? '?'+qs : ''}`)
-  },
-  get:    (id)       => req(`/posts?id=${id}`),
-  create: (data)     => req('/posts', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id, data) => req('/posts', { method: 'PATCH', body: JSON.stringify({ id, ...data }) }),
-  remove: (id)       => req('/posts', { method: 'DELETE', body: JSON.stringify({ id }) }),
+  list: (params = {}) => req('posts', 'GET', null, params),
+  get:  (id)          => req('posts', 'GET', null, { id }),
+  create: (data)      => req('posts', 'POST', data),
+  update: (id, data)  => req('posts', 'PATCH', { id, ...data }),
+  remove: (id)        => req('posts', 'DELETE', { id }),
   toggleLike: (postId, userId) =>
-    req('/likes', { method: 'POST', body: JSON.stringify({ post_id: postId, user_id: userId }) }),
+    req('likes', 'POST', { post_id: postId, user_id: userId }),
 }
 
 // ── 댓글 ────────────────────────────────────────────────
 export const commentAPI = {
-  list:   (postId) => req(`/comments?post_id=${postId}`),
+  list:   (postId) => req('comments', 'GET', null, { post_id: postId }),
   create: (postId, authorId, body, parentId = null) =>
-    req('/comments', { method: 'POST', body: JSON.stringify({
-      post_id: postId, author_id: authorId, body, parent_id: parentId
-    }) }),
-  remove: (id, authorId) =>
-    req('/comments', { method: 'DELETE', body: JSON.stringify({ id, author_id: authorId }) }),
+    req('comments', 'POST', { post_id: postId, author_id: authorId, body, parent_id: parentId }),
+  remove: (id, authorId) => req('comments', 'DELETE', { id, author_id: authorId }),
   toggleLike: (commentId, userId) =>
-    req('/comments/like', { method: 'POST', body: JSON.stringify({ comment_id: commentId, user_id: userId }) }),
+    req('comments', 'POST', { comment_id: commentId, user_id: userId, _action: 'like' }),
 }
 
 // ── 이모지 반응 ─────────────────────────────────────────
 export const reactionAPI = {
   get: (targetType, targetId, userId) =>
-    req(`/reactions?target_type=${targetType}&target_id=${targetId}${userId ? '&user_id='+userId : ''}`),
+    req('reactions', 'GET', null, {
+      target_type: targetType, target_id: targetId,
+      ...(userId ? { user_id: userId } : {}),
+    }),
   toggle: (targetType, targetId, userId, reactionKey) =>
-    req('/reactions', { method: 'POST', body: JSON.stringify({
+    req('reactions', 'POST', {
       target_type: targetType, target_id: targetId,
       user_id: userId, reaction_key: reactionKey,
-    }) }),
+    }),
 }
 
 // ── 카테고리/토픽 ────────────────────────────────────────
 export const categoryAPI = {
-  list: () => req('/categories'),
+  list: () => req('categories', 'GET'),
 }
