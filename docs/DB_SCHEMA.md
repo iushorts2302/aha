@@ -50,7 +50,7 @@ USE aha;
 
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- 1. 사용자 (User)
+-- 1. 사용자 기본 정보
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 CREATE TABLE tb_user (
@@ -77,7 +77,6 @@ CREATE TABLE tb_user (
   COMMENT='사용자';
 
 
--- 팔로우 관계 (N:M self-join)
 CREATE TABLE tb_user_follow (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     follower_seq_no BIGINT          NOT NULL               COMMENT '팔로우 하는 사용자 (FK → tb_user)',
@@ -95,7 +94,6 @@ CREATE TABLE tb_user_follow (
   COMMENT='팔로우 관계';
 
 
--- 관심 분야 (사용자별 다중 선택)
 CREATE TABLE tb_user_expertise (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     user_seq_no     BIGINT          NOT NULL               COMMENT '사용자 (FK → tb_user)',
@@ -111,29 +109,10 @@ CREATE TABLE tb_user_expertise (
   COMMENT='사용자 관심 분야';
 
 
--- 북마크
-CREATE TABLE tb_user_bookmark (
-    seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
-    user_seq_no     BIGINT          NOT NULL               COMMENT '사용자 (FK → tb_user)',
-    post_seq_no     BIGINT          NOT NULL               COMMENT '게시글 (FK → tb_post)',
-    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '북마크일시',
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_bookmark (user_seq_no, post_seq_no),
-    INDEX idx_bookmark_user (user_seq_no),
-    INDEX idx_bookmark_post (post_seq_no),
-    CONSTRAINT fk_bookmark_user FOREIGN KEY (user_seq_no) REFERENCES tb_user (seq_no) ON DELETE CASCADE,
-    CONSTRAINT fk_bookmark_post FOREIGN KEY (post_seq_no) REFERENCES tb_post (seq_no) ON DELETE CASCADE
-) ENGINE=InnoDB
-  DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci
-  COMMENT='북마크';
-
-
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- 2. 콘텐츠 분류
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
--- 카테고리 (메뉴)
 CREATE TABLE tb_category (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     category_id     VARCHAR(50)     NOT NULL               COMMENT '카테고리 식별자 (예: dev, ai, game)',
@@ -154,7 +133,6 @@ CREATE TABLE tb_category (
   COMMENT='메뉴 카테고리';
 
 
--- 토픽 (서브탭)
 CREATE TABLE tb_topic (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     topic_key       VARCHAR(100)    NOT NULL               COMMENT '토픽 키 (예: dev.javascript, ai.news)',
@@ -210,7 +188,6 @@ CREATE TABLE tb_post (
   COMMENT='게시글';
 
 
--- 게시글 태그 (1:N)
 CREATE TABLE tb_post_tag (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     post_seq_no     BIGINT          NOT NULL               COMMENT '게시글 (FK → tb_post)',
@@ -227,7 +204,6 @@ CREATE TABLE tb_post_tag (
   COMMENT='게시글 태그';
 
 
--- 게시글 좋아요
 CREATE TABLE tb_post_like (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     post_seq_no     BIGINT          NOT NULL               COMMENT '게시글 (FK → tb_post)',
@@ -245,7 +221,6 @@ CREATE TABLE tb_post_like (
   COMMENT='게시글 좋아요';
 
 
--- 게시글 조회 이력 (중복 방지용)
 CREATE TABLE tb_post_view (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     post_seq_no     BIGINT          NOT NULL               COMMENT '게시글 (FK → tb_post)',
@@ -261,6 +236,24 @@ CREATE TABLE tb_post_view (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
   COMMENT='게시글 조회 이력';
+
+
+-- ★ tb_post 생성 이후에 배치 — errno 150 해결
+CREATE TABLE tb_user_bookmark (
+    seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
+    user_seq_no     BIGINT          NOT NULL               COMMENT '사용자 (FK → tb_user)',
+    post_seq_no     BIGINT          NOT NULL               COMMENT '게시글 (FK → tb_post)',
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '북마크일시',
+    PRIMARY KEY (seq_no),
+    UNIQUE KEY uq_bookmark (user_seq_no, post_seq_no),
+    INDEX idx_bookmark_user (user_seq_no),
+    INDEX idx_bookmark_post (post_seq_no),
+    CONSTRAINT fk_bookmark_user FOREIGN KEY (user_seq_no) REFERENCES tb_user (seq_no) ON DELETE CASCADE,
+    CONSTRAINT fk_bookmark_post FOREIGN KEY (post_seq_no) REFERENCES tb_post (seq_no) ON DELETE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='북마크';
 
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -293,7 +286,6 @@ CREATE TABLE tb_comment (
   COMMENT='댓글';
 
 
--- 댓글 좋아요
 CREATE TABLE tb_comment_like (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     comment_seq_no  BIGINT          NOT NULL               COMMENT '댓글 (FK → tb_comment)',
@@ -340,7 +332,6 @@ CREATE TABLE tb_reaction (
 -- 6. 크롤링 (Crawl)
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
--- 크롤링 소스 설정
 CREATE TABLE tb_crawl_source (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     source_id       VARCHAR(100)    NOT NULL               COMMENT '소스 식별자 (예: src_kakao)',
@@ -361,7 +352,6 @@ CREATE TABLE tb_crawl_source (
   COMMENT='크롤링 소스 설정';
 
 
--- 소스-토픽 연결 (N:M)
 CREATE TABLE tb_crawl_source_topic (
     seq_no              BIGINT      NOT NULL AUTO_INCREMENT COMMENT 'PK',
     source_seq_no       BIGINT      NOT NULL               COMMENT '크롤링 소스 (FK → tb_crawl_source)',
@@ -379,7 +369,6 @@ CREATE TABLE tb_crawl_source_topic (
   COMMENT='크롤링 소스-토픽 연결';
 
 
--- 수집된 크롤링 아이템
 CREATE TABLE tb_crawl_item (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     item_id         VARCHAR(200)    NOT NULL               COMMENT '아이템 식별자 (topicKey_ts_idx)',
@@ -410,7 +399,6 @@ CREATE TABLE tb_crawl_item (
   COMMENT='수집된 크롤링 아이템';
 
 
--- 크롤링 아이템 태그
 CREATE TABLE tb_crawl_item_tag (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     item_seq_no     BIGINT          NOT NULL               COMMENT '크롤링 아이템 (FK → tb_crawl_item)',
@@ -427,7 +415,6 @@ CREATE TABLE tb_crawl_item_tag (
   COMMENT='크롤링 아이템 태그';
 
 
--- 크롤링 아이템 조회 이력
 CREATE TABLE tb_crawl_item_view (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     item_seq_no     BIGINT          NOT NULL               COMMENT '크롤링 아이템 (FK → tb_crawl_item)',
@@ -444,7 +431,6 @@ CREATE TABLE tb_crawl_item_view (
   COMMENT='크롤링 아이템 조회 이력';
 
 
--- 크롤링 아이템 좋아요
 CREATE TABLE tb_crawl_item_like (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     item_seq_no     BIGINT          NOT NULL               COMMENT '크롤링 아이템 (FK → tb_crawl_item)',
@@ -484,7 +470,6 @@ CREATE TABLE tb_admin (
   COMMENT='관리자';
 
 
--- 게시글 차단 목록
 CREATE TABLE tb_block (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     target_type     VARCHAR(20)     NOT NULL DEFAULT 'post' COMMENT '대상 유형: post | crawl_item',
@@ -504,7 +489,6 @@ CREATE TABLE tb_block (
   COMMENT='게시글/크롤링 차단 목록';
 
 
--- 크롤링 실행 이력
 CREATE TABLE tb_cron_log (
     seq_no          BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'PK',
     topic_key       VARCHAR(100)    NULL                   COMMENT '토픽 키 (NULL이면 전체 실행)',
@@ -592,31 +576,5 @@ tb_admin ─── 1:N ─── tb_block
 
 ## 초기 데이터 (INSERT)
 
-```sql
--- 관리자 계정 (비밀번호: admin1234 → bcrypt 해시)
-INSERT INTO tb_admin (email, password_hash, name, role)
-VALUES ('admin@aha.com', '$2b$12$...bcrypt_hash...', '관리자', 'superadmin');
 
--- 기본 카테고리 19개
-INSERT INTO tb_category (category_id, label, icon, sort_order) VALUES
-('home',    '홈',       '🏠',  1),
-('ai',      'AI 뉴스',  '🤖',  2),
-('startup', '스타트업', '🚀',  3),
-('dev',     '개발',     '💻',  4),
-('oss',     '오픈소스', '📦',  5),
-('design',  '디자인',   '🎨',  6),
-('it',      'IT 뉴스',  '📰',  7),
-('board',   '게시판',   '📋',  8),
-('game',    '게임',     '🎮',  9),
-('finance', '주식/코인','💰', 10),
-('market',  '마켓',     '🛒', 11),
-('job',     '취업',     '💼', 12),
-('learn',   '학습',     '📚', 13),
-('research','논문',     '🔬', 14),
-('video',   '영상',     '📹', 15),
-('humor',   '유머',     '😂', 16),
-('trending','인기',     '🔥', 17),
-('image',   '이미지',   '🖼', 18),
-('aihub',   'AI허브',   '🧠', 19);
-```
 
