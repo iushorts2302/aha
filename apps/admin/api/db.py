@@ -8,7 +8,7 @@ import pymysql.cursors
 
 # DB 접속 정보 — 환경변수 > 기본값
 DB_CONFIG = {
-    "host":     os.environ.get("DB_HOST",     "172.30.8.82"),
+    "host":     os.environ.get("DB_HOST",     "211.217.252.169"),
     "port":     int(os.environ.get("DB_PORT", "3306")),
     "user":     os.environ.get("DB_USER",     "srvaha"),
     "password": os.environ.get("DB_PASSWORD", ""),
