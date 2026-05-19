@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { getBlockedIds, BLOCKED_KEY, setBlockedIds as saveBlockedIds } from '../store/blockedStore.js'
-import { postAPI, commentAPI } from '../api/client.js'
+import { postAPI, commentAPI, categoryAPI } from '../api/client.js'
+import { getConfig } from '../store/configStore.js'
 
 const ADMIN_API    = 'https://admin-vert-psi.vercel.app'
 // localStorage — 게시글/댓글 세션 폴백용 (DB 연결 실패 시)
@@ -20,14 +21,46 @@ async function fetchServerBlocked() {
 
 const AppContext = createContext(null)
 
-const CATEGORIES = [
-  { id: 'c1', name: 'DIY',  icon: '🔧' }, { id: 'c2', name: '테크', icon: '💻' },
-  { id: 'c3', name: '요리', icon: '🍳' }, { id: 'c4', name: '여행', icon: '✈️' },
-  { id: 'c5', name: '운동', icon: '💪' },
-]
+// config.py DEFAULT_CONFIG 기반 기본 카테고리 (DB/API 실패 시 폴백)
+function _defaultCategories() {
+  const cfg = getConfig()
+  if (cfg && cfg.categories && cfg.categories.length > 0) {
+    return cfg.categories.map(c => ({
+      id: c.category_id || c.id, name: c.label, icon: c.icon || '',
+      seq_no: c.seq_no,
+    }))
+  }
+  return [
+    { id: 'home',    name: '홈',       icon: '🏠' },
+    { id: 'ai',      name: 'AI 뉴스',  icon: '🤖' },
+    { id: 'dev',     name: '개발',     icon: '💻' },
+    { id: 'startup', name: '스타트업', icon: '🚀' },
+    { id: 'game',    name: '게임',     icon: '🎮' },
+    { id: 'finance', name: '주식/코인',icon: '💰' },
+    { id: 'board',   name: '게시판',   icon: '📋' },
+    { id: 'learn',   name: '학습',     icon: '📚' },
+    { id: 'job',     name: '취업',     icon: '💼' },
+  ]
+}
 
 export function AppProvider({ children }) {
-  const [categories] = useState(CATEGORIES)
+  const [categories, setCategories] = useState(_defaultCategories)
+
+  // categories를 API/config에서 동적 로드
+  useEffect(() => {
+    categoryAPI.list()
+      .then(d => {
+        if (d.db_down) return  // DB 실패 → _defaultCategories 유지
+        const cats = (d.categories || [])
+        if (cats.length > 0) {
+          setCategories(cats.map(c => ({
+            id: c.category_id || c.id, name: c.label, icon: c.icon || '',
+            seq_no: c.seq_no,
+          })))
+        }
+      })
+      .catch(() => {})
+  }, [])
   const [posts,    setPosts]    = useState(() => readLS(POSTS_KEY, []))
   const [comments, setComments] = useState(() => readLS(COMMENTS_KEY, []))
   const [blockedIds, setBlockedIds] = useState(() => getBlockedIds())

@@ -535,23 +535,32 @@ class handler(BaseHTTPRequestHandler):
             err_msg = str(e)
             # DB 연결 실패(2003) → resource별 빈 기본값으로 200 반환 (서비스 무중단)
             if "2003" in err_msg or "Can't connect" in err_msg or "timed out" in err_msg:
-                EMPTY = {
-                    "auth":       {"error": "DB unavailable"},
-                    "users":      {"users": [], "count": 0},
-                    "posts":      {"posts": [], "total": 0, "page": 1, "limit": 20},
-                    "comments":   {"comments": [], "count": 0},
-                    "likes":      {"liked": False, "like_count": 0},
-                    "bookmarks":  {"bookmarks": []},
-                    "reactions":  {"counts": {}, "user_reaction": None},
-                    "follows":    {"users": [], "count": 0},
-                    "categories": {"categories": []},
-                    "topics":     {"topics": []},
-                    "sources":    {"sources": []},
-                    "crawl_items":{"items": [], "total": 0, "count": 0},
-                }
-                fallback = EMPTY.get(resource, {"error": "DB unavailable", "db_down": True})
-                status = 401 if resource == "auth" else 200
-                return self._json(status, {**fallback, "db_down": True})
+                # config.py DEFAULT_CONFIG에서 기본값 로드
+                    try:
+                        from config import DEFAULT_CONFIG as _DC
+                    except Exception:
+                        _DC = {}
+                    EMPTY = {
+                        "auth":       {"error": "DB unavailable"},
+                        "users":      {"users": [], "count": 0},
+                        "posts":      {"posts": [], "total": 0, "page": 1, "limit": 20},
+                        "comments":   {"comments": [], "count": 0},
+                        "likes":      {"liked": False, "like_count": 0},
+                        "bookmarks":  {"bookmarks": []},
+                        "reactions":  {"counts": {}, "user_reaction": None},
+                        "follows":    {"users": [], "count": 0},
+                        # DB 없어도 config 기본값으로 19개/63개 반환
+                        "categories": {"categories": _DC.get("categories", [])},
+                        "topics":     {"topics":     [
+                            {**t, "seq_no": i+1, "category_seq_no": None}
+                            for i, t in enumerate(_DC.get("topics", []))
+                        ]},
+                        "sources":    {"sources":    _DC.get("sources", [])},
+                        "crawl_items":{"items": [], "total": 0, "count": 0},
+                    }
+                    fallback = EMPTY.get(resource, {"error": "DB unavailable", "db_down": True})
+                    status = 401 if resource == "auth" else 200
+                    return self._json(status, {**fallback, "db_down": True})
             self._json(500, {"error": err_msg, "trace": traceback.format_exc()[-300:]})
 
     def do_GET(self):    self._handle("GET")

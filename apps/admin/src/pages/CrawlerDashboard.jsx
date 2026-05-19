@@ -36,7 +36,7 @@ export default function CrawlerDashboard() {
   const timerRef    = useRef(null)
   const countdownRef = useRef(null)
 
-  // ── DB에서 카테고리 + 토픽 로드 ─────────────────────
+  // ── DB에서 카테고리 + 토픽 로드 (DB 없으면 config 기본값) ──
   async function loadTopics() {
     setLoading(true)
     try {
@@ -44,6 +44,7 @@ export default function CrawlerDashboard() {
         apiGet('categories'),
         apiGet('topics'),
       ])
+      // DB 없어도 config 기본값 반환됨 (db_down=true지만 데이터 있음)
       const cats = catData.categories || []
       setCategories(cats)
 
@@ -175,6 +176,7 @@ export default function CrawlerDashboard() {
           { label: '활성 토픽',      value: activeCount,                  unit: '개' },
           { label: '만료 토픽',      value: staleCount,                   unit: '개', warn: staleCount > 0 },
           { label: '자동 스케줄',    value: autoRunning ? 'ON' : 'OFF',   unit: '', ok: autoRunning },
+        { label: 'DB 상태',       value: categories.length > 0 && !categories[0]?.db_down ? '연결됨' : 'DB 없음', unit: '', ok: categories.length > 0, warn: categories.length === 0 },
         ].map(s => (
           <div key={s.label} style={{ padding: 20, background: '#fff' }}>
             <p style={{ fontSize: 26, fontWeight: 800, color: s.warn ? '#E03131' : s.ok ? 'var(--color-accent)' : 'var(--color-ink)' }}>
