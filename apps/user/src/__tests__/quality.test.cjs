@@ -256,6 +256,35 @@ test('FB-11','client.js: AbortSignal 타임아웃 10초',      ()=> client.inclu
 test('FB-12','AppContext: db_down 플래그 처리',           ()=> ctx.includes('db_down'))
 test('FB-13','AppContext: DB 실패 시 localStorage 유지',  ()=> ctx.includes('setDbAvailable(false)'))
 
+
+// ══════════════════════════════════════════════════════════
+// CB — 서킷 브레이커
+// ══════════════════════════════════════════════════════════
+const cb   = read('store/circuitBreaker.js')
+const maint = read('pages/MaintenancePage.jsx')
+const appCb = read('App.jsx')
+
+test('CB-01','circuitBreaker: CLOSED/OPEN/HALF 상태 정의',  ()=> cb.includes('CLOSED') && cb.includes('OPEN') && cb.includes('HALF'))
+test('CB-02','circuitBreaker: THRESHOLD 10회',              ()=> cb.includes('THRESHOLD = 10') || cb.includes('THRESHOLD=10'))
+test('CB-03','circuitBreaker: HALF_TTL 30초',               ()=> cb.includes('30 * 1000') || cb.includes('30*1000'))
+test('CB-04','circuitBreaker: recordSuccess 함수',          ()=> cb.includes('recordSuccess'))
+test('CB-05','circuitBreaker: recordFailure 함수',          ()=> cb.includes('recordFailure'))
+test('CB-06','circuitBreaker: healthCheck 함수',            ()=> cb.includes('healthCheck'))
+test('CB-07','circuitBreaker: 자동 복구 setInterval',       ()=> cb.includes('setInterval'))
+test('CB-08','circuitBreaker: onStateChange 구독',          ()=> cb.includes('onStateChange'))
+test('CB-09','circuitBreaker: reset 강제 초기화',           ()=> cb.includes('function reset'))
+test('CB-10','circuitBreaker: sessionStorage 영속',         ()=> cb.includes('sessionStorage'))
+test('CB-11','client.js: OPEN 상태 요청 차단',              ()=> client.includes('CB_STATE.OPEN') && client.includes('서버 점검 중'))
+test('CB-12','client.js: recordSuccess/recordFailure 연동', ()=> client.includes('recordSuccess()') && client.includes('recordFailure()'))
+test('CB-13','client.js: db_down → recordFailure',          ()=> client.includes('db_down') && client.includes('recordFailure'))
+test('CB-14','App.jsx: onStateChange 구독',                 ()=> appCb.includes('onStateChange') && appCb.includes('setCbState'))
+test('CB-15','App.jsx: OPEN 시 MaintenancePage 렌더',       ()=> appCb.includes('CB_STATE.OPEN') && appCb.includes('MaintenancePage'))
+test('CB-16','MaintenancePage: 카운트다운 30초',            ()=> maint.includes('30') && maint.includes('countdown'))
+test('CB-17','MaintenancePage: 지금 재시도 버튼',           ()=> maint.includes('handleRetry') && maint.includes('지금 재시도'))
+test('CB-18','MaintenancePage: 복구 시 자동 reload',        ()=> maint.includes('window.location.reload'))
+test('CB-19','MaintenancePage: reset + 홈으로 버튼',        ()=> maint.includes('reset()') && maint.includes('오류 초기화'))
+test('CB-20','MaintenancePage: aha! 디자인 토큰 사용',      ()=> maint.includes('var(--color-primary)') || maint.includes('#0066CC'))
+
 // ══════════════════════════════════════════════════════════
 // 결과 출력
 // ══════════════════════════════════════════════════════════

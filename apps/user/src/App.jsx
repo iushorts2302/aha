@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { AuthProvider } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
 import Header from './components/Header'
@@ -11,6 +11,8 @@ import ProfilePage     from './pages/ProfilePage'
 import SearchPage      from './pages/SearchPage'
 import { BookmarksPage, CategoryPage } from './pages/MiscPages'
 import { LoginPage, SignupPage }       from './pages/AuthPages'
+import MaintenancePage from './pages/MaintenancePage'
+import { getState, onStateChange, CB_STATE } from './store/circuitBreaker.js'
 
 import {
   HomePage, TrendingPage, FeedPage, BoardPageNew,
@@ -43,9 +45,15 @@ function parseRoute(route) {
 }
 
 function AppInner() {
-  const [route, setRoute] = useState('home')
-  // ref로 이전 경로 추적 — setState 배치 문제 없이 즉시 읽기 가능
+  const [route, setRoute]       = useState('home')
+  const [cbState, setCbState]   = useState(() => getState())
   const prevRouteRef = useRef('home')
+
+  // 서킷브레이커 상태 구독
+  useEffect(() => onStateChange(setCbState), [])
+
+  // OPEN 상태 → 서버 점검 페이지
+  if (cbState === CB_STATE.OPEN) return <MaintenancePage />
 
   function navigate(to) {
     prevRouteRef.current = route  // 이동 전 경로 즉시 기록

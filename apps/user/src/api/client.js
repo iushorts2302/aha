@@ -4,6 +4,8 @@
  * DB 연결 실패 시 빈 기본값 반환 (서비스 무중단)
  */
 
+import { recordSuccess, recordFailure, getState, CB_STATE } from '../store/circuitBreaker.js'
+
 const BASE = 'https://admin-vert-psi.vercel.app/api/v1'
 
 // resource별 DB 실패 시 기본값
@@ -23,6 +25,12 @@ const FALLBACKS = {
 }
 
 async function req(resource, method = 'GET', body = null, params = {}) {
+  // 서킷브레이커 OPEN 상태면 즉시 폴백 반환 (네트워크 요청 차단)
+  if (getState() === CB_STATE.OPEN) {
+    if (method !== 'GET') throw new Error('서버 점검 중입니다.')
+    return FALLBACKS[resource] ?? {}
+  }
+
   try {
     const qs = new URLSearchParams({ resource, ...params }).toString()
     const res = await fetch(`${BASE}?${qs}`, {
@@ -32,14 +40,21 @@ async function req(resource, method = 'GET', body = null, params = {}) {
       signal: AbortSignal.timeout(10000),
     })
     const data = await res.json()
-    // DB down 플래그 — 쓰기 작업(POST/PATCH/DELETE)만 에러 throw
-    if (!res.ok && method !== 'GET') {
-      if (data.db_down) return FALLBACKS[resource] ?? { ok: false, db_down: true }
-      throw new Error(data.error || `HTTP ${res.status}`)
+
+    // DB down 플래그 → 실패로 기록
+    if (data.db_down) {
+      recordFailure()
+      if (method !== 'GET') return FALLBACKS[resource] ?? { ok: false, db_down: true }
+      return data
     }
+
+    // 성공 → 서킷브레이커 리셋
+    if (res.ok) recordSuccess()
+    else if (method !== 'GET') throw new Error(data.error || `HTTP ${res.status}`)
     return data
   } catch (e) {
-    // 네트워크/타임아웃 실패 → 기본값 반환 (GET) / throw (쓰기)
+    // 네트워크/타임아웃 실패 → 실패 기록
+    recordFailure()
     if (method !== 'GET') throw e
     return FALLBACKS[resource] ?? {}
   }
