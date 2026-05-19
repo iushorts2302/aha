@@ -3,105 +3,84 @@
  *
  * 상태:
  *   CLOSED  — 정상 (기본값)
- *   OPEN    — 차단 (10회 연속 실패, 서버점검 페이지 표시)
- *   HALF    — 복구 시도 중 (30초마다 헬스체크)
+ *   OPEN    — 차단 (THRESHOLD회 연속 실패)
+ *   HALF    — 복구 시도 중
  *
- * sessionStorage 키: aha_cb_state
- *   { state, failures, openedAt, lastCheck }
+ * 설계 원칙:
+ *   - 앱 시작 시 항상 CLOSED로 초기화 (이전 OPEN 상태 승계 안 함)
+ *   - db_down은 실패로 카운트 안 함 (DB 없음 ≠ 서비스 다운)
+ *   - 진짜 네트워크 실패(타임아웃/연결거부)만 카운트
  */
 
-const SK        = 'aha_cb_state'
 const THRESHOLD = 10          // 실패 임계값
 const HALF_TTL  = 30 * 1000   // 30초마다 복구 시도
 const HEALTH_URL = 'https://admin-vert-psi.vercel.app/api/config'
 
 export const CB_STATE = { CLOSED: 'CLOSED', OPEN: 'OPEN', HALF: 'HALF' }
 
-// ── 저장소 ────────────────────────────────────────────
-function load() {
-  try {
-    return JSON.parse(sessionStorage.getItem(SK)) || {
-      state: CB_STATE.CLOSED, failures: 0, openedAt: null, lastCheck: 0
-    }
-  } catch {
-    return { state: CB_STATE.CLOSED, failures: 0, openedAt: null, lastCheck: 0 }
-  }
-}
-function save(s) {
-  try { sessionStorage.setItem(SK, JSON.stringify(s)) } catch {}
-}
+// ── 메모리 상태 (sessionStorage 제거 — 이전 OPEN 상태 승계 방지) ──
+let _state    = CB_STATE.CLOSED
+let _failures = 0
+let _listeners = new Set()
 
-// ── listeners ─────────────────────────────────────────
-const _listeners = new Set()
+function _notify() { _listeners.forEach(fn => fn(_state)) }
+
+// ── 공개 API ──────────────────────────────────────────
+export function getState()    { return _state }
+export function getFailures() { return _failures }
+
 export function onStateChange(fn) {
   _listeners.add(fn)
   return () => _listeners.delete(fn)
 }
-function _notify() { _listeners.forEach(fn => fn(getState())) }
 
-// ── 공개 API ─────────────────────────────────────────
-export function getState() { return load().state }
-export function getFailures() { return load().failures }
-
-/** API 호출 성공 시 호출 */
 export function recordSuccess() {
-  const s = load()
-  if (s.state !== CB_STATE.CLOSED || s.failures > 0) {
-    save({ state: CB_STATE.CLOSED, failures: 0, openedAt: null, lastCheck: 0 })
+  if (_state !== CB_STATE.CLOSED || _failures > 0) {
+    _state    = CB_STATE.CLOSED
+    _failures = 0
     _notify()
   }
 }
 
-/** API 호출 실패 시 호출 (DB down 포함) */
 export function recordFailure() {
-  const s = load()
-  if (s.state === CB_STATE.OPEN) return  // 이미 OPEN
-
-  const failures = s.failures + 1
-  if (failures >= THRESHOLD) {
-    save({ state: CB_STATE.OPEN, failures, openedAt: Date.now(), lastCheck: 0 })
+  if (_state === CB_STATE.OPEN) return
+  _failures += 1
+  if (_failures >= THRESHOLD) {
+    _state = CB_STATE.OPEN
     _notify()
-  } else {
-    save({ ...s, failures })
   }
 }
 
-/** OPEN 상태일 때 복구 시도 가능 여부 */
 export function canAttemptRecovery() {
-  const s = load()
-  if (s.state !== CB_STATE.OPEN) return false
-  return Date.now() - (s.lastCheck || 0) >= HALF_TTL
+  return _state === CB_STATE.OPEN
 }
 
-/** 복구 시도 시작 (OPEN → HALF) */
 export function markHalfOpen() {
-  const s = load()
-  save({ ...s, state: CB_STATE.HALF, lastCheck: Date.now() })
+  _state = CB_STATE.HALF
   _notify()
 }
 
-/** 복구 시도 실패 → 다시 OPEN */
 export function markOpenAgain() {
-  const s = load()
-  save({ ...s, state: CB_STATE.OPEN, lastCheck: Date.now() })
+  _state = CB_STATE.OPEN
   _notify()
 }
 
-/** 복구 성공 → CLOSED */
 export function markRecovered() {
-  save({ state: CB_STATE.CLOSED, failures: 0, openedAt: null, lastCheck: 0 })
+  _state    = CB_STATE.CLOSED
+  _failures = 0
   _notify()
 }
 
-/** 강제 리셋 (관리자용) */
 export function reset() {
-  save({ state: CB_STATE.CLOSED, failures: 0, openedAt: null, lastCheck: 0 })
+  _state    = CB_STATE.CLOSED
+  _failures = 0
+  // 혹시 남아있을 수 있는 sessionStorage도 정리
+  try { sessionStorage.removeItem('aha_cb_state') } catch {}
   _notify()
 }
 
-/** 헬스체크 실행 */
 export async function healthCheck() {
-  if (!canAttemptRecovery()) return false
+  if (_state !== CB_STATE.OPEN) return false
   markHalfOpen()
   try {
     const r = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(5000) })
@@ -112,7 +91,7 @@ export async function healthCheck() {
   }
 }
 
-// OPEN 상태일 때 자동 헬스체크 (30초 간격)
+// OPEN 상태일 때 30초마다 자동 헬스체크
 setInterval(() => {
-  if (canAttemptRecovery()) healthCheck()
+  if (_state === CB_STATE.OPEN) healthCheck()
 }, HALF_TTL)
