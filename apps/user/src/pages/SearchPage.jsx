@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
-import { getItems, MENU_TOPICS } from '../store/crawlStore.js'
+import { getItems, getItemsSync, MENU_TOPICS } from '../store/crawlStore.js'
 import { sortPosts } from '../store/algorithm.js'
 import { PageHeader, TabNav, CrawlCard } from '../components/CrawlComponents.jsx'
 import PostCard from '../components/PostCard.jsx'
@@ -37,7 +37,7 @@ export default function SearchPage({ query: initQuery, navigate }) {
 
   // 크롤링 데이터 검색
   const allCrawled = query
-    ? Object.keys(MENU_TOPICS).flatMap(key => getItems(key, 20)).filter(item =>
+    ? Object.keys(MENU_TOPICS).flatMap(key => getItemsSync(key)).filter(item =>
         item.title?.toLowerCase().includes(query.toLowerCase()) ||
         item.summary?.toLowerCase().includes(query.toLowerCase()) ||
         item.tags?.some(t => t.toLowerCase().includes(query.toLowerCase()))

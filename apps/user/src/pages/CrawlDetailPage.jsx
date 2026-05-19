@@ -61,8 +61,10 @@ export default function CrawlDetailPage({ itemId, navigate, prevPage }) {
     const saved = loadDetail()
     if (saved && saved.id === itemId) {
       setItem(saved)
-      const rel = getItems(saved.topicKey, 20).filter(i => i.id !== itemId).slice(0, 5)
-      setRelated(rel)
+      getItems(saved.topicKey, 20).then(relRaw => {
+        const rel = (Array.isArray(relRaw) ? relRaw : []).filter(i => i.id !== itemId).slice(0, 5)
+        setRelated(rel)
+      }).catch(() => setRelated([]))
       // 저장된 조회수/좋아요 로드
       setViews(getCrawlViews(itemId))
       setLikes(getCrawlLikes(itemId))

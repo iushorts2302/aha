@@ -13,8 +13,9 @@ export default function ShortformFeed({ topicKey = 'home.shortform' }) {
   const touchStartY = useRef(0)
 
   useEffect(() => {
-    const data = getItems(topicKey, 20)
-    setItems(data)
+    getItems(topicKey, 20).then(data => {
+      setItems(Array.isArray(data) ? data : [])
+    }).catch(() => setItems([]))
   }, [topicKey])
 
   // 키보드 네비게이션
