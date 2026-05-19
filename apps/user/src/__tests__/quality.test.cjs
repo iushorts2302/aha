@@ -238,6 +238,24 @@ test('SS-09','AdminContext: localStorage 세션 복원',        ()=> adminCtx.in
 test('SS-10','AdminContext: 로그인 시 localStorage 저장',   ()=> adminCtx.includes('localStorage.setItem(LS_ADMIN_KEY'))
 test('SS-11','AdminContext: logout 시 localStorage 삭제',   ()=> adminCtx.includes('localStorage.removeItem(LS_ADMIN_KEY)'))
 
+
+// ══════════════════════════════════════════════════════════
+// FB — DB 연결 실패 폴백 (서비스 무중단)
+// ══════════════════════════════════════════════════════════
+test('FB-01','v1.py: DB 실패 시 200 + 빈 컬렉션 반환',    ()=> v1Py.includes('db_down') && v1Py.includes('EMPTY'))
+test('FB-02','v1.py: categories 빈 배열 폴백',            ()=> v1Py.includes('"categories": []'))
+test('FB-03','v1.py: posts 빈 배열 폴백',                 ()=> v1Py.includes('"posts": []'))
+test('FB-04','v1.py: topics 빈 배열 폴백',                ()=> v1Py.includes('"topics": []'))
+test('FB-05','data.py: /tmp JSON 캐시 저장',              ()=> dataPy.includes('CACHE_FILE') && dataPy.includes('/tmp/'))
+test('FB-06','data.py: 3단계 폴백 (DB→캐시→크롤링)',      ()=> dataPy.includes('_get_cached') && dataPy.includes('_set_cached') && dataPy.includes('_db_items'))
+test('FB-07','data.py: DB 실패 시 None 반환 (캐시로 폴백)',()=> dataPy.includes('return None'))
+test('FB-08','data.py: 크롤링 성공 시 캐시 저장',         ()=> dataPy.includes('_set_cached(topic_key, items)'))
+test('FB-09','client.js: FALLBACKS 기본값 정의',          ()=> client.includes('FALLBACKS'))
+test('FB-10','client.js: GET 실패 시 기본값 반환',        ()=> client.includes("if (method !== 'GET') throw e") || client.includes("method !== 'GET'"))
+test('FB-11','client.js: AbortSignal 타임아웃 10초',      ()=> client.includes('AbortSignal.timeout(10000)'))
+test('FB-12','AppContext: db_down 플래그 처리',           ()=> ctx.includes('db_down'))
+test('FB-13','AppContext: DB 실패 시 localStorage 유지',  ()=> ctx.includes('setDbAvailable(false)'))
+
 // ══════════════════════════════════════════════════════════
 // 결과 출력
 // ══════════════════════════════════════════════════════════

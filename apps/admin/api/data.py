@@ -1,13 +1,17 @@
 """
 /api/data — 크롤링 데이터 조회 API
-사용자웹 CrawlFeed가 30초마다 폴링
-DB(tb_crawl_item) 우선 조회, 없으면 실시간 크롤링 후 DB 저장
+우선순위: 1) DB  2) /tmp JSON 캐시  3) 실시간 크롤링 → 캐시 저장
+사용자웹 CrawlFeed 30초 폴링
 """
 import json, os, sys, time
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.dirname(__file__))
+
+# /tmp는 Vercel 서버리스에서 쓰기 가능한 유일한 경로
+CACHE_FILE = "/tmp/crawl_cache.json"
+CACHE_TTL  = 30 * 60  # 30분
 
 def _cors(h):
     h.send_header("Access-Control-Allow-Origin", "*")
@@ -21,8 +25,39 @@ def _json(h, status, data):
     h.send_header("Content-Length", str(len(body)))
     h.end_headers(); h.wfile.write(body)
 
+# ── JSON 파일 캐시 ────────────────────────────────────────
+def _load_cache():
+    try:
+        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _save_cache(cache):
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, default=str)
+    except Exception:
+        pass
+
+def _get_cached(topic_key):
+    """캐시에서 토픽 데이터 조회 (TTL 확인)"""
+    cache = _load_cache()
+    entry = cache.get(topic_key)
+    if not entry:
+        return None
+    if time.time() - entry.get("saved_at", 0) > CACHE_TTL:
+        return None
+    return entry.get("items", [])
+
+def _set_cached(topic_key, items):
+    """캐시에 토픽 데이터 저장"""
+    cache = _load_cache()
+    cache[topic_key] = {"items": items, "saved_at": time.time()}
+    _save_cache(cache)
+
+# ── DB 조회 ──────────────────────────────────────────────
 def _db_items(topic_key, limit=20):
-    """DB에서 크롤링 아이템 조회"""
     try:
         import db
         rows = db.query(
@@ -38,24 +73,22 @@ def _db_items(topic_key, limit=20):
             (topic_key, limit)
         )
         for r in rows:
-            r["hot"] = r.pop("hot_yn", "N") == "Y"
-            # 태그
+            r["hot"]  = r.pop("hot_yn", "N") == "Y"
             r["tags"] = [t["tag_name"] for t in db.query(
                 "SELECT tag_name FROM tb_crawl_item_tag WHERE item_seq_no=%s ORDER BY sort_order",
                 (r["id"],))]
         return rows
     except Exception:
-        return []
+        return None  # DB 연결 실패 → None (캐시/크롤링으로 폴백)
 
 def _save_to_db(items, topic_key):
-    """크롤링 결과를 DB에 저장"""
     try:
         import db
         topic = db.query_one("SELECT seq_no FROM tb_topic WHERE topic_key=%s", (topic_key,))
         if not topic: return
         for item in items:
-            exist = db.query_one("SELECT seq_no FROM tb_crawl_item WHERE item_id=%s", (item.get("id",""),))
-            if exist: continue
+            if db.query_one("SELECT seq_no FROM tb_crawl_item WHERE item_id=%s", (item.get("id",""),)):
+                continue
             seq = db.execute(
                 "INSERT INTO tb_crawl_item "
                 "(item_id,topic_seq_no,title,summary,source_url,topic_label,category_id,hot_yn) "
@@ -68,7 +101,8 @@ def _save_to_db(items, topic_key):
                 db.execute("INSERT IGNORE INTO tb_crawl_item_tag (item_seq_no,tag_name,sort_order) VALUES(%s,%s,%s)",
                            (seq, str(tag)[:100], i))
     except Exception:
-        pass
+        pass  # DB 저장 실패 → 무시 (캐시에는 저장됨)
+
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -82,25 +116,30 @@ class handler(BaseHTTPRequestHandler):
         if not topic_key:
             return _json(self, 400, {"error": "topic parameter required"})
 
-        # 1. DB에서 먼저 조회
+        # ── 1순위: DB ────────────────────────────────────
         db_items = _db_items(topic_key, limit)
-        if db_items:
+        if db_items is not None and len(db_items) > 0:
+            _set_cached(topic_key, db_items)  # DB 성공 → 캐시도 갱신
             return _json(self, 200, {"items": db_items, "count": len(db_items), "source": "db"})
 
-        # 2. DB에 없으면 실시간 크롤링 후 DB 저장
+        # ── 2순위: /tmp JSON 캐시 ────────────────────────
+        cached = _get_cached(topic_key)
+        if cached:
+            return _json(self, 200, {"items": cached, "count": len(cached), "source": "cache"})
+
+        # ── 3순위: 실시간 크롤링 → 캐시 저장 ────────────
         try:
             from crawl import TOPIC_CRAWLERS, enrich
             fn = TOPIC_CRAWLERS.get(topic_key)
             if not fn:
                 return _json(self, 200, {"items": [], "count": 0, "source": "empty"})
             raw   = fn()
-            items = enrich(raw[:limit], topic_key,
-                           topic_key.split(".")[-1].replace("_"," ").title(),
-                           topic_key.split(".")[0])
-            # DB 저장 (백그라운드)
-            _save_to_db(items, topic_key)
+            label = topic_key.split(".")[-1].replace("_", " ").title()
+            items = enrich(raw[:limit], topic_key, label, topic_key.split(".")[0])
+            _set_cached(topic_key, items)    # 캐시에 저장
+            _save_to_db(items, topic_key)    # DB에도 저장 시도 (실패해도 무방)
             return _json(self, 200, {"items": items, "count": len(items), "source": "fresh"})
         except Exception as e:
-            return _json(self, 500, {"error": str(e)})
+            return _json(self, 200, {"items": [], "count": 0, "source": "error", "error": str(e)})
 
     def log_message(self, *a): pass

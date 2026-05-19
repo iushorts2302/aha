@@ -37,23 +37,30 @@ export function AppProvider({ children }) {
   useEffect(() => { writeLS(POSTS_KEY, posts) },    [posts])
   useEffect(() => { writeLS(COMMENTS_KEY, comments) }, [comments])
 
-  // DB 연결 확인 + 게시글 로드
+  // DB 연결 확인 + 게시글 로드 (실패 시 localStorage 유지)
   useEffect(() => {
     postAPI.list({ page: 1, limit: 50 })
       .then(data => {
+        if (data.db_down) { setDbAvailable(false); return }
         const dbPosts = (data.posts || []).map(p => ({
           ...p,
-          id:        String(p.seq_no),
-          authorId:  String(p.author_seq_no),
+          id:         String(p.seq_no),
+          authorId:   String(p.author_seq_no),
           categoryId: p.category_id || null,
-          likes:     [],          // 별도 조회
-          views:     p.view_count || 0,
-          body:      p.body || '',
-          tags:      p.tags || [],
-          createdAt: p.created_at,
+          likes:      [],
+          views:      p.view_count || 0,
+          body:       p.body || '',
+          tags:       p.tags || [],
+          createdAt:  p.created_at,
         }))
         if (dbPosts.length > 0) {
-          setPosts(dbPosts)
+          setPosts(prev => {
+            // DB 포스트 + localStorage 전용 포스트 (type='user', id가 'p'로 시작) 병합
+            const localOnly = prev.filter(p => String(p.id).startsWith('p') && !p.seq_no)
+            const merged = [...dbPosts, ...localOnly]
+            writeLS(POSTS_KEY, merged)
+            return merged
+          })
           setDbAvailable(true)
         }
       })
