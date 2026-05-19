@@ -41,9 +41,8 @@ async function req(resource, method = 'GET', body = null, params = {}) {
     })
     const data = await res.json()
 
-    // DB down 플래그 → 실패로 기록
+    // DB down 플래그 — DB 없음은 서비스 다운이 아니므로 서킷브레이커 미트리거
     if (data.db_down) {
-      recordFailure()
       if (method !== 'GET') return FALLBACKS[resource] ?? { ok: false, db_down: true }
       return data
     }

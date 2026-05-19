@@ -243,9 +243,9 @@ test('SS-11','AdminContext: logout 시 localStorage 삭제',   ()=> adminCtx.inc
 // FB — DB 연결 실패 폴백 (서비스 무중단)
 // ══════════════════════════════════════════════════════════
 test('FB-01','v1.py: DB 실패 시 200 + 빈 컬렉션 반환',    ()=> v1Py.includes('db_down') && v1Py.includes('EMPTY'))
-test('FB-02','v1.py: categories 빈 배열 폴백',            ()=> v1Py.includes('"categories": []'))
+test('FB-02','v1.py: categories DB 실패 시 config 기본값',  ()=> v1Py.includes('DEFAULT_CONFIG') && v1Py.includes('"categories"'))
 test('FB-03','v1.py: posts 빈 배열 폴백',                 ()=> v1Py.includes('"posts": []'))
-test('FB-04','v1.py: topics 빈 배열 폴백',                ()=> v1Py.includes('"topics": []'))
+test('FB-04','v1.py: topics DB 실패 시 config 기본값',      ()=> v1Py.includes('_DC.get') && v1Py.includes('topics'))
 test('FB-05','data.py: /tmp JSON 캐시 저장',              ()=> dataPy.includes('CACHE_FILE') && dataPy.includes('/tmp/'))
 test('FB-06','data.py: 3단계 폴백 (DB→캐시→크롤링)',      ()=> dataPy.includes('_get_cached') && dataPy.includes('_set_cached') && dataPy.includes('_db_items'))
 test('FB-07','data.py: DB 실패 시 None 반환 (캐시로 폴백)',()=> dataPy.includes('return None'))

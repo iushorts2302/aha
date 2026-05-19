@@ -91,6 +91,16 @@ class handler(BaseHTTPRequestHandler):
                 label = key.split(".")[-1].replace("_"," ").title()
                 items = enrich(raw[:8], key, label, key.split(".")[0])
                 saved = _save_to_db(items, key)
+                # /tmp 캐시도 갱신 (data.py 폴백용)
+                try:
+                    import json as _j, time as _t
+                    CACHE_FILE = "/tmp/crawl_cache.json"
+                    try:
+                        with open(CACHE_FILE, "r") as cf: cache = _j.load(cf)
+                    except Exception: cache = {}
+                    cache[key] = {"items": items, "saved_at": _t.time()}
+                    with open(CACHE_FILE, "w") as cf: _j.dump(cache, cf, ensure_ascii=False, default=str)
+                except Exception: pass
                 crawled[key] = {"total": len(items), "saved": saved}
                 _log_cron(key, "success", len(items), None, time.time()-t0)
                 time.sleep(0.2)

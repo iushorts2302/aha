@@ -97,7 +97,10 @@ export function AppProvider({ children }) {
           setDbAvailable(true)
         }
       })
-      .catch(() => setDbAvailable(false))
+      .catch(() => {
+        // DB 로드 실패 — localStorage 기존 데이터 유지
+        setDbAvailable(false)
+      })
   }, [])
 
   // 차단 목록 폴링 (10초)
