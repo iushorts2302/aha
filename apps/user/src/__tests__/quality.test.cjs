@@ -220,6 +220,24 @@ test('DB-10','cron.py: tb_cron_log 기록',            ()=> cronPy.includes('tb_
 test('DB-11','client.js: /api/v1 엔드포인트',        ()=> client.includes('/api/v1') && client.includes('resource='))
 test('DB-12','AppContext: DB postAPI.list 로드',      ()=> ctx.includes('postAPI.list') || ctx.includes('postAPI'))
 
+
+// ══════════════════════════════════════════════════════════
+// SS — 세션 영속 (새로고침 후 로그인 유지)
+// ══════════════════════════════════════════════════════════
+const adminCtx = fs.readFileSync(path.join(ADMIN, 'context/AdminContext.jsx'), 'utf8')
+
+test('SS-01','AuthContext: localStorage에서 세션 복원',     ()=> auth.includes('readLS(LS_USER_KEY)') || auth.includes("localStorage.getItem(LS_USER_KEY)"))
+test('SS-02','AuthContext: LS_USER_KEY 상수 정의',          ()=> auth.includes("LS_USER_KEY"))
+test('SS-03','AuthContext: users 캐시 localStorage 저장',   ()=> auth.includes('LS_USERS_KEY'))
+test('SS-04','AuthContext: users 캐시 초기화 복원',         ()=> auth.includes('readLS(LS_USERS_KEY'))
+test('SS-05','AuthContext: currentUser localStorage 저장',  ()=> auth.includes('writeLS(LS_USER_KEY') || auth.includes("localStorage.setItem(LS_USER_KEY") || auth.includes('LS_USER_KEY, user)'))
+test('SS-06','AuthContext: logout 시 localStorage 삭제',    ()=> auth.includes('writeLS(LS_USER_KEY, null)') || auth.includes("localStorage.removeItem") || (auth.includes('_persist(null)') && auth.includes('if (val == null) localStorage.removeItem')))
+test('SS-07','AuthContext: getUserById users 캐시 검색',    ()=> auth.includes('users.find') && auth.includes('getUserById'))
+test('SS-08','AuthContext: currentUser users에 자동 추가',  ()=> auth.includes('useEffect') && auth.includes('currentUser') && auth.includes('setUsers'))
+test('SS-09','AdminContext: localStorage 세션 복원',        ()=> adminCtx.includes('LS_ADMIN_KEY') && adminCtx.includes('localStorage.getItem(LS_ADMIN_KEY)'))
+test('SS-10','AdminContext: 로그인 시 localStorage 저장',   ()=> adminCtx.includes('localStorage.setItem(LS_ADMIN_KEY'))
+test('SS-11','AdminContext: logout 시 localStorage 삭제',   ()=> adminCtx.includes('localStorage.removeItem(LS_ADMIN_KEY)'))
+
 // ══════════════════════════════════════════════════════════
 // 결과 출력
 // ══════════════════════════════════════════════════════════

@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { blockPost, unblockPost, getBlockedIds } from '../store/blockedStore.js'
 
-const ADMIN_API = 'https://admin-vert-psi.vercel.app'
+const ADMIN_API    = 'https://admin-vert-psi.vercel.app'
+const LS_ADMIN_KEY = 'aha_admin_session'
 
 async function api(path, options = {}) {
   const res = await fetch(`${ADMIN_API}/api${path}`, {
@@ -39,7 +40,9 @@ const DEFAULT_USERS   = [
 ]
 
 export function AdminProvider({ children }) {
-  const [admin, setAdmin]             = useState(null)
+  const [admin, setAdmin] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(LS_ADMIN_KEY)) } catch { return null }
+  })
   const [dbAvailable, setDbAvailable] = useState(false)
   const [categories, setCategories]   = useState(DEFAULT_CATEGORIES)
   const [topics, setTopics]           = useState(DEFAULT_TOPICS)
@@ -102,14 +105,19 @@ export function AdminProvider({ children }) {
     // DB 관리자 인증 시도
     try {
       await api('/auth', { method: 'POST', body: JSON.stringify({ email, password, type: 'admin' }) })
-      setAdmin({ email, name: '관리자' }); return
+      const adminData = { email, name: '관리자', role: 'admin' }
+      setAdmin(adminData)
+      localStorage.setItem(LS_ADMIN_KEY, JSON.stringify(adminData))
+      return
     } catch {}
     // Mock 폴백
     if (email !== ADMIN_CREDENTIALS.email || password !== ADMIN_CREDENTIALS.password)
       throw new Error('관리자 계정 정보가 올바르지 않습니다.')
-    setAdmin({ email, name: '관리자' })
+    const adminData = { email, name: '관리자', role: 'admin' }
+    setAdmin(adminData)
+    localStorage.setItem(LS_ADMIN_KEY, JSON.stringify(adminData))
   }
-  function logout() { setAdmin(null) }
+  function logout() { setAdmin(null); localStorage.removeItem(LS_ADMIN_KEY) }
 
   // ── 카테고리 CRUD ────────────────────────────────────
   async function addCategory(cat) {
