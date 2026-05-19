@@ -43,6 +43,8 @@ async function req(resource, method = 'GET', body = null, params = {}) {
 
     // DB down 플래그 — DB 없음은 서비스 다운이 아니므로 서킷브레이커 미트리거
     if (data.db_down) {
+      // auth는 throw → AuthContext Mock 폴백으로 넘어감
+      if (resource === 'auth') throw new Error(data.error || 'DB unavailable')
       if (method !== 'GET') return FALLBACKS[resource] ?? { ok: false, db_down: true }
       return data
     }

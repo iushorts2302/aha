@@ -131,7 +131,7 @@ export default function Header({ currentPage, navigate }) {
                     background: 'var(--color-primary)', color: '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 9, fontWeight: 700, flexShrink: 0,
-                  }}>{currentUser.nickname[0]}</span>
+                  }}>{(currentUser.nickname || '?')[0]}</span>
                   {currentUser.nickname}
                 </button>
                 {userMenuOpen && (

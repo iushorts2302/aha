@@ -517,7 +517,7 @@ export function MyPage({ navigate }) {
   return (
     <div className="fade-up">
       <div style={{ padding: 'var(--sp-section) 0 var(--sp-xxl)', borderBottom: '1px solid var(--color-divider)', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 600 }}>{currentUser.nickname[0]}</div>
+        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 600 }}>{(currentUser.nickname||"?")[0]}</div>
         <div>
           <h1 style={{ fontSize: 'var(--text-display-md)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.374px' }}>{currentUser.nickname}</h1>
           <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', marginTop: '4px' }}>{currentUser.email}</p>

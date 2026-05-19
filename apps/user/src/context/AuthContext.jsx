@@ -80,9 +80,10 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     try {
       const data = await authAPI.login(email, password)
+      if (!data || !data.seq_no) throw new Error('로그인 실패')
       const user = {
         seq_no: data.seq_no, id: String(data.seq_no),
-        email: data.email, nickname: data.nickname,
+        email: data.email || email, nickname: data.nickname || email.split('@')[0],
         bio: data.bio || '', avatar: data.avatar_url || '',
         role: data.role || 'user',
         expertise: data.expertise || [],

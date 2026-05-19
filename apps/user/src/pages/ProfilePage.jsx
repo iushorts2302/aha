@@ -44,7 +44,7 @@ export default function ProfilePage({ userId, navigate }) {
               background: 'var(--color-ink)', color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '32px', fontWeight: 600, flexShrink: 0,
-            }}>{user.nickname[0]}</div>
+            }}>{(user.nickname||"?")[0]}</div>
             <div>
               <h1 style={{ fontSize: 'var(--text-display-md)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>{user.nickname}</h1>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', marginTop: 'var(--space-1)' }}>{user.bio || '소개가 없습니다.'}</p>
