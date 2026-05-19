@@ -279,11 +279,11 @@ test('CB-12','client.js: recordSuccess/recordFailure 연동', ()=> client.includ
 test('CB-13','client.js: db_down → recordFailure',          ()=> client.includes('db_down') && client.includes('recordFailure'))
 test('CB-14','App.jsx: onStateChange 구독',                 ()=> appCb.includes('onStateChange') && appCb.includes('setCbState'))
 test('CB-15','App.jsx: OPEN 시 MaintenancePage 렌더',       ()=> appCb.includes('CB_STATE.OPEN') && appCb.includes('MaintenancePage'))
-test('CB-16','MaintenancePage: 카운트다운 30초',            ()=> maint.includes('30') && maint.includes('countdown'))
-test('CB-17','MaintenancePage: 지금 재시도 버튼',           ()=> maint.includes('handleRetry') && maint.includes('지금 재시도'))
-test('CB-18','MaintenancePage: 복구 시 자동 reload',        ()=> maint.includes('window.location.reload'))
-test('CB-19','MaintenancePage: reset + 홈으로 버튼',        ()=> maint.includes('reset()') && maint.includes('오류 초기화'))
-test('CB-20','MaintenancePage: aha! 디자인 토큰 사용',      ()=> maint.includes('var(--color-primary)') || maint.includes('#0066CC'))
+test('CB-16','MaintenancePage: 단계별 안내 메시지 (STAGES)',  ()=> maint.includes('STAGES') && maint.includes('getStage'))
+test('CB-17','MaintenancePage: 재시도 버튼',                    ()=> maint.includes('handleRetry') && maint.includes('지금 다시 시도'))
+test('CB-18','MaintenancePage: 복구 시 안내 후 reload',        ()=> maint.includes('recovered') && maint.includes('window.location.reload'))
+test('CB-19','MaintenancePage: 홈으로 버튼',                   ()=> maint.includes('reset()') && maint.includes('홈으로 돌아가기'))
+test('CB-20','MaintenancePage: aha! 디자인 토큰 사용',          ()=> maint.includes('#0066CC'))
 
 // ══════════════════════════════════════════════════════════
 // 결과 출력
