@@ -104,7 +104,7 @@ export function SectionHeader({ title, count, onRefresh, loading, source }) {
 
 /** 크롤링 피드 */
 export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navigate }) {
-  const [items, setItems] = useState(() => getItems(topicKey, limit))
+  const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [source, setSource] = useState(null)
 
@@ -112,9 +112,9 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
     setLoading(true)
     try {
       const data = await getItems(topicKey, limit)
-      setItems(data); setSource(data.length > 0 ? 'fresh' : 'empty')
+      const safeData = Array.isArray(data) ? data : []; setItems(safeData); setSource(safeData.length > 0 ? 'fresh' : 'empty')
     } catch {
-      setItems(getItems(topicKey, limit)); setSource('cache')
+      getItems(topicKey, limit).then(d => { setItems(Array.isArray(d) ? d : []); setSource('cache') })
     } finally { setLoading(false) }
   }, [topicKey, limit])
 
