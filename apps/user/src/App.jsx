@@ -52,6 +52,12 @@ function AppInner() {
   // 서킷브레이커 상태 구독
   useEffect(() => onStateChange(setCbState), [])
 
+  // 앱 구동 시 /api/init 백그라운드 호출 — 빈 토픽 즉시 크롤링
+  useEffect(() => {
+    fetch('https://admin-vert-psi.vercel.app/api/init', { signal: AbortSignal.timeout(30000) })
+      .catch(() => {}) // 실패해도 앱 동작에 영향 없음
+  }, [])
+
   // OPEN 상태 → 서버 점검 페이지
   if (cbState === CB_STATE.OPEN) return <MaintenancePage />
 

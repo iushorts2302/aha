@@ -98,7 +98,21 @@ export function AdminProvider({ children }) {
     }
   }
 
-  useEffect(() => { if (admin) loadAll() }, [admin])
+  useEffect(() => {
+    if (!admin) return
+    // 1. 관리자 데이터 로드
+    loadAll()
+    // 2. /api/init 호출 — DB 빈 토픽 즉시 크롤링
+    fetch('https://admin-vert-psi.vercel.app/api/init', { signal: AbortSignal.timeout(30000) })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.topics_crawled > 0) {
+          // 크롤링 완료 후 데이터 새로고침
+          setTimeout(() => loadAll(), 3000)
+        }
+      })
+      .catch(() => {})
+  }, [admin])
 
   // ── 로그인 ───────────────────────────────────────────
   async function login(email, password) {

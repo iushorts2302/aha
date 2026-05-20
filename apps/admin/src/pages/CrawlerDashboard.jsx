@@ -23,6 +23,12 @@ async function apiGet(resource, params = '') {
   return r.json()
 }
 
+async function apiInit(force = false) {
+  const r = await fetch(`${ADMIN_API}/api/init${force ? '?force=1' : ''}`,
+    { signal: AbortSignal.timeout(30000) })
+  return r.json()
+}
+
 export default function CrawlerDashboard() {
   const [categories, setCategories]   = useState([])
   const [topics,     setTopics]       = useState([])     // DB 토픽 목록
@@ -163,6 +169,12 @@ export default function CrawlerDashboard() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={runAll}   className="btn btn-secondary" style={{ height: 36 }}>전체 실행</button>
           <button onClick={runStale} className="btn btn-secondary" style={{ height: 36 }}>만료만 ({staleCount})</button>
+          <button onClick={async () => {
+            addLog('초기화 크롤링 시작 (빈 토픽만)...')
+            const d = await apiInit(false)
+            addLog(`초기화 완료: ${d.topics_crawled}개 토픽, DB ${d.total_in_db}개`, 'success')
+            loadTopics()
+          }} className="btn btn-secondary" style={{ height: 36 }}>초기화 크롤링</button>
           <button onClick={toggleAuto} className="btn btn-primary" style={{ height: 36, background: autoRunning ? '#E03131' : undefined }}>
             {autoRunning ? `⏹ 자동중지${countdownStr ? ` (${countdownStr})` : ''}` : '▶ 자동 시작'}
           </button>

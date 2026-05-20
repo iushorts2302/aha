@@ -87,6 +87,9 @@ export const MENU_TOPICS = {
   'knowledge.tips':     { label: '팁 & 트릭',      category: 'knowledge' },
 }
 
+// 토픽별 init 트리거 여부 추적 (세션 내 1회만)
+const _initTriggered = new Set()
+
 // ── DB API에서 크롤링 아이템 조회 ────────────────────────
 async function fetchFromDB(topicKey) {
   const cached = _cache.get(topicKey)
@@ -101,6 +104,21 @@ async function fetchFromDB(topicKey) {
     const data = await r.json()
     const items = (data.items || []).filter(i => i.blocked_yn !== 'Y')
     _cache.set(topicKey, { items, fetchedAt: Date.now() })
+
+    // 데이터가 비어있고 아직 init을 트리거하지 않았으면 백그라운드에서 크롤링 요청
+    if (items.length === 0 && !_initTriggered.has(topicKey)) {
+      _initTriggered.add(topicKey)
+      fetch(`${ADMIN_API}/api/init`, { signal: AbortSignal.timeout(30000) })
+        .then(res => res.ok ? res.json() : null)
+        .then(d => {
+          if (d?.topics_crawled > 0) {
+            // 크롤링 완료 → 캐시 무효화 → 다음 getItems 호출 시 새 데이터 반환
+            _cache.delete(topicKey)
+          }
+        })
+        .catch(() => {})
+    }
+
     return items
   } catch {
     return []
