@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { sortPosts } from '../store/algorithm.js'
 import { CrawlFeed, TabNav, PageHeader, ComingSoon } from '../components/CrawlComponents.jsx'
-import { LiveChatPanel, LiveIssueRanking } from '../components/LiveChat.jsx'
+import { LiveIssueRanking } from '../components/LiveChat.jsx'
 import ShortformFeed from '../components/ShortformFeed.jsx'
 import PostCard from '../components/PostCard.jsx'
 
@@ -444,22 +444,13 @@ export function VideoPage({ navigate }) {
 
 // ── 라이브(Live) ─────────────────────────────────────────────
 export function LivePage({ navigate }) {
-  const [tab, setTab] = useState('issue')
-  const TABS = [
-    { key: 'issue', label: '🔴 라이브 이슈' },
-    { key: 'chat',  label: '실시간 채팅' },
-  ]
   return (
     <div className="fade-up">
-      <PageHeader title="라이브" subtitle="지금 이 순간, 실시간 소통" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'issue' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'start' }}>
-          <CrawlFeed topicKey="trending.realtime" title="실시간 이슈 피드" limit={10} navigate={navigate} />
-          <LiveIssueRanking />
-        </div>
-      )}
-      {tab === 'chat' && <div style={{ paddingTop: '20px' }}><LiveChatPanel channel="free" /></div>}
+      <PageHeader title="라이브" subtitle="지금 이 순간, 실시간 이슈" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'start' }}>
+        <CrawlFeed topicKey="home.trending" title="🔴 실시간 이슈" limit={10} navigate={navigate} />
+        <LiveIssueRanking />
+      </div>
     </div>
   )
 }
