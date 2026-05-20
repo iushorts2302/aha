@@ -35,12 +35,14 @@ export default function CrawlerDashboard() {
   const [crawlStats, setCrawlStats]   = useState({})     // topicKey → { count, lastCrawled }
   const [topicStatus, setTopicStatus] = useState({})     // topicKey → 'idle'|'loading'|'success'|'error'
   const [selectedCat, setSelectedCat] = useState('all')
-  const [autoRunning, setAutoRunning] = useState(false)
+  const [autoRunning, setAutoRunning] = useState(true)  // 페이지 로드 시 자동 ON
   const [countdown, setCountdown]     = useState(null)
   const [log, setLog]                 = useState([])
   const [loading, setLoading]         = useState(true)
   const timerRef    = useRef(null)
   const countdownRef = useRef(null)
+
+  const [dbStatus, setDbStatus]     = useState('unknown')  // 'connected'|'disconnected'|'unknown'
 
   // ── DB에서 카테고리 + 토픽 로드 (DB 없으면 config 기본값) ──
   async function loadTopics() {
@@ -50,7 +52,9 @@ export default function CrawlerDashboard() {
         apiGet('categories'),
         apiGet('topics'),
       ])
-      // DB 없어도 config 기본값 반환됨 (db_down=true지만 데이터 있음)
+      // db_down 필드로 DB 연결 상태 판단
+      setDbStatus(catData.db_down ? 'disconnected' : 'connected')
+
       const cats = catData.categories || []
       setCategories(cats)
 
@@ -82,7 +86,15 @@ export default function CrawlerDashboard() {
     }
   }
 
-  useEffect(() => { loadTopics() }, [])
+  useEffect(() => {
+    loadTopics()
+    // 자동 스케줄러 즉시 시작
+    timerRef.current = setInterval(() => { runStale(); setCountdown(INTERVAL_MS) }, INTERVAL_MS)
+    countdownRef.current = setInterval(() => setCountdown(p => Math.max(0, (p ?? INTERVAL_MS) - 1000)), 1000)
+    setCountdown(INTERVAL_MS)
+    addLog('자동 스케줄러 시작됨 (10분 간격)')
+    return () => { clearInterval(timerRef.current); clearInterval(countdownRef.current) }
+  }, [])
 
   function addLog(msg, type = 'info') {
     const ts = new Date().toLocaleTimeString('ko-KR')
@@ -124,7 +136,7 @@ export default function CrawlerDashboard() {
     await runCrawl([key], `[${t?.label || key}]`)
   }
 
-  // ── 자동 스케줄러 ────────────────────────────────────
+  // ── 자동 스케줄러 토글 ──────────────────────────────
   function toggleAuto() {
     if (autoRunning) {
       clearInterval(timerRef.current)
@@ -133,13 +145,12 @@ export default function CrawlerDashboard() {
       addLog('자동 스케줄러 중지됨')
     } else {
       setAutoRunning(true)
-      addLog('자동 스케줄러 시작 (10분 간격)')
+      addLog('자동 스케줄러 재시작 (10분 간격)')
       timerRef.current = setInterval(() => { runStale(); setCountdown(INTERVAL_MS) }, INTERVAL_MS)
       countdownRef.current = setInterval(() => setCountdown(p => Math.max(0, (p ?? INTERVAL_MS) - 1000)), 1000)
       setCountdown(INTERVAL_MS)
     }
   }
-  useEffect(() => () => { clearInterval(timerRef.current); clearInterval(countdownRef.current) }, [])
 
   // ── 파생 값 ──────────────────────────────────────────
   const totalItems  = Object.values(crawlStats).reduce((s, v) => s + (v.count || 0), 0)
@@ -188,7 +199,7 @@ export default function CrawlerDashboard() {
           { label: '활성 토픽',      value: activeCount,                  unit: '개' },
           { label: '만료 토픽',      value: staleCount,                   unit: '개', warn: staleCount > 0 },
           { label: '자동 스케줄',    value: autoRunning ? 'ON' : 'OFF',   unit: '', ok: autoRunning },
-        { label: 'DB 상태',       value: categories.length > 0 && !categories[0]?.db_down ? '연결됨' : 'DB 없음', unit: '', ok: categories.length > 0, warn: categories.length === 0 },
+        { label: 'DB 상태', value: dbStatus === 'connected' ? '연결됨' : dbStatus === 'disconnected' ? 'DB 없음' : '확인 중', unit: '', ok: dbStatus === 'connected', warn: dbStatus === 'disconnected' },
         ].map(s => (
           <div key={s.label} style={{ padding: 20, background: '#fff' }}>
             <p style={{ fontSize: 26, fontWeight: 800, color: s.warn ? '#E03131' : s.ok ? 'var(--color-accent)' : 'var(--color-ink)' }}>
