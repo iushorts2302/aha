@@ -14,7 +14,7 @@ function timeAgo(iso) {
 }
 
 function isStale(iso) {
-  if (!iso) return true
+  if (!iso) return false   // lastCrawled 없음 → 만료 아님 (미수집으로 별도 표시)
   return Date.now() - new Date(iso).getTime() > INTERVAL_MS
 }
 
@@ -276,19 +276,45 @@ export default function CrawlerDashboard() {
                           {stats.count}
                         </td>
                         <td style={{ fontSize: 12, color: stale && stats.lastCrawled ? '#E03131' : 'var(--color-muted)' }}>
-                          {timeAgo(stats.lastCrawled)}
+                          {stats.lastCrawled ? timeAgo(stats.lastCrawled)
+                           : stats.count > 0 ? 'DB 저장됨'
+                           : '없음'}
                         </td>
                         <td>
-                          {st === 'loading' ? <span style={{ fontSize: 11, color: 'var(--color-accent)', fontWeight: 700 }}>수집중...</span>
-                          : st === 'success' ? <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#d4f9e6', color: '#005C27', fontWeight: 700 }}>완료</span>
-                          : st === 'error'   ? <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#9B1C1C', fontWeight: 700 }}>오류</span>
-                          : stale            ? <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#fef3c7', color: '#78350F', fontWeight: 700 }}>만료</span>
-                          :                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#d4f9e6', color: '#005C27', fontWeight: 700 }}>최신</span>}
+                          {st === 'loading' ? (
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#dbeafe', color: '#1d4ed8', fontWeight: 700, display:'inline-flex', alignItems:'center', gap:3 }}>
+                              ⏳ 실행 중
+                            </span>
+                          ) : st === 'success' ? (
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#d4f9e6', color: '#005C27', fontWeight: 700 }}>
+                              ✅ 완료
+                            </span>
+                          ) : st === 'error' ? (
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#9B1C1C', fontWeight: 700 }}>
+                              ❌ 오류
+                            </span>
+                          ) : stats.count > 0 && stale ? (
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#fef3c7', color: '#78350F', fontWeight: 700 }}>
+                              ⏰ 만료
+                            </span>
+                          ) : stats.count > 0 ? (
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#d4f9e6', color: '#005C27', fontWeight: 700 }}>
+                              ✔ 정상
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#f3f4f6', color: '#6b7280', fontWeight: 700 }}>
+                              — 미수집
+                            </span>
+                          )}
                         </td>
                         <td>
                           <button onClick={() => runSingle(t.topic_key)} disabled={st === 'loading'}
-                            className="btn btn-xs" style={{ border: '1px solid var(--color-border)', color: st === 'loading' ? 'var(--color-placeholder)' : 'var(--color-ink)' }}>
-                            {st === 'loading' ? '...' : '실행'}
+                            className="btn btn-xs" style={{
+                              border: '1px solid var(--color-border)',
+                              color: st === 'loading' ? 'var(--color-placeholder)' : 'var(--color-ink)',
+                              opacity: st === 'loading' ? 0.5 : 1,
+                            }}>
+                            {st === 'loading' ? '실행 중' : '▶ 실행'}
                           </button>
                         </td>
                       </tr>
