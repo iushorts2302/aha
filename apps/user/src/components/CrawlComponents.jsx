@@ -112,13 +112,20 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
     setLoading(true)
     try {
       const data = await getItems(topicKey, limit)
-      const safeData = Array.isArray(data) ? data : []; setItems(safeData); setSource(safeData.length > 0 ? 'fresh' : 'empty')
+      const safeData = Array.isArray(data) ? data : []
+      setItems(safeData)
+      setSource(safeData.length > 0 ? 'fresh' : 'empty')
     } catch {
       getItems(topicKey, limit).then(d => { setItems(Array.isArray(d) ? d : []); setSource('cache') })
     } finally { setLoading(false) }
   }, [topicKey, limit])
 
-  useEffect(() => { refresh() }, [refresh])
+  // topicKey 변경 시 즉시 초기화 → 이전 토픽 데이터 잔류 방지
+  useEffect(() => {
+    setItems([])
+    setSource(null)
+    refresh()
+  }, [topicKey])
   useEffect(() => { const t = setInterval(refresh, 60000); return () => clearInterval(t) }, [refresh])
 
   if (items.length === 0) return (
