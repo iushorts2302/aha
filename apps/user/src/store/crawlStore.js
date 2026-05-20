@@ -98,7 +98,7 @@ async function fetchFromDB(topicKey) {
   try {
     const r = await fetch(
       `${ADMIN_API}/api/data?topic=${encodeURIComponent(topicKey)}`,
-      { signal: AbortSignal.timeout(8000) }
+      { signal: AbortSignal.timeout(15000) }
     )
     if (!r.ok) return []
     const data = await r.json()

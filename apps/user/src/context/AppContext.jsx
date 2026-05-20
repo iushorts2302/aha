@@ -46,20 +46,22 @@ function _defaultCategories() {
 export function AppProvider({ children }) {
   const [categories, setCategories] = useState(_defaultCategories)
 
-  // categories를 API/config에서 동적 로드
+  // categories: /api/config 에서 로드 (DB 호출 없음, 176ms)
+  // DB 조회(3.5초) 대신 config API 활용
   useEffect(() => {
-    categoryAPI.list()
-      .then(d => {
-        if (d.db_down) return  // DB 실패 → _defaultCategories 유지
-        const cats = (d.categories || [])
-        if (cats.length > 0) {
-          setCategories(cats.map(c => ({
-            id: c.category_id || c.id, name: c.label, icon: c.icon || '',
-            seq_no: c.seq_no,
+    import('../store/configStore.js').then(({ fetchConfig, getConfig }) => {
+      fetchConfig().then(() => {
+        const cfg = getConfig()
+        if (cfg?.categories?.length > 0) {
+          setCategories(cfg.categories.map(c => ({
+            id:     c.category_id || c.id || c.key,
+            name:   c.label || c.name,
+            icon:   c.icon || '',
+            seq_no: c.seq_no || null,
           })))
         }
-      })
-      .catch(() => {})
+      }).catch(() => {})
+    })
   }, [])
   const [posts,    setPosts]    = useState(() => readLS(POSTS_KEY, []))
   const [comments, setComments] = useState(() => readLS(COMMENTS_KEY, []))
@@ -70,37 +72,38 @@ export function AppProvider({ children }) {
   useEffect(() => { writeLS(POSTS_KEY, posts) },    [posts])
   useEffect(() => { writeLS(COMMENTS_KEY, comments) }, [comments])
 
-  // DB 연결 확인 + 게시글 로드 (실패 시 localStorage 유지)
+  // posts 로드 전략:
+  // - localStorage 데이터는 이미 useState 초기값으로 즉시 표시됨
+  // - DB 동기화는 5초 지연 후 백그라운드 실행 (초기 렌더 블로킹 방지)
   useEffect(() => {
-    postAPI.list({ page: 1, limit: 50 })
-      .then(data => {
-        if (data.db_down) { setDbAvailable(false); return }
-        const dbPosts = (data.posts || []).map(p => ({
-          ...p,
-          id:         String(p.seq_no),
-          authorId:   String(p.author_seq_no),
-          categoryId: p.category_id || null,
-          likes:      [],
-          views:      p.view_count || 0,
-          body:       p.body || '',
-          tags:       p.tags || [],
-          createdAt:  p.created_at,
-        }))
-        if (dbPosts.length > 0) {
-          setPosts(prev => {
-            // DB 포스트 + localStorage 전용 포스트 (type='user', id가 'p'로 시작) 병합
-            const localOnly = prev.filter(p => String(p.id).startsWith('p') && !p.seq_no)
-            const merged = [...dbPosts, ...localOnly]
-            writeLS(POSTS_KEY, merged)
-            return merged
-          })
+    const t = setTimeout(() => {
+      postAPI.list({ page: 1, limit: 50 })
+        .then(data => {
+          if (data.db_down) { setDbAvailable(false); return }
+          const dbPosts = (data.posts || []).map(p => ({
+            ...p,
+            id:         String(p.seq_no),
+            authorId:   String(p.author_seq_no),
+            categoryId: p.category_id || null,
+            likes:      [],
+            views:      p.view_count || 0,
+            body:       p.body || '',
+            tags:       p.tags || [],
+            createdAt:  p.created_at,
+          }))
           setDbAvailable(true)
-        }
-      })
-      .catch(() => {
-        // DB 로드 실패 — localStorage 기존 데이터 유지
-        setDbAvailable(false)
-      })
+          if (dbPosts.length > 0) {
+            setPosts(prev => {
+              const localOnly = prev.filter(p => String(p.id).startsWith('p') && !p.seq_no)
+              const merged = [...dbPosts, ...localOnly]
+              writeLS(POSTS_KEY, merged)
+              return merged
+            })
+          }
+        })
+        .catch(() => setDbAvailable(false))
+    }, 5000)  // 5초 지연 — localStorage 데이터 먼저 표시
+    return () => clearTimeout(t)
   }, [])
 
   // localStorage 게시글 → DB 마이그레이션 (DB 연결 후 1회)

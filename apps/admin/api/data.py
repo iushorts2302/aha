@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # /tmp는 Vercel 서버리스에서 쓰기 가능한 유일한 경로
 CACHE_FILE = "/tmp/crawl_cache.json"
-CACHE_TTL  = 10 * 60  # 10분
+CACHE_TTL  = 30 * 60  # 30분
 
 def _cors(h):
     h.send_header("Access-Control-Allow-Origin", "*")

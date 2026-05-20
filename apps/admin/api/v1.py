@@ -534,7 +534,9 @@ class handler(BaseHTTPRequestHandler):
             import traceback
             err_msg = str(e)
             # DB 연결 실패(2003) → resource별 빈 기본값으로 200 반환 (서비스 무중단)
-            if "2003" in err_msg or "Can't connect" in err_msg or "timed out" in err_msg:
+            if "2003" in err_msg or "Can't connect" in err_msg or "timed out" in err_msg or "Connection" in err_msg:
+                    # 캐시된 연결 무효화
+                    global _conn_cache; _conn_cache = None
                 # config.py DEFAULT_CONFIG에서 기본값 로드
                     try:
                         from config import DEFAULT_CONFIG as _DC
