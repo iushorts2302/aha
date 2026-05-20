@@ -172,17 +172,20 @@ class handler(BaseHTTPRequestHandler):
             row = _db.query_one("SELECT COUNT(*) c FROM tb_crawl_item")
             total_in_db = row["c"] if row else 0
             db_ok = True
-        except Exception as e:
+        except Exception:
             total_in_db = 0
+            db_ok = False
 
         # 2. 토픽별 크롤링 필요 여부 판단
+        # DB 연결 실패 or force → 모든 토픽 크롤링
+        # DB 연결 성공 → 0건인 토픽만 크롤링
         topics_to_crawl = []
         for key in INIT_TOPICS:
-            if force:
+            if force or not db_ok:
                 topics_to_crawl.append(key)
             else:
                 cnt = _db_count(key)
-                if cnt <= 0:          # DB 없거나 데이터 0건
+                if cnt <= 0:
                     topics_to_crawl.append(key)
 
         # 3. 크롤링 실행 (최대 10개 — Vercel 서버리스 30초 제한)

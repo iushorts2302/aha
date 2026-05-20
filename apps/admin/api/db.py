@@ -15,7 +15,7 @@ DB_CONFIG = {
     "database": os.environ.get("DB_NAME",     "defaultdb"),
     "charset":  "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
-    "connect_timeout": 10,
+    "connect_timeout": 5,
     "autocommit": False,
     # Aiven Cloud: SSL 필수
     "ssl": {"ssl": {}},
