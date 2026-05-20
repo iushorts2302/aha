@@ -112,12 +112,19 @@ class handler(BaseHTTPRequestHandler):
         params    = parse_qs(urlparse(self.path).query)
         topic_key = params.get("topic", [None])[0]
         limit     = min(50, int(params.get("limit", ["20"])[0]))
+        force     = params.get("force", ["0"])[0] == "1"
 
         if not topic_key:
             return _json(self, 400, {"error": "topic parameter required"})
 
+        # force=1이면 /tmp 캐시 무효화
+        if force:
+            cache = _load_cache()
+            cache.pop(topic_key, None)
+            _save_cache(cache)
+
         # ── 1순위: /tmp JSON 캐시 (가장 빠름) ──────────
-        cached = _get_cached(topic_key)
+        cached = None if force else _get_cached(topic_key)
         if cached:
             # 백그라운드로 DB 갱신 시도 (응답 블로킹 없음)
             return _json(self, 200, {"items": cached, "count": len(cached), "source": "cache"})

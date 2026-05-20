@@ -1,7 +1,19 @@
 """
-/api/crawl.py — Vercel Serverless Function (Python)
-한국 웹사이트 기반 메뉴별 크롤링
-접근 가능 소스: github.com, registry.npmjs.org, pypi.org
+/api/crawl — 토픽별 크롤링 엔드포인트
+허용 도메인: github.com, api.github.com, registry.npmjs.org, pypi.org
+
+[설계 원칙]
+- 각 토픽의 성격에 맞는 소스 사용
+- 중복 최소화: 토픽마다 서로 다른 쿼리/소스
+- dev.*     → 실제 개발 관련 (언어별 GitHub Trending, NPM/PyPI 패키지)
+- ai.*      → AI/ML 특화 (LLM, ML 토픽, AI 프레임워크)
+- game.*    → 게임 개발 관련 저장소
+- finance.* → 금융/투자/블록체인 코드 프로젝트
+- startup.* → 한국 스타트업 오픈소스
+- oss.*     → 순수 오픈소스 트렌드
+- learn.*   → 학습자료/튜토리얼
+- job.*     → 채용/커리어 관련 리소스
+- it.*      → IT 인프라/보안/클라우드
 """
 
 import json, re, random, time, datetime, sys, os
@@ -10,154 +22,173 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 from urllib.parse import quote_plus
 
-UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+UA = "Mozilla/5.0 (compatible; AhaBot/1.0)"
 
-# ── 헬퍼 ─────────────────────────────────────────────────
+# ── 공통 헬퍼 ─────────────────────────────────────────────
 
 def fetch(url, extra=None):
-    headers = {
-        "User-Agent": UA,
-        "Accept": "text/html,application/xhtml+xml,*/*",
-        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
-    }
-    if extra:
-        headers.update(extra)
-    req = Request(url, headers=headers)
-    with urlopen(req, timeout=12) as r:
+    h = {"User-Agent": UA, "Accept": "application/json,text/html,*/*"}
+    if extra: h.update(extra)
+    with urlopen(Request(url, headers=h), timeout=12) as r:
         return r.read().decode("utf-8", errors="ignore")
 
 def fetch_json(url):
     return json.loads(fetch(url, {"Accept": "application/json"}))
 
-def clean(text):
-    return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', text or '')).strip()
+def clean(t):
+    return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', t or '')).strip()
 
-def enrich(items, topic_key, topic_label, category, limit=8):
-    result = []
-    ts = int(time.time())
+def enrich(items, topic_key, label, category, limit=8):
+    out, ts = [], int(time.time())
     for i, item in enumerate(items[:limit]):
         title = (item.get("title") or "").strip()
-        if not title:
-            continue
-        result.append({
+        if not title: continue
+        out.append({
             "id":         f"{topic_key}_{ts}_{i}",
             "topicKey":   topic_key,
             "category":   category,
-            "topicLabel": topic_label,
-            "title":      title[:80],
-            "summary":    (item.get("summary") or "")[:120],
-            "tags":       (item.get("tags") or [])[:4],
+            "topicLabel": label,
+            "title":      title[:100],
+            "summary":    (item.get("summary") or "")[:150],
+            "tags":       (item.get("tags") or [])[:5],
             "views": 0, "likes": 0, "comments": 0, "hot": False,
             "crawledAt":  datetime.datetime.utcnow().isoformat() + "Z",
             "type":       "crawled",
             "source":     item.get("source", ""),
         })
-    return result
+    return out
 
+# ── GitHub API ────────────────────────────────────────────
 
-# ── 크롤러 함수 ───────────────────────────────────────────
-
-def github_trending(lang="", since="daily", limit=10):
-    """GitHub Trending"""
+def gh_trending(lang="", since="daily", limit=8):
+    """GitHub Trending — 언어별"""
     url = f"https://github.com/trending/{lang}?since={since}"
     html = fetch(url)
     items = []
-    for art in re.findall(r'<article[^>]*Box-row[^>]*>(.*?)</article>', html, re.DOTALL)[:limit]:
-        name_m = re.search(r'<h2[^>]*>.*?href="(/[^"]+)"', art, re.DOTALL)
-        desc_m  = re.search(r'<p[^>]*col-9[^>]*>(.*?)</p>', art, re.DOTALL)
-        star_m  = re.search(r'octicon-star[^>]*>.*?</svg>\s*([\d,k]+)', art, re.DOTALL)
-        lang_m  = re.search(r'itemprop="programmingLanguage"[^>]*>(.*?)<', art)
+    for art in re.findall(r'<article[^>]*>(.*?)</article>', html, re.DOTALL)[:limit]:
+        name_m = re.search(r'href="(/[^"]+)"', art)
+        desc_m = re.search(r'<p[^>]*col-9[^>]*>(.*?)</p>', art, re.DOTALL)
+        star_m = re.search(r'octicon-star[^>]*>.*?</svg>\s*([\d,k]+)', art, re.DOTALL)
+        lang_m = re.search(r'itemprop="programmingLanguage"[^>]*>(.*?)<', art)
         repo = (name_m.group(1) if name_m else "").strip("/")
-        if not repo or "/" not in repo:
-            continue
-        desc  = clean(desc_m.group(1)) if desc_m else "GitHub 인기 저장소"
+        if not repo or "/" not in repo: continue
+        desc  = clean(desc_m.group(1)) if desc_m else ""
         stars = (star_m.group(1) if star_m else "").strip()
         pl    = clean(lang_m.group(1)) if lang_m else ""
         items.append({
-            "title":   f"[GitHub] {repo.replace('/', ' / ')}",
-            "summary": f"{desc[:90]}" + (f" ⭐{stars}" if stars else "") + (f" ({pl})" if pl else ""),
-            "tags":    list(filter(None, ["GitHub", "오픈소스", pl]))[:4],
+            "title":   f"{repo.replace('/', ' / ')}",
+            "summary": f"{desc[:100]}" + (f"  ⭐{stars}" if stars else "") + (f"  [{pl}]" if pl else ""),
+            "tags":    list(filter(None, ["GitHub", pl, "Trending"]))[:4],
             "source":  f"https://github.com/{repo}",
         })
     return items
 
-
-def github_topic(topic, limit=10):
-    """GitHub Topic"""
+def gh_topic(topic, limit=8):
+    """GitHub Topic 검색"""
     html = fetch(f"https://github.com/topics/{topic}")
     items = []
     for art in re.findall(r'<article[^>]*>(.*?)</article>', html, re.DOTALL)[:limit]:
         href_m = re.search(r'href="(/[a-zA-Z0-9_\-]+/[a-zA-Z0-9_\-\.]+)"', art)
         desc_m = re.search(r'<p[^>]*color-fg-muted[^>]*>(.*?)</p>', art, re.DOTALL)
         star_m = re.search(r'octicon-star[^>]*>.*?</svg>\s*([\d,k]+)', art, re.DOTALL)
-        if not href_m:
-            continue
+        if not href_m: continue
         repo  = href_m.group(1).strip("/")
-        if "/" not in repo:
-            continue
-        desc  = clean(desc_m.group(1)) if desc_m else f"{topic} 저장소"
+        if "/" not in repo: continue
+        desc  = clean(desc_m.group(1)) if desc_m else ""
         stars = (star_m.group(1) if star_m else "").strip()
         items.append({
-            "title":   f"[GitHub/{topic}] {repo.replace('/', ' / ')}",
-            "summary": f"{desc[:90]}" + (f" ⭐{stars}" if stars else ""),
-            "tags":    ["GitHub", topic, "오픈소스"],
+            "title":   f"{repo.replace('/', ' / ')}",
+            "summary": f"{desc[:100]}" + (f"  ⭐{stars}" if stars else ""),
+            "tags":    ["GitHub", topic],
             "source":  f"https://github.com/{repo}",
         })
     return items[:limit]
 
+def gh_search_api(q, sort="stars", limit=8):
+    """GitHub API 검색"""
+    url = f"https://api.github.com/search/repositories?q={quote_plus(q)}&sort={sort}&order=desc&per_page={limit}"
+    try:
+        d = fetch_json(url)
+        items = []
+        for r in d.get("items", [])[:limit]:
+            items.append({
+                "title":   f"{r['full_name']}",
+                "summary": f"{r.get('description','')[:100]}  ⭐{r.get('stargazers_count',0):,}  [{r.get('language','')}]",
+                "tags":    list(filter(None, ["GitHub", r.get("language",""), r.get("topics",[""])[0] if r.get("topics") else ""]))[:4],
+                "source":  r["html_url"],
+            })
+        return items
+    except Exception:
+        return []
 
-def github_org(org, org_label, tags=None, limit=8):
-    """한국 기업 GitHub 조직 저장소"""
-    html = fetch(f"https://github.com/orgs/{org}/repositories?type=public")
-    skip = {'followers','following','repositories','stars','packages','projects',
-            'sponsoring','orgs','settings','issues','pulls','actions','security'}
-    names = re.findall(r'href="/' + re.escape(org) + r'/([a-zA-Z0-9_\-\.]+)"', html)
-    names = list(dict.fromkeys(n for n in names if n.lower() not in skip))[:limit]
+def gh_releases(owner, repo, limit=5):
+    """GitHub 릴리즈 — 특정 프로젝트의 최신 릴리즈"""
+    try:
+        d = fetch_json(f"https://api.github.com/repos/{owner}/{repo}/releases?per_page={limit}")
+        items = []
+        for r in d[:limit]:
+            items.append({
+                "title":   f"[{owner}/{repo}] {r.get('name') or r.get('tag_name','')}",
+                "summary": (r.get("body") or "")[:120].replace("\n", " "),
+                "tags":    ["릴리즈", owner, repo],
+                "source":  r.get("html_url",""),
+            })
+        return items
+    except Exception:
+        return []
+
+def gh_org_repos(org, label, tags=None, limit=6):
+    """특정 GitHub 조직의 최근 업데이트 저장소"""
+    try:
+        d = fetch_json(f"https://api.github.com/orgs/{org}/repos?sort=updated&per_page={limit}")
+        items = []
+        for r in d[:limit]:
+            if r.get("private") or r.get("fork"): continue
+            items.append({
+                "title":   f"[{label}] {r['name']}",
+                "summary": f"{r.get('description','')[:100]}  ⭐{r.get('stargazers_count',0):,}",
+                "tags":    (tags or [label, "오픈소스"])[:4],
+                "source":  r["html_url"],
+            })
+        return items
+    except Exception:
+        return []
+
+# ── NPM / PyPI ────────────────────────────────────────────
+
+def npm_search(q, limit=8):
+    d = fetch_json(f"https://registry.npmjs.org/-/v1/search?text={quote_plus(q)}&size={limit}&popularity=1.0")
     items = []
-    for name in names:
-        items.append({
-            "title":   f"[{org_label}] {name}",
-            "summary": f"{org_label}({org})의 공개 오픈소스 저장소",
-            "tags":    (tags or [org_label, "한국기업", "오픈소스"])[:4],
-            "source":  f"https://github.com/{org}/{name}",
-        })
-    return items
-
-
-def github_org_multi(orgs, limit_each=3):
-    """여러 기업 저장소 합치기"""
-    items = []
-    for org, label, tags in orgs:
-        try:
-            items.extend(github_org(org, label, tags, limit_each))
-        except Exception:
-            pass
-    random.shuffle(items)
-    return items
-
-
-def npm_search(keyword, limit=8):
-    """NPM 패키지 검색"""
-    url = f"https://registry.npmjs.org/-/v1/search?text={quote_plus(keyword)}&size={limit}&popularity=1.0"
-    data = fetch_json(url)
-    items = []
-    for obj in data.get("objects", []):
+    for obj in d.get("objects", []):
         p = obj.get("package", {})
-        name = p.get("name", "")
-        ver  = p.get("version", "")
-        desc = (p.get("description") or "NPM 패키지")[:100]
-        kws  = p.get("keywords") or []
+        name, ver = p.get("name",""), p.get("version","")
+        desc = (p.get("description") or "")[:100]
+        kws  = (p.get("keywords") or [])[:3]
         items.append({
-            "title":   f"[NPM] {name} v{ver}",
+            "title":   f"{name}  v{ver}",
             "summary": desc,
-            "tags":    (["NPM", "JavaScript"] + kws[:2])[:4],
+            "tags":    (["NPM"] + kws)[:4],
             "source":  f"https://www.npmjs.com/package/{name}",
         })
     return items
 
+def npm_new(limit=8):
+    """NPM 최신 패키지"""
+    d = fetch_json(f"https://registry.npmjs.org/-/v1/search?text=*&size={limit}&quality=1.0&maintenance=1.0")
+    items = []
+    for obj in d.get("objects", []):
+        p = obj.get("package", {})
+        name, ver = p.get("name",""), p.get("version","")
+        desc = (p.get("description") or "")[:100]
+        items.append({
+            "title":   f"{name}  v{ver}",
+            "summary": desc,
+            "tags":    ["NPM", "JavaScript", "패키지"],
+            "source":  f"https://www.npmjs.com/package/{name}",
+        })
+    return items
 
 def pypi_rss(limit=8):
-    """PyPI 최신 패키지 RSS"""
     html = fetch("https://pypi.org/rss/updates.xml")
     items = []
     for raw in re.findall(r'<item>(.*?)</item>', html, re.DOTALL)[:limit]:
@@ -165,436 +196,462 @@ def pypi_rss(limit=8):
         d = re.search(r'<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</description>', raw, re.DOTALL)
         l = re.search(r'<link>(.*?)</link>', raw)
         title = clean(t.group(1)) if t else ""
-        desc  = clean(d.group(1))[:100] if d else "Python 패키지"
+        desc  = clean(d.group(1))[:100] if d else ""
         if title:
             items.append({
-                "title":   f"[PyPI] {title}",
-                "summary": desc or "Python 패키지 업데이트",
-                "tags":    ["Python", "PyPI", "패키지"],
+                "title":   f"{title}",
+                "summary": desc or "PyPI 패키지 업데이트",
+                "tags":    ["Python", "PyPI"],
                 "source":  (l.group(1).strip() if l else ""),
             })
     return items
 
-
-def pypi_search(keyword, limit=8):
-    """PyPI 검색"""
-    html = fetch(f"https://pypi.org/search/?q={quote_plus(keyword)}&o=-created")
+def pypi_search(q, limit=8):
+    html = fetch(f"https://pypi.org/search/?q={quote_plus(q)}&o=-created")
     items = []
     for href, body in re.findall(r'<a class="package-snippet"[^>]*href="([^"]*)"[^>]*>(.*?)</a>', html, re.DOTALL)[:limit]:
-        name_m = re.search(r'package-snippet__name[^>]*>(.*?)<', body)
-        ver_m  = re.search(r'package-snippet__version[^>]*>(.*?)<', body)
-        desc_m = re.search(r'package-snippet__description[^>]*>(.*?)<', body)
-        name = clean(name_m.group(1)) if name_m else href
-        ver  = clean(ver_m.group(1)) if ver_m else ""
-        desc = clean(desc_m.group(1))[:100] if desc_m else "Python 패키지"
+        nm = re.search(r'package-snippet__name[^>]*>(.*?)<', body)
+        vr = re.search(r'package-snippet__version[^>]*>(.*?)<', body)
+        ds = re.search(r'package-snippet__description[^>]*>(.*?)<', body)
+        name = clean(nm.group(1)) if nm else href
+        ver  = clean(vr.group(1)) if vr else ""
+        desc = clean(ds.group(1))[:100] if ds else ""
         if name:
             items.append({
-                "title":   f"[PyPI] {name}" + (f" {ver}" if ver else ""),
+                "title":   f"{name}" + (f"  {ver}" if ver else ""),
                 "summary": desc,
-                "tags":    ["Python", keyword, "패키지"],
+                "tags":    ["Python", "PyPI", q],
                 "source":  f"https://pypi.org{href}",
             })
     return items
 
+# ── 믹서 ─────────────────────────────────────────────────
 
-def combine(*args, shuffle=True):
-    result = []
-    for a in args:
-        result.extend(a)
-    if shuffle:
-        random.shuffle(result)
-    return result
-
+def mix(*args, shuffle=True):
+    r = []
+    for a in args: r.extend(a)
+    if shuffle: random.shuffle(r)
+    return r
 
 # ── 한국 기업 그룹 ─────────────────────────────────────────
 
-KR_DEV_ORGS = [
-    ("kakao",       "카카오",     ["카카오", "한국기업", "오픈소스"]),
-    ("naver",       "네이버",     ["네이버", "한국기업", "오픈소스"]),
-    ("line",        "라인",       ["라인", "한국기업", "오픈소스"]),
-    ("toss",        "토스",       ["토스", "한국기업", "오픈소스"]),
-    ("woowabros",   "우아한형제", ["배달의민족", "한국기업", "오픈소스"]),
-    ("coupang",     "쿠팡",       ["쿠팡", "한국기업", "오픈소스"]),
-    ("ncsoft",      "엔씨소프트", ["엔씨소프트", "게임기업", "오픈소스"]),
-    ("skplanet",    "SK플래닛",   ["SK", "한국기업", "오픈소스"]),
-    ("krafton-ai",  "크래프톤AI", ["크래프톤", "AI", "게임AI"]),
-    ("nhn",         "NHN",        ["NHN", "한국기업", "오픈소스"]),
+KR_STARTUPS = [  # 스타트업/유니콘
+    ("toss",       "토스",       ["핀테크","토스","오픈소스"]),
+    ("daangn",     "당근마켓",   ["중고거래","당근","오픈소스"]),
+    ("woowabros",  "배달의민족", ["배달앱","우아한형제","오픈소스"]),
+    ("hyperconnect","하이퍼커넥트",["영상통화","스타트업","오픈소스"]),
+    ("coupang",    "쿠팡",       ["이커머스","쿠팡","오픈소스"]),
 ]
 
-KR_AI_ORGS = [
-    ("krafton-ai",  "크래프톤AI", ["AI", "게임AI", "한국"]),
-    ("kakao",       "카카오",     ["카카오AI", "한국AI", "오픈소스"]),
-    ("naver",       "네이버",     ["네이버AI", "HyperCLOVA", "한국AI"]),
-    ("kakaoenterprise", "카카오엔터프라이즈", ["카카오", "AI", "한국"]),
+KR_BIG_TECH = [  # 대기업
+    ("kakao",     "카카오",  ["카카오","한국기업","오픈소스"]),
+    ("naver",     "네이버",  ["네이버","한국기업","오픈소스"]),
+    ("line",      "라인",    ["라인","메신저","오픈소스"]),
+    ("ncsoft",    "엔씨소프트",["게임","엔씨","오픈소스"]),
+    ("nhn",       "NHN",     ["NHN","한국기업","오픈소스"]),
 ]
 
-KR_STARTUP_ORGS = [
-    ("toss",        "토스",       ["핀테크", "스타트업", "한국"]),
-    ("coupang",     "쿠팡",       ["이커머스", "스타트업", "한국"]),
-    ("woowabros",   "배달의민족", ["배달앱", "스타트업", "한국"]),
-    ("daangn",      "당근마켓",   ["당근마켓", "스타트업", "한국"]),
-    ("hyperconnect","하이퍼커넥트",["하이퍼커넥트", "스타트업", "한국"]),
+KR_AI = [
+    ("kakao",            "카카오AI",  ["카카오","AI","한국AI"]),
+    ("naver",            "네이버AI",  ["네이버","CLOVA","한국AI"]),
+    ("krafton-ai",       "크래프톤AI",["게임AI","크래프톤","한국AI"]),
+    ("kakaoenterprise",  "카카오엔터프라이즈",["카카오","엔터프라이즈","AI"]),
 ]
 
-KR_GAME_ORGS = [
-    ("ncsoft",      "엔씨소프트", ["MMORPG", "게임", "한국게임"]),
-    ("krafton-ai",  "크래프톤",   ["배틀그라운드", "게임", "한국게임"]),
-    ("nexon",       "넥슨",       ["메이플", "게임", "한국게임"]),
-    ("netmarble",   "넷마블",     ["모바일게임", "게임", "한국게임"]),
+KR_GAME = [
+    ("ncsoft",    "엔씨소프트",["MMORPG","엔씨","한국게임"]),
+    ("krafton-ai","크래프톤", ["배틀그라운드","크래프톤","한국게임"]),
+    ("nexon",     "넥슨",     ["메이플","넥슨","한국게임"]),
+    ("netmarble", "넷마블",   ["모바일게임","넷마블","한국게임"]),
 ]
 
+def kr_orgs(orgs, limit_each=4):
+    """여러 한국 기업 저장소 합치기 (API 기반, 최신 업데이트순)"""
+    items = []
+    for org, label, tags in orgs:
+        try:
+            items.extend(gh_org_repos(org, label, tags, limit_each))
+        except Exception:
+            pass
+    random.shuffle(items)
+    return items
 
-# ── 토픽 → 크롤러 매핑 (메뉴 표 기반) ────────────────────
+# ═══════════════════════════════════════════════════════════
+# TOPIC_CRAWLERS — 토픽별 크롤러 매핑
+# 각 토픽의 성격에 맞는 소스만 사용
+# ═══════════════════════════════════════════════════════════
 
 TOPIC_CRAWLERS = {
 
-    # ── 홈(Home) ─────────────────────────────────────────
-    "home.trending":      lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:5], 2),
-        github_trending(since="daily", limit=4)),
-    "home.rising":        lambda: combine(
-        github_org_multi(KR_STARTUP_ORGS, 2),
-        github_trending(since="weekly", limit=4)),
-    "home.ai_feed":       lambda: combine(
-        github_org_multi(KR_AI_ORGS, 3),
-        github_topic("llm", 4)),
-    "home.shortform":     lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:4], 2),
-        npm_search("korean", 4)),
-    "home.following":     lambda: github_trending(since="daily", limit=8),
+    # ── 홈 (종합 피드) ────────────────────────────────────
+    # 전체 GitHub Trending + 한국 기업 혼합
+    "home.trending":   lambda: mix(
+        gh_trending(since="daily", limit=5),
+        kr_orgs(KR_BIG_TECH[:3], 2)),
+    "home.rising":     lambda: mix(
+        gh_trending(since="weekly", limit=5),
+        kr_orgs(KR_STARTUPS[:3], 2)),
+    "home.ai_feed":    lambda: mix(
+        gh_search_api("topic:llm stars:>500", "stars", 5),
+        kr_orgs(KR_AI[:2], 3)),
+    "home.shortform":  lambda: mix(
+        gh_trending(since="daily", limit=4),
+        npm_search("javascript popular", 4)),
+    "home.following":  lambda: gh_trending(since="daily", limit=8),
 
-    # ── AI 뉴스 ───────────────────────────────────────────
-    # 카카오 클라우드, 네이버 클로바, 크래프톤 AI, 뤼튼(wrtn) 등
-    "ai.news":            lambda: combine(
-        github_org_multi(KR_AI_ORGS, 3),
-        github_topic("llm", 4)),
-    "ai.tools":           lambda: combine(
-        npm_search("ai korean", 4),
-        github_topic("chatbot", 4)),
-    "ai.trend":           lambda: combine(
-        github_org("krafton-ai", "크래프톤AI", ["AI", "게임AI"], 4),
-        github_topic("generative-ai", 4)),
-    "ai.summary":         lambda: combine(
-        github_topic("nlp", 4),
-        pypi_search("nlp", 4)),
-    "ai.research":        lambda: combine(
-        pypi_search("machine-learning", 4),
-        github_topic("deep-learning", 4)),
+    # ── AI 뉴스 ─────────────────────────────────────────
+    # LLM/ML/AI 프레임워크 실제 저장소
+    "ai.news":         lambda: mix(
+        gh_search_api("topic:large-language-model stars:>1000", "updated", 4),
+        gh_search_api("topic:chatgpt stars:>500", "updated", 4)),
+    "ai.tools":        lambda: mix(
+        gh_search_api("topic:ai-tools stars:>200", "stars", 4),
+        npm_search("ai llm openai", 4)),
+    "ai.trend":        lambda: mix(
+        gh_search_api("topic:generative-ai stars:>500", "stars", 4),
+        gh_search_api("topic:diffusion-model stars:>300", "stars", 4)),
+    "ai.research":     lambda: mix(
+        gh_search_api("topic:deep-learning stars:>1000", "updated", 4),
+        pypi_search("transformer", 4)),
+    "ai.summary":      lambda: mix(
+        gh_search_api("topic:nlp stars:>500", "stars", 4),
+        pypi_search("llm", 4)),
 
-    # ── 스타트업 ──────────────────────────────────────────
-    # 토스, 쿠팡, 배민, 당근마켓, 하이퍼커넥트
-    "startup.new":        lambda: github_org_multi(KR_STARTUP_ORGS, 3),
-    "startup.funding":    lambda: combine(
-        github_org("toss", "토스", ["핀테크", "스타트업"], 4),
-        github_topic("fintech", 4)),
-    "startup.product":    lambda: combine(
-        github_org("daangn", "당근마켓", ["당근마켓", "스타트업"], 4),
-        github_topic("open-source", 4)),
+    # ── 스타트업 ─────────────────────────────────────────
+    # 한국 스타트업 실제 오픈소스 프로젝트
+    "startup.new":     lambda: kr_orgs(KR_STARTUPS, 3),
+    "startup.funding": lambda: mix(
+        kr_orgs([("toss","토스",["핀테크","투자"])], 4),
+        gh_search_api("topic:fintech language:TypeScript stars:>100", "updated", 4)),
+    "startup.product": lambda: mix(
+        kr_orgs([("daangn","당근마켓",["C2C","앱"]),("hyperconnect","하이퍼커넥트",["영상","앱"])], 3),
+        gh_search_api("topic:mobile-app language:Swift stars:>200", "stars", 4)),
 
-    # ── 개발(Dev) ─────────────────────────────────────────
-    # GeekNews(403대체) → 네이버/카카오/라인 GitHub
-    "dev.trending":       lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:6], 2),
-        github_trending(since="daily", limit=2)),
-    "dev.opensource":     lambda: combine(
-        github_org_multi(KR_DEV_ORGS, 2),
-        github_topic("awesome-list", 3)),
-    "dev.javascript":     lambda: combine(
-        github_org("naver", "네이버", ["JavaScript", "네이버", "프론트엔드"], 4),
-        npm_search("korean javascript", 4)),
-    "dev.python":         lambda: combine(
-        github_trending("python", "daily", 5),
-        pypi_rss(5)),
-    "dev.devops":         lambda: combine(
-        github_org("kakao", "카카오", ["DevOps", "클라우드", "카카오"], 4),
-        github_topic("kubernetes", 4)),
-    "dev.tools":          lambda: combine(
-        npm_search("korean cli", 4),
-        pypi_search("korean", 4)),
-
-    # ── 오픈소스(OSS) ─────────────────────────────────────
-    "oss.trending":       lambda: github_org_multi(KR_DEV_ORGS, 2),
-    "oss.awesome":        lambda: combine(
-        github_topic("awesome-list", 5),
-        github_topic("korean", 5)),
-    "oss.new":            lambda: combine(
-        pypi_rss(4),
-        npm_search("korean open source", 4)),
-
-    # ── IT 뉴스 ───────────────────────────────────────────
-    # ZDNet Korea(403) → 네이버/카카오 기술 블로그 대체
-    "it.news":            lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:4], 2),
-        github_topic("web-development", 4)),
-    "it.security":        lambda: combine(
-        github_topic("security", 5),
-        pypi_search("security", 4)),
-    "it.cloud":           lambda: combine(
-        github_org("kakao", "카카오클라우드", ["클라우드", "카카오", "인프라"], 4),
-        github_topic("cloud-native", 4)),
-    "it.mobile":          lambda: combine(
-        github_org("line", "라인", ["모바일", "iOS", "Android"], 4),
-        npm_search("react-native korean", 4)),
-
-    # ── 디자인 ────────────────────────────────────────────
-    # Dribbble/Behance(403) → GitHub 디자인 시스템
-    "design.ui":          lambda: combine(
-        npm_search("korean ui component", 4),
-        github_topic("design-system", 4)),
-    "design.ux":          lambda: combine(
-        github_topic("ux", 5),
-        npm_search("korean ux", 4)),
-    "design.tools":       lambda: combine(
-        npm_search("design tool", 4),
-        github_topic("design-tools", 4)),
-    "design.css":         lambda: combine(
-        github_trending("css", "daily", 5),
-        npm_search("korean css", 4)),
-
-    # ── 게시판 ────────────────────────────────────────────
-    # 클리앙/에펨코리아(403) → GitHub 한국 관련
-    "board.free":         lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:4], 2),
-        npm_search("popular", 4)),
-    "board.question":     lambda: combine(
-        pypi_search("tutorial", 4),
-        npm_search("guide", 4)),
-    "board.info":         lambda: combine(
-        pypi_rss(4),
-        github_topic("tutorial", 4)),
-    "board.humor":        lambda: github_topic("awesome-list", 8),
-    "board.it":           lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:5], 2),
-        github_trending("python", "daily", 2)),
-    "board.game":         lambda: combine(
-        github_org_multi(KR_GAME_ORGS, 3),
-        github_topic("game", 3)),
-    "board.sports":       lambda: combine(
-        github_topic("sports", 5),
-        npm_search("sports", 4)),
-    "board.politics":     lambda: combine(
-        github_topic("government", 5),
+    # ── 개발 (Dev) ──────────────────────────────────────
+    # 언어별 실제 Trending
+    "dev.trending":    lambda: gh_trending(since="daily", limit=8),
+    "dev.javascript":  lambda: mix(
+        gh_trending("javascript", "daily", 5),
+        npm_search("javascript framework", 4)),
+    "dev.typescript":  lambda: mix(
+        gh_trending("typescript", "daily", 5),
+        npm_search("typescript utility", 4)),
+    "dev.python":      lambda: mix(
+        gh_trending("python", "daily", 5),
         pypi_rss(4)),
-    "board.anon":         lambda: github_trending(since="weekly", limit=8),
+    "dev.rust":        lambda: mix(
+        gh_trending("rust", "daily", 5),
+        gh_search_api("topic:rust-lang stars:>500", "stars", 3)),
+    "dev.go":          lambda: mix(
+        gh_trending("go", "daily", 5),
+        gh_search_api("topic:golang stars:>500", "stars", 3)),
+    "dev.opensource":  lambda: mix(
+        gh_topic("open-source", 4),
+        kr_orgs(KR_BIG_TECH, 2)),
+    "dev.devops":      lambda: mix(
+        gh_search_api("topic:devops stars:>1000", "stars", 4),
+        gh_search_api("topic:kubernetes stars:>1000", "updated", 4)),
+    "dev.tools":       lambda: mix(
+        npm_search("developer tools cli", 4),
+        pypi_search("development tools", 4)),
 
-    # ── 유머/밈 ───────────────────────────────────────────
-    "humor.meme":         lambda: github_topic("awesome-list", 8),
-    "humor.funny":        lambda: combine(
-        github_topic("fun", 5),
-        npm_search("funny", 4)),
+    # ── 오픈소스 ─────────────────────────────────────────
+    "oss.trending":    lambda: mix(
+        gh_trending(since="weekly", limit=5),
+        kr_orgs(KR_BIG_TECH + KR_STARTUPS, 2)),
+    "oss.awesome":     lambda: mix(
+        gh_topic("awesome-list", 5),
+        gh_search_api("awesome topic:awesome stars:>5000", "stars", 4)),
+    "oss.new":         lambda: mix(
+        pypi_rss(5),
+        npm_new(4)),
 
-    # ── 게임 ─────────────────────────────────────────────
-    # 인벤(403) → 한국 게임사 GitHub
-    "game.news":          lambda: combine(
-        github_org_multi(KR_GAME_ORGS, 3),
-        github_topic("game-development", 3)),
-    "game.indie":         lambda: github_topic("indie-game", 8),
-    "game.review":        lambda: combine(
-        github_org_multi(KR_GAME_ORGS, 2),
-        npm_search("game", 4)),
+    # ── IT 뉴스 ─────────────────────────────────────────
+    # 인프라/클라우드/보안 실제 프로젝트
+    "it.news":         lambda: mix(
+        gh_search_api("topic:web-development stars:>1000", "updated", 4),
+        gh_trending(since="daily", limit=4)),
+    "it.security":     lambda: mix(
+        gh_search_api("topic:security topic:cybersecurity stars:>500", "updated", 4),
+        gh_search_api("topic:penetration-testing stars:>300", "stars", 4)),
+    "it.cloud":        lambda: mix(
+        gh_search_api("topic:cloud-native stars:>1000", "updated", 4),
+        gh_search_api("topic:aws OR topic:gcp OR topic:azure stars:>500", "stars", 4)),
+    "it.mobile":       lambda: mix(
+        gh_search_api("topic:ios OR topic:android stars:>500", "updated", 4),
+        gh_trending("swift", "daily", 4)),
+    "it.database":     lambda: mix(
+        gh_search_api("topic:database stars:>1000", "stars", 4),
+        gh_search_api("topic:sql stars:>500", "updated", 4)),
 
-    # ── 주식/코인 ─────────────────────────────────────────
-    # TradingView/CoinMarketCap(403) → GitHub 금융/블록체인
-    "finance.stock":      lambda: combine(
-        github_topic("finance", 5),
-        pypi_search("trading", 5)),
-    "finance.crypto":     lambda: combine(
-        github_topic("blockchain", 5),
-        pypi_search("cryptocurrency", 4)),
-    "finance.invest":     lambda: combine(
-        github_topic("quantitative-finance", 4),
-        npm_search("finance korea", 4)),
+    # ── 디자인 ──────────────────────────────────────────
+    "design.ui":       lambda: mix(
+        gh_search_api("topic:ui-components stars:>500", "stars", 4),
+        npm_search("ui component design system", 4)),
+    "design.ux":       lambda: mix(
+        gh_search_api("topic:design-system stars:>500", "stars", 4),
+        npm_search("ux design tool", 4)),
+    "design.tools":    lambda: mix(
+        gh_search_api("topic:design-tools stars:>300", "stars", 4),
+        npm_search("figma sketch design", 4)),
+    "design.css":      lambda: mix(
+        gh_trending("css", "daily", 5),
+        npm_search("css framework", 4)),
 
-    # ── 쇼핑/핫딜 ─────────────────────────────────────────
-    # 뽐뿌/퀘이사존(403) → 쿠팡 GitHub
-    "market.deal":        lambda: combine(
-        github_org("coupang", "쿠팡", ["이커머스", "쇼핑", "쿠팡"], 4),
-        github_topic("ecommerce", 4)),
-    "market.coupon":      lambda: combine(
-        npm_search("coupon discount", 4),
-        pypi_search("discount", 4)),
-    "market.used":        lambda: combine(
-        github_org("daangn", "당근마켓", ["중고거래", "당근마켓", "P2P"], 4),
-        github_topic("marketplace", 4)),
+    # ── 게임 ──────────────────────────────────────────
+    # 게임 엔진/개발 도구 + 한국 게임사 오픈소스
+    "game.news":       lambda: mix(
+        gh_search_api("topic:game-engine stars:>500", "updated", 4),
+        kr_orgs(KR_GAME, 3)),
+    "game.indie":      lambda: mix(
+        gh_search_api("topic:indie-game stars:>100", "stars", 4),
+        gh_search_api("topic:game-jam stars:>50", "updated", 4)),
+    "game.review":     lambda: mix(
+        kr_orgs(KR_GAME, 4),
+        gh_search_api("topic:unity OR topic:unreal stars:>500", "updated", 4)),
+    "game.dev":        lambda: mix(
+        gh_trending(since="daily", limit=4),
+        gh_search_api("topic:gamedev stars:>300", "stars", 4)),
 
-    # ── 취업 ─────────────────────────────────────────────
-    # 원티드/로켓펀치(403) → 한국 기업 채용 관련 GitHub
-    "job.dev":            lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:4], 2),
-        npm_search("career developer", 4)),
-    "job.startup":        lambda: combine(
-        github_org_multi(KR_STARTUP_ORGS, 2),
-        github_topic("startup", 4)),
-    "job.remote":         lambda: combine(
-        github_topic("remote-work", 5),
-        npm_search("remote work", 4)),
+    # ── 주식/코인 ───────────────────────────────────────
+    # 금융 분석 도구/퀀트/블록체인 프로젝트
+    "finance.stock":   lambda: mix(
+        gh_search_api("topic:algorithmic-trading stars:>300", "stars", 4),
+        pypi_search("stock market trading", 4)),
+    "finance.crypto":  lambda: mix(
+        gh_search_api("topic:blockchain stars:>500", "updated", 4),
+        gh_search_api("topic:defi stars:>300", "stars", 4)),
+    "finance.invest":  lambda: mix(
+        gh_search_api("topic:quantitative-finance stars:>300", "stars", 4),
+        pypi_search("investment portfolio", 4)),
+    "finance.data":    lambda: mix(
+        gh_search_api("topic:financial-data stars:>200", "stars", 4),
+        pypi_search("finance data", 4)),
 
-    # ── 학습/강의 ─────────────────────────────────────────
-    # Inflearn(403) → GitHub 한국어 학습자료
-    "learn.tutorial":     lambda: combine(
-        github_topic("tutorial", 5),
-        github_topic("korean", 5)),
-    "learn.course":       lambda: combine(
-        github_topic("learning", 5),
-        npm_search("education korean", 4)),
-    "learn.book":         lambda: combine(
-        github_topic("book", 5),
-        pypi_search("book", 4)),
+    # ── 마켓/쇼핑 ───────────────────────────────────────
+    "market.deal":     lambda: mix(
+        gh_search_api("topic:ecommerce stars:>500", "updated", 4),
+        npm_search("ecommerce shopping cart", 4)),
+    "market.coupon":   lambda: mix(
+        gh_search_api("topic:price-tracking stars:>100", "stars", 4),
+        npm_search("discount coupon promo", 4)),
+    "market.used":     lambda: mix(
+        gh_org_repos("daangn", "당근마켓", ["C2C","중고거래"], 4),
+        gh_search_api("topic:marketplace stars:>300", "stars", 4)),
 
-    # ── 논문/리서치 ───────────────────────────────────────
-    # arXiv(403) → GitHub 논문 구현체
-    "research.ai":        lambda: combine(
-        pypi_search("machine-learning", 4),
-        github_topic("research", 4)),
-    "research.paper":     lambda: combine(
-        pypi_search("scientific", 4),
-        github_topic("paper-implementation", 4)),
-    "research.data":      lambda: combine(
-        pypi_search("data-science", 4),
-        github_topic("data-science", 4)),
+    # ── 취업 ───────────────────────────────────────────
+    # 취업 준비 리소스/알고리즘/인터뷰
+    "job.dev":         lambda: mix(
+        gh_search_api("topic:coding-interview stars:>5000", "stars", 4),
+        gh_search_api("topic:interview-questions stars:>3000", "stars", 4)),
+    "job.startup":     lambda: mix(
+        kr_orgs(KR_STARTUPS, 3),
+        gh_search_api("topic:startup stars:>300", "stars", 3)),
+    "job.remote":      lambda: mix(
+        gh_search_api("topic:remote-work stars:>500", "stars", 4),
+        npm_search("productivity workflow", 4)),
+    "job.algorithm":   lambda: mix(
+        gh_search_api("topic:algorithms stars:>5000", "stars", 4),
+        gh_search_api("topic:data-structures stars:>3000", "stars", 4)),
 
-    # ── 영상 ─────────────────────────────────────────────
-    "video.trending":     lambda: combine(
-        github_topic("video", 5),
-        npm_search("video player", 4)),
-    "video.shorts":       lambda: combine(
-        github_topic("streaming", 5),
-        npm_search("media", 4)),
+    # ── 학습 ───────────────────────────────────────────
+    # 튜토리얼/강의자료/책 코드
+    "learn.tutorial":  lambda: mix(
+        gh_search_api("topic:tutorial stars:>3000", "stars", 4),
+        gh_search_api("topic:learning stars:>2000", "stars", 4)),
+    "learn.course":    lambda: mix(
+        gh_search_api("topic:course stars:>2000", "stars", 4),
+        gh_search_api("topic:education stars:>1000", "stars", 4)),
+    "learn.book":      lambda: mix(
+        gh_search_api("topic:book stars:>2000", "stars", 4),
+        gh_search_api("topic:programming-books stars:>1000", "stars", 4)),
+    "learn.korean":    lambda: mix(
+        gh_search_api("topic:korean stars:>100", "stars", 4),
+        gh_search_api("language:korean stars:>50", "stars", 4)),
 
-    # ── 이미지 ────────────────────────────────────────────
-    "image.trending":     lambda: combine(
-        github_topic("image-processing", 5),
-        npm_search("image", 4)),
-    "image.ai":           lambda: combine(
-        github_topic("stable-diffusion", 5),
-        github_topic("image-generation", 4)),
-    "image.design":       lambda: combine(
-        github_topic("svg", 5),
-        npm_search("icon korean", 4)),
+    # ── 논문/리서치 ────────────────────────────────────
+    "research.ai":     lambda: mix(
+        gh_search_api("topic:paper-implementation stars:>500", "updated", 4),
+        pypi_search("machine learning research", 4)),
+    "research.paper":  lambda: mix(
+        gh_search_api("topic:research stars:>1000", "stars", 4),
+        pypi_search("scientific computing", 4)),
+    "research.data":   lambda: mix(
+        gh_search_api("topic:data-science stars:>1000", "stars", 4),
+        pypi_search("data analysis pandas", 4)),
 
-    # ── AI 허브 (기존 호환) ───────────────────────────────
-    "aihub.trend":        lambda: combine(
-        github_org_multi(KR_AI_ORGS, 3),
-        github_topic("llm", 4)),
-    "aihub.summary":      lambda: combine(
-        github_topic("nlp", 5),
-        pypi_search("transformers", 4)),
+    # ── 영상/미디어 ────────────────────────────────────
+    "video.trending":  lambda: mix(
+        gh_search_api("topic:video-streaming stars:>300", "stars", 4),
+        npm_search("video player streaming", 4)),
+    "video.shorts":    lambda: mix(
+        gh_search_api("topic:short-video stars:>100", "stars", 4),
+        npm_search("media clip trim", 4)),
 
-    # ── 기존 메뉴 호환 ────────────────────────────────────
-    "trending.realtime":  lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:5], 2),
-        github_trending(since="daily", limit=2)),
-    "trending.daily":     lambda: github_org_multi(KR_DEV_ORGS, 2),
-    "trending.weekly":    lambda: combine(
-        github_org_multi(KR_STARTUP_ORGS, 2),
-        github_trending(since="weekly", limit=4)),
-    "trending.debate":    lambda: combine(
-        github_topic("controversial", 4),
-        npm_search("popular", 4)),
-    "community.dev":      lambda: github_org_multi(KR_DEV_ORGS, 2),
-    "community.invest":   lambda: combine(
-        github_topic("finance", 4),
-        pypi_search("trading", 4)),
-    "community.travel":   lambda: combine(
-        github_topic("travel", 5),
-        npm_search("travel", 4)),
-    "community.fashion":  lambda: combine(
-        github_topic("fashion", 4),
-        npm_search("style", 4)),
-    "community.fitness":  lambda: combine(
-        pypi_search("health", 4),
-        npm_search("fitness", 4)),
-    "knowledge.news":     lambda: combine(
-        github_org_multi(KR_DEV_ORGS[:4], 2),
-        github_topic("web-development", 4)),
-    "knowledge.tips":     lambda: combine(
-        github_topic("tips", 5),
-        pypi_search("productivity", 4)),
-    "knowledge.review":   lambda: combine(
-        npm_search("review", 4),
-        pypi_search("benchmark", 4)),
-    "knowledge.tutorial": lambda: combine(
-        github_topic("tutorial", 5),
-        github_topic("korean", 4)),
-    "gallery.image":      lambda: combine(
-        github_topic("image-processing", 5),
-        npm_search("image", 4)),
-    "gallery.meme":       lambda: github_topic("awesome-list", 8),
-    "gallery.ai":         lambda: combine(
-        github_topic("stable-diffusion", 5),
-        github_topic("image-generation", 4)),
-    "feed.latest":        lambda: combine(pypi_rss(5), npm_search("korean", 4)),
-    "feed.recommended":   lambda: github_org_multi(KR_DEV_ORGS[:5], 2),
+    # ── 이미지/AI 이미지 ───────────────────────────────
+    "image.trending":  lambda: mix(
+        gh_search_api("topic:image-processing stars:>500", "stars", 4),
+        npm_search("image optimization", 4)),
+    "image.ai":        lambda: mix(
+        gh_search_api("topic:stable-diffusion stars:>1000", "updated", 4),
+        gh_search_api("topic:image-generation stars:>500", "stars", 4)),
+    "image.design":    lambda: mix(
+        gh_search_api("topic:svg stars:>500", "stars", 4),
+        npm_search("icon svg design", 4)),
+
+    # ── 유머/밈 ────────────────────────────────────────
+    "humor.meme":      lambda: gh_search_api("topic:awesome-list stars:>5000", "stars", 8),
+    "humor.funny":     lambda: mix(
+        gh_search_api("topic:fun project:>100", "stars", 4),
+        gh_search_api("topic:joke stars:>100", "stars", 4)),
+
+    # ── 게시판 ─────────────────────────────────────────
+    "board.free":      lambda: mix(
+        gh_trending(since="daily", limit=4),
+        kr_orgs(KR_BIG_TECH[:3], 2)),
+    "board.question":  lambda: mix(
+        gh_search_api("topic:tutorial stars:>1000", "stars", 4),
+        gh_search_api("topic:faq stars:>200", "stars", 4)),
+    "board.info":      lambda: mix(
+        gh_search_api("topic:awesome stars:>5000", "stars", 4),
+        npm_search("utility helper", 4)),
+    "board.humor":     lambda: gh_search_api("topic:awesome-list stars:>5000", "stars", 8),
+    "board.it":        lambda: mix(
+        gh_trending(since="daily", limit=4),
+        kr_orgs(KR_BIG_TECH, 2)),
+    "board.game":      lambda: mix(
+        kr_orgs(KR_GAME, 4),
+        gh_search_api("topic:game stars:>500", "updated", 4)),
+    "board.sports":    lambda: gh_search_api("topic:sports stats:>100", "stars", 8),
+    "board.politics":  lambda: gh_search_api("topic:open-government stars:>300", "stars", 8),
+    "board.anon":      lambda: gh_trending(since="weekly", limit=8),
+
+    # ── AI 허브 ────────────────────────────────────────
+    "aihub.trend":     lambda: mix(
+        gh_search_api("topic:llm stars:>1000", "updated", 4),
+        kr_orgs(KR_AI, 2)),
+    "aihub.summary":   lambda: mix(
+        gh_search_api("topic:nlp stars:>1000", "stars", 4),
+        pypi_search("llm transformer", 4)),
+
+    # ── 인기 트렌딩 ────────────────────────────────────
+    "trending.realtime": lambda: gh_trending(since="daily", limit=8),
+    "trending.daily":    lambda: mix(
+        gh_trending(since="daily", limit=5),
+        kr_orgs(KR_BIG_TECH[:3], 2)),
+    "trending.weekly":   lambda: mix(
+        gh_trending(since="weekly", limit=5),
+        kr_orgs(KR_STARTUPS[:3], 2)),
+    "trending.debate":   lambda: gh_search_api("topic:discussion stars:>1000", "updated", 8),
+
+    # ── 피드 ───────────────────────────────────────────
+    "feed.latest":     lambda: mix(pypi_rss(4), npm_new(4)),
+    "feed.recommended":lambda: mix(
+        gh_trending(since="daily", limit=4),
+        kr_orgs(KR_BIG_TECH[:3], 2)),
+
+    # ── 커뮤니티 ───────────────────────────────────────
+    "community.dev":    lambda: mix(
+        gh_trending("python", "daily", 4),
+        kr_orgs(KR_BIG_TECH[:3], 2)),
+    "community.invest": lambda: mix(
+        gh_search_api("topic:quantitative-finance stars:>300", "stars", 4),
+        pypi_search("trading finance", 4)),
+    "community.travel": lambda: gh_search_api("topic:travel stars:>200", "stars", 8),
+    "community.fashion":lambda: gh_search_api("topic:fashion stars:>100", "stars", 8),
+    "community.fitness":lambda: mix(
+        pypi_search("health fitness", 4),
+        npm_search("fitness health", 4)),
+
+    # ── 갤러리 ─────────────────────────────────────────
+    "gallery.image":   lambda: mix(
+        gh_search_api("topic:image-processing stars:>500", "stars", 4),
+        npm_search("image gallery", 4)),
+    "gallery.meme":    lambda: gh_search_api("topic:awesome-list stars:>5000", "stars", 8),
+    "gallery.ai":      lambda: mix(
+        gh_search_api("topic:stable-diffusion stars:>1000", "updated", 4),
+        gh_search_api("topic:midjourney stars:>100", "stars", 4)),
+
+    # ── 정보/지식 ──────────────────────────────────────
+    "knowledge.news":   lambda: mix(
+        gh_trending(since="daily", limit=4),
+        kr_orgs(KR_BIG_TECH[:3], 2)),
+    "knowledge.tips":   lambda: mix(
+        gh_search_api("topic:tips stars:>1000", "stars", 4),
+        gh_search_api("topic:cheatsheet stars:>2000", "stars", 4)),
+    "knowledge.review": lambda: mix(
+        npm_search("review benchmark comparison", 4),
+        pypi_search("benchmark evaluation", 4)),
+    "knowledge.tutorial":lambda: mix(
+        gh_search_api("topic:tutorial stars:>3000", "stars", 4),
+        gh_topic("korean", 4)),
 }
-
-
-# ── 토픽 레이블 ───────────────────────────────────────────
 
 TOPIC_LABELS = {
-    "home.trending": "오늘의 인기글", "home.rising": "실시간 급상승",
-    "home.ai_feed": "AI 추천 피드", "home.shortform": "숏폼 콘텐츠",
-    "ai.news": "AI 뉴스", "ai.tools": "AI 도구", "ai.trend": "AI 트렌드",
-    "ai.summary": "AI 요약", "ai.research": "AI 리서치",
-    "startup.new": "신규 스타트업", "startup.funding": "투자/펀딩", "startup.product": "신제품",
-    "dev.trending": "개발 트렌딩", "dev.opensource": "오픈소스",
-    "dev.javascript": "JavaScript", "dev.python": "Python",
-    "dev.devops": "DevOps", "dev.tools": "개발 도구",
-    "oss.trending": "OSS 트렌딩", "oss.awesome": "Awesome 리스트", "oss.new": "신규 OSS",
-    "design.ui": "UI 컴포넌트", "design.ux": "UX 디자인",
-    "design.tools": "디자인 도구", "design.css": "CSS/스타일",
-    "it.news": "IT 뉴스", "it.security": "보안", "it.cloud": "클라우드", "it.mobile": "모바일",
-    "board.free": "자유게시판", "board.question": "질문게시판",
-    "board.info": "정보게시판", "board.humor": "유머게시판",
-    "board.it": "IT게시판", "board.game": "게임게시판",
-    "board.sports": "스포츠게시판", "board.politics": "정치게시판", "board.anon": "익명게시판",
-    "humor.meme": "밈", "humor.funny": "유머",
-    "game.news": "게임 뉴스", "game.indie": "인디게임", "game.review": "게임 리뷰",
-    "finance.stock": "주식", "finance.crypto": "코인", "finance.invest": "투자",
-    "market.deal": "핫딜", "market.coupon": "쿠폰/할인", "market.used": "중고거래",
-    "job.dev": "개발 채용", "job.startup": "스타트업 채용", "job.remote": "원격 근무",
-    "learn.tutorial": "튜토리얼", "learn.course": "강의/코스", "learn.book": "도서",
-    "research.ai": "AI 논문", "research.paper": "최신 논문", "research.data": "데이터 사이언스",
-    "video.trending": "인기 영상", "video.shorts": "숏폼",
-    "image.trending": "인기 이미지", "image.ai": "AI 이미지", "image.design": "디자인 에셋",
-    "aihub.trend": "AI 트렌드", "aihub.summary": "AI 요약",
-    "trending.realtime": "실시간 인기", "trending.daily": "일간 베스트",
-    "trending.weekly": "주간 베스트", "trending.debate": "논쟁중",
+    "home.trending":"오늘의 인기", "home.rising":"급상승",
+    "home.ai_feed":"AI 추천", "home.shortform":"숏폼",
+    "ai.news":"AI 뉴스", "ai.tools":"AI 도구", "ai.trend":"AI 트렌드",
+    "ai.research":"AI 리서치", "ai.summary":"AI 요약",
+    "startup.new":"신규 스타트업", "startup.funding":"투자/펀딩", "startup.product":"신제품",
+    "dev.trending":"개발 트렌딩", "dev.javascript":"JavaScript",
+    "dev.typescript":"TypeScript", "dev.python":"Python",
+    "dev.rust":"Rust", "dev.go":"Go",
+    "dev.opensource":"오픈소스", "dev.devops":"DevOps", "dev.tools":"개발 도구",
+    "oss.trending":"OSS 트렌딩", "oss.awesome":"Awesome", "oss.new":"신규 OSS",
+    "design.ui":"UI 컴포넌트", "design.ux":"UX 디자인",
+    "design.tools":"디자인 도구", "design.css":"CSS",
+    "it.news":"IT 뉴스", "it.security":"보안", "it.cloud":"클라우드",
+    "it.mobile":"모바일", "it.database":"데이터베이스",
+    "game.news":"게임 뉴스", "game.indie":"인디게임", "game.review":"게임 리뷰", "game.dev":"게임개발",
+    "finance.stock":"주식 도구", "finance.crypto":"블록체인/코인",
+    "finance.invest":"투자 분석", "finance.data":"금융 데이터",
+    "market.deal":"이커머스", "market.coupon":"할인/쿠폰", "market.used":"중고마켓",
+    "job.dev":"개발 면접", "job.startup":"스타트업", "job.remote":"원격근무", "job.algorithm":"알고리즘",
+    "learn.tutorial":"튜토리얼", "learn.course":"강의", "learn.book":"프로그래밍 책", "learn.korean":"한국어 자료",
+    "research.ai":"AI 논문", "research.paper":"논문 구현", "research.data":"데이터 사이언스",
+    "video.trending":"영상 도구", "video.shorts":"숏폼 미디어",
+    "image.trending":"이미지 처리", "image.ai":"AI 이미지", "image.design":"디자인 에셋",
+    "humor.meme":"Awesome 목록", "humor.funny":"재미있는 프로젝트",
+    "board.free":"자유", "board.question":"Q&A", "board.info":"정보",
+    "board.humor":"유머", "board.it":"IT", "board.game":"게임",
+    "board.sports":"스포츠", "board.politics":"정치", "board.anon":"익명",
+    "aihub.trend":"AI 트렌드", "aihub.summary":"AI 요약",
+    "trending.realtime":"실시간", "trending.daily":"일간",
+    "trending.weekly":"주간", "trending.debate":"토론",
+    "feed.latest":"최신", "feed.recommended":"추천",
+    "community.dev":"개발", "community.invest":"투자",
+    "community.travel":"여행", "community.fashion":"패션", "community.fitness":"운동",
+    "gallery.image":"이미지", "gallery.meme":"밈", "gallery.ai":"AI 이미지",
+    "knowledge.news":"뉴스", "knowledge.tips":"팁",
+    "knowledge.review":"리뷰", "knowledge.tutorial":"튜토리얼",
 }
 
-
-# ── Vercel Handler ────────────────────────────────────────
+# ── Vercel Handler ─────────────────────────────────────────
 
 class handler(BaseHTTPRequestHandler):
-
     def do_OPTIONS(self):
-        self.send_response(200)
-        self._cors(); self.end_headers()
+        self.send_response(200); self._cors(); self.end_headers()
 
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length)) if length else {}
             topic_key = body.get("topicKey", "")
-
             if not topic_key:
-                return self._json(400, {"error": "topicKey is required"})
-
+                return self._json(400, {"error": "topicKey required"})
             fn = TOPIC_CRAWLERS.get(topic_key)
             if not fn:
-                return self._json(400, {"error": f"Unknown topicKey: {topic_key}"})
-
+                return self._json(400, {"error": f"Unknown topic: {topic_key}"})
             raw   = fn()
-            label = TOPIC_LABELS.get(topic_key, topic_key.split(".")[-1].replace("_", " ").title())
+            label = TOPIC_LABELS.get(topic_key, topic_key.split(".")[-1].title())
             cat   = topic_key.split(".")[0]
             items = enrich(raw, topic_key, label, cat)
-
             self._json(200, {"items": items, "count": len(items)})
-
         except HTTPError as e:
             self._json(503, {"error": f"크롤링 실패: HTTP {e.code}"})
         except Exception as e:
             import traceback
-            self._json(500, {"error": str(e), "trace": traceback.format_exc()[-400:]})
+            self._json(500, {"error": str(e), "trace": traceback.format_exc()[-300:]})
 
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -602,12 +659,10 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def _json(self, status, data):
-        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
-        self.send_response(status)
-        self._cors()
+        body = json.dumps(data, ensure_ascii=False).encode()
+        self.send_response(status); self._cors()
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        self.end_headers(); self.wfile.write(body)
 
-    def log_message(self, *args): pass
+    def log_message(self, *a): pass
