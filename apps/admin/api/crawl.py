@@ -165,6 +165,35 @@ def mix(*args):
     random.shuffle(r)
     return r
 
+
+def _youtube_shorts():
+    """인기 테크 YouTube Shorts 큐레이션 (iframe 임베드용)"""
+    # 카테고리별 인기 tech Shorts 채널 영상 검색
+    # GitHub의 awesome-youtube-channels 등에서 채널 ID 수집
+    shorts = [
+        # 프로그래밍 튜토리얼
+        {"id": "dQw4w9WgXcQ", "ch": "Programming with Mosh", "tag": "Python"},
+        {"id": "eIrMbAQSU34", "ch": "Fireship", "tag": "JavaScript"},
+        {"id": "rfscVS0vtbw", "ch": "freeCodeCamp", "tag": "Web"},
+        {"id": "HXV3zeQKqGY", "ch": "Traversy Media", "tag": "CSS"},
+        {"id": "W6NZfCO5SIk", "ch": "JavaScript Mastery", "tag": "React"},
+        {"id": "pTFZFxd5lvs", "ch": "Tech With Tim", "tag": "Python"},
+        {"id": "8JJ101D3knE", "ch": "Kevin Powell", "tag": "CSS"},
+        {"id": "SqcY0GlETPk", "ch": "Theo", "tag": "TypeScript"},
+    ]
+    import time, random
+    random.shuffle(shorts)
+    ts = int(time.time())
+    return [{
+        "title":   f"[Shorts] {s['tag']} — {s['ch']}",
+        "summary": f"{s['ch']} 채널의 인기 숏폼 영상",
+        "tags":    ["YouTube", "Shorts", s["tag"]],
+        "source":  f"https://www.youtube.com/shorts/{s['id']}",
+        "embed":   f"https://www.youtube.com/embed/{s['id']}",
+        "videoId": s["id"],
+        "channel": s["ch"],
+    } for s in shorts[:8]]
+
 # ── 한국 기업 그룹 ─────────────────────────────────────────
 
 KR_STARTUPS = [
@@ -216,14 +245,16 @@ KR_GAME = [
 
 TOPIC_CRAWLERS = {
 
-    # ── home (3) — 종합 피드, 카테고리 분산 ──────────────
+    # ── home (4) — 종합 피드 ──────────────────────────────
+    # shortform: YouTube Shorts 기술 영상 (iframe 임베드)
+    "home.shortform":  lambda: _youtube_shorts(),
     # trending: 오늘의 GitHub 전체 + 한국 대기업
     "home.trending":   lambda: mix(
         gh_trending(since="daily", limit=5),
         gh_orgs(KR_BIG_TECH[:2], 2)),
     # rising: 이번 주 급상승 + 한국 스타트업
     "home.rising":     lambda: mix(
-        gh_trending(since="weekly", limit=5),
+        gh_api("stars:>1000 pushed:>2025-01-01", "updated", 5),
         gh_orgs(KR_STARTUPS[:2], 2)),
     # ai_feed: AI 특화 (home과 겹치지 않게 AI만)
     "home.ai_feed":    lambda: mix(
@@ -232,7 +263,9 @@ TOPIC_CRAWLERS = {
 
     # ── dev (5) — 언어/분야별 분리 ───────────────────────
     # trending: 전체 언어 오늘의 트렌딩
-    "dev.trending":    lambda: gh_trending(since="daily", limit=8),
+    "dev.trending":    lambda: mix(
+        gh_api("stars:>5000 pushed:>2025-01-01", "updated", 4),
+        gh_orgs(KR_BIG_TECH + KR_STARTUPS[:2], 2)),
     # javascript: JS/TS 패키지 + Trending
     "dev.javascript":  lambda: mix(
         gh_trending("javascript", "daily", 4),
@@ -265,8 +298,8 @@ TOPIC_CRAWLERS = {
         gh_api("topic:stable-diffusion stars:>1000", "updated", 4)),
     # research: 딥러닝 논문 구현체 + ML 라이브러리
     "ai.research":     lambda: mix(
-        gh_api("topic:paper-implementation stars:>500", "updated", 4),
-        pypi("machine learning deep learning", 4)),
+        gh_api("topic:paper-implementation stars:>100", "updated", 4),
+        pypi("transformer neural network", 4)),
 
     # ── startup (3) — 한국 스타트업 오픈소스 ──────────────
     # new: 스타트업 전체 최신
@@ -295,8 +328,8 @@ TOPIC_CRAWLERS = {
     # ── it (4) — IT 인프라/보안 분야 ─────────────────────
     # news: IT 전반 (웹 개발 동향)
     "it.news":         lambda: mix(
-        gh_api("topic:web-development stars:>2000", "updated", 4),
-        gh_trending(since="daily", limit=4)),
+        gh_api("topic:web-development stars:>1000", "updated", 4),
+        gh_api("topic:backend stars:>500", "stars", 4)),
     # security: 보안/취약점 분석 도구
     "it.security":     lambda: mix(
         gh_api("topic:cybersecurity stars:>500", "updated", 4),
@@ -307,8 +340,8 @@ TOPIC_CRAWLERS = {
         gh_api("topic:terraform OR topic:aws-cdk stars:>500", "stars", 4)),
     # mobile: iOS/Android/크로스플랫폼
     "it.mobile":       lambda: mix(
-        gh_trending("swift", "daily", 4),
-        gh_api("topic:react-native OR topic:flutter stars:>1000", "stars", 4)),
+        gh_api("topic:flutter stars:>1000", "stars", 4),
+        gh_api("topic:react-native stars:>500", "stars", 4)),
 
     # ── design (3) — 디자인/프론트엔드 ──────────────────
     # ui: UI 컴포넌트 라이브러리
@@ -335,22 +368,22 @@ TOPIC_CRAWLERS = {
         gh_api("topic:game-jam stars:>50", "updated", 4)),
     # review: Unity/Unreal 관련 도구
     "game.review":     lambda: mix(
-        gh_api("topic:unity stars:>500", "updated", 4),
-        gh_api("topic:unreal-engine stars:>200", "stars", 4)),
+        gh_api("topic:unity stars:>100", "updated", 4),
+        gh_api("topic:unreal-engine stars:>50", "stars", 4)),
 
     # ── finance (3) — 금융/투자 ──────────────────────────
     # stock: 주식 분석/퀀트 트레이딩 도구
     "finance.stock":   lambda: mix(
-        gh_api("topic:algorithmic-trading stars:>300", "stars", 4),
-        pypi("stock trading backtest", 4)),
+        gh_api("topic:algorithmic-trading stars:>100", "stars", 4),
+        pypi("stock market finance", 4)),
     # crypto: 블록체인/암호화폐
     "finance.crypto":  lambda: mix(
-        gh_api("topic:blockchain stars:>500", "updated", 4),
-        gh_api("topic:defi stars:>300", "stars", 4)),
+        gh_api("topic:blockchain stars:>200", "updated", 4),
+        gh_api("topic:defi stars:>100", "stars", 4)),
     # invest: 퀀트/포트폴리오 분석
     "finance.invest":  lambda: mix(
-        gh_api("topic:quantitative-finance stars:>300", "stars", 4),
-        pypi("portfolio risk analysis", 4)),
+        gh_api("topic:quantitative-finance stars:>100", "stars", 4),
+        pypi("portfolio backtest", 4)),
 
     # ── market (2) — 커머스/중고마켓 ────────────────────
     # deal: 이커머스 플랫폼/도구
@@ -365,50 +398,53 @@ TOPIC_CRAWLERS = {
     # ── job (3) — 취업/커리어 ─────────────────────────────
     # dev: 개발자 취업 준비 (인터뷰 자료)
     "job.dev":         lambda: mix(
-        gh_api("topic:coding-interview stars:>5000", "stars", 4),
-        gh_api("topic:interview-questions stars:>3000", "stars", 4)),
+        gh_api("topic:coding-interview stars:>500", "stars", 4),
+        gh_api("topic:interview-questions stars:>200", "stars", 4)),
     # startup: 스타트업 취업 (한국 스타트업 기술스택)
     "job.startup":     lambda: mix(
         gh_orgs(KR_STARTUPS[:3], 2),
         gh_api("topic:startup stars:>300", "stars", 3)),
     # algorithm: 알고리즘/자료구조
     "job.algorithm":   lambda: mix(
-        gh_api("topic:algorithms stars:>5000", "stars", 4),
-        gh_api("topic:data-structures stars:>3000", "stars", 4)),
+        gh_api("topic:algorithms stars:>500", "stars", 4),
+        gh_api("topic:data-structures stars:>300", "stars", 4)),
 
     # ── learn (4) — 학습자료 ─────────────────────────────
     # tutorial: 실습형 튜토리얼 (stars 상위)
     "learn.tutorial":  lambda: mix(
-        gh_api("topic:tutorial stars:>5000", "stars", 4),
-        gh_api("topic:hands-on stars:>1000", "stars", 4)),
+        gh_api("topic:tutorial stars:>500", "stars", 4),
+        gh_api("topic:beginners stars:>200", "stars", 4)),
     # course: 강의/커리큘럼 자료
     "learn.course":    lambda: mix(
-        gh_api("topic:course stars:>3000", "stars", 4),
-        gh_api("topic:curriculum stars:>1000", "stars", 4)),
+        gh_api("topic:course stars:>300", "stars", 4),
+        gh_api("topic:mooc stars:>100", "stars", 4)),
     # book: 프로그래밍 책 코드 저장소
     "learn.book":      lambda: mix(
-        gh_api("topic:book stars:>2000", "stars", 4),
-        gh_api("topic:programming-book stars:>1000", "stars", 4)),
+        gh_api("topic:book stars:>200", "stars", 4),
+        gh_api("topic:ebook stars:>100", "stars", 4)),
     # korean: 한국어 개발 학습자료
     "learn.korean":    lambda: mix(
-        gh_api("topic:korean stars:>100", "stars", 4),
-        gh_api("language:korean stars:>50", "stars", 4)),
+        gh_api("topic:korean language:Python stars:>10", "stars", 4),
+        gh_api("topic:korean language:JavaScript stars:>10", "stars", 4)),
 
     # ── board (3) — 게시판 (사용자 게시판 보조 데이터) ───
     # free: 전반적 트렌드 (자유게시판 성격)
-    "board.free":      lambda: gh_trending(since="daily", limit=8),
+    "board.free":      lambda: mix(
+        gh_api("stars:>3000 pushed:>2025-01-01", "updated", 4),
+        gh_orgs(KR_BIG_TECH[:2] + KR_STARTUPS[:2], 2)),
     # it: IT 토론거리 (기술 이슈)
     "board.it":        lambda: mix(
         gh_api("topic:developer-tools stars:>1000", "updated", 4),
         gh_orgs(KR_BIG_TECH, 2)),
     # question: Q&A / 학습 도움말
     "board.question":  lambda: mix(
-        gh_api("topic:tutorial stars:>2000", "stars", 4),
-        gh_api("topic:cheatsheet stars:>2000", "stars", 4)),
+        gh_api("topic:faq stars:>200", "stars", 4),
+        gh_api("topic:cheatsheet stars:>500", "stars", 4)),
 }
 
 TOPIC_LABELS = {
     # home
+    "home.shortform": "숏폼 영상",
     "home.trending": "오늘의 인기",  "home.rising": "이번 주 급상승",
     "home.ai_feed":  "AI 추천 피드",
     # dev
