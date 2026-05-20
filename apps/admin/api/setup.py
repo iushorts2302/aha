@@ -353,65 +353,66 @@ class handler(BaseHTTPRequestHandler):
                         result["tables"][t] = f"ERROR: {str(e)[:50]}"
                 return _json(self, 200, result)
 
-            # ── 1. 테이블 생성 ────────────────────────────────
-            created = 0
-            for ddl in DDL_TABLES:
-                table_name = ddl.split("EXISTS")[1].split("(")[0].strip()
-                try:
-                    db.execute(ddl)
-                    result["tables"][table_name] = "created_or_exists"
-                    created += 1
-                except Exception as e:
-                    result["errors"].append(f"{table_name}: {str(e)[:80]}")
-            result["tables_processed"] = created
+            step = params.get("step", ["all"])[0]
 
-            # ── 2. categories INSERT ──────────────────────────
-            cat_inserted = 0
-            cat_map = {}
-            for cid, label, icon, sort in CATEGORIES:
-                exist = db.query_one("SELECT seq_no FROM tb_category WHERE category_id=%s",(cid,))
-                if exist:
-                    cat_map[cid] = exist["seq_no"]
-                else:
-                    seq = db.execute(
-                        "INSERT INTO tb_category (category_id,label,icon,sort_order) VALUES(%s,%s,%s,%s)",
-                        (cid, label, icon, sort))
-                    cat_map[cid] = seq
-                    cat_inserted += 1
-            result["inserted"]["categories"] = cat_inserted
+            if step in ("all", "tables"):
+                # ── 1. 테이블 생성 ──────────────────────────
+                created = 0
+                for ddl in DDL_TABLES:
+                    table_name = ddl.split("EXISTS")[1].split("(")[0].strip()
+                    try:
+                        db.execute(ddl)
+                        result["tables"][table_name] = "ok"
+                        created += 1
+                    except Exception as e:
+                        result["errors"].append(f"{table_name}: {str(e)[:80]}")
+                result["tables_processed"] = created
 
-            # ── 3. topics INSERT ──────────────────────────────
-            topic_inserted = 0
-            for key, cat_id, label, sort in TOPICS:
-                cat_seq = cat_map.get(cat_id)
-                if not cat_seq: continue
-                exist = db.query_one("SELECT seq_no FROM tb_topic WHERE topic_key=%s",(key,))
-                if not exist:
+            if step in ("all", "data"):
+                # ── 2. categories INSERT ────────────────────
+                cat_inserted = 0; cat_map = {}
+                for cid, label, icon, sort in CATEGORIES:
+                    exist = db.query_one("SELECT seq_no FROM tb_category WHERE category_id=%s",(cid,))
+                    if exist: cat_map[cid] = exist["seq_no"]
+                    else:
+                        seq = db.execute(
+                            "INSERT INTO tb_category (category_id,label,icon,sort_order) VALUES(%s,%s,%s,%s)",
+                            (cid, label, icon, sort))
+                        cat_map[cid] = seq; cat_inserted += 1
+                result["inserted"]["categories"] = cat_inserted
+
+                # ── 3. topics INSERT ────────────────────────
+                topic_inserted = 0
+                if not cat_map:
+                    for row in db.query("SELECT seq_no, category_id FROM tb_category"):
+                        cat_map[row["category_id"]] = row["seq_no"]
+                for key, cat_id, label, sort in TOPICS:
+                    cat_seq = cat_map.get(cat_id)
+                    if not cat_seq: continue
+                    if not db.query_one("SELECT seq_no FROM tb_topic WHERE topic_key=%s",(key,)):
+                        db.execute(
+                            "INSERT INTO tb_topic (topic_key,category_seq_no,label,sort_order,active_yn) "
+                            "VALUES(%s,%s,%s,%s,'Y')", (key, cat_seq, label, sort))
+                        topic_inserted += 1
+                result["inserted"]["topics"] = topic_inserted
+
+                # ── 4. admin 계정 ──────────────────────────
+                if not db.query_one("SELECT seq_no FROM tb_admin WHERE email='admin@aha.com'"):
                     db.execute(
-                        "INSERT INTO tb_topic (topic_key,category_seq_no,label,sort_order,active_yn) "
-                        "VALUES(%s,%s,%s,%s,'Y')", (key, cat_seq, label, sort))
-                    topic_inserted += 1
-            result["inserted"]["topics"] = topic_inserted
+                        "INSERT INTO tb_admin (email,password_hash,name,role,status) "
+                        "VALUES('admin@aha.com',%s,'관리자','superadmin','active')",
+                        (_sha256("admin1234"),))
+                    result["inserted"]["admin"] = 1
+                else: result["inserted"]["admin"] = 0
 
-            # ── 4. admin 계정 ─────────────────────────────────
-            if not db.query_one("SELECT seq_no FROM tb_admin WHERE email='admin@aha.com'"):
-                db.execute(
-                    "INSERT INTO tb_admin (email,password_hash,name,role,status) "
-                    "VALUES('admin@aha.com',%s,'관리자','superadmin','active')",
-                    (_sha256("admin1234"),))
-                result["inserted"]["admin"] = 1
-            else:
-                result["inserted"]["admin"] = 0
-
-            # ── 5. demo 유저 ──────────────────────────────────
-            if not db.query_one("SELECT seq_no FROM tb_user WHERE email='demo@aha.com'"):
-                db.execute(
-                    "INSERT INTO tb_user (email,password_hash,nickname,bio,role,status) "
-                    "VALUES('demo@aha.com',%s,'김민준','DIY & 테크 enthusiast','user','active')",
-                    (_sha256("demo1234"),))
-                result["inserted"]["demo_user"] = 1
-            else:
-                result["inserted"]["demo_user"] = 0
+                # ── 5. demo 유저 ───────────────────────────
+                if not db.query_one("SELECT seq_no FROM tb_user WHERE email='demo@aha.com'"):
+                    db.execute(
+                        "INSERT INTO tb_user (email,password_hash,nickname,bio,role,status) "
+                        "VALUES('demo@aha.com',%s,'김민준','DIY & 테크 enthusiast','user','active')",
+                        (_sha256("demo1234"),))
+                    result["inserted"]["demo_user"] = 1
+                else: result["inserted"]["demo_user"] = 0
 
             result["ok"] = True
             _json(self, 200, result)
