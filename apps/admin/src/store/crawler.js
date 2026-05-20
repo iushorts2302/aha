@@ -4,18 +4,21 @@
  * 실제 웹 크롤링 (GitHub, NPM, PyPI 등)
  */
 
-import { MENU_TOPICS, addItems, updateSchedule, readSchedule } from './crawlStore.js'
+import { MENU_TOPICS } from './crawlStore.js'
 
-const API_URL = '/api/crawl'
+const CRAWL_API  = 'https://admin-vert-psi.vercel.app/api/crawl'
+const SAVE_API   = 'https://admin-vert-psi.vercel.app/api/v1?resource=crawl_items'
 
 export async function crawlTopic(topicKey) {
   const topic = MENU_TOPICS[topicKey]
   if (!topic) throw new Error(`Unknown topic: ${topicKey}`)
 
-  const response = await fetch(API_URL, {
+  // 1. 크롤링 실행
+  const response = await fetch(CRAWL_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ topicKey }),
+    signal: AbortSignal.timeout(25000),
   })
 
   if (!response.ok) {
@@ -26,16 +29,21 @@ export async function crawlTopic(topicKey) {
   const data = await response.json()
   const items = (data.items || []).map(item => ({
     ...item,
-    // 누락 필드 보완
     topicLabel: item.topicLabel || topic.label,
     category:   item.category   || topic.category,
   }))
 
-  if (items.length === 0) throw new Error('수집된 항목이 없습니다')
+  // 2. DB 저장 (백그라운드 — 실패해도 크롤링 성공으로 처리)
+  if (items.length > 0) {
+    fetch(SAVE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+      signal: AbortSignal.timeout(15000),
+    }).catch(() => {})
+  }
 
-  addItems(topicKey, items)
-  updateSchedule(topicKey, new Date().toISOString())
-
+  // 3. items가 0이어도 오류 대신 빈 배열 반환 (크롤러 제한 상황 대응)
   return items
 }
 
@@ -49,7 +57,7 @@ export async function crawlTopics(topicKeys, onProgress) {
       onProgress?.(key, 'success', items.length)
     } catch (err) {
       results[key] = { success: false, error: err.message }
-      onProgress?.(key, 'error', err.message)
+      onProgress?.(key, 'error', err.message.slice(0, 60))
     }
     // 크롤링 간격 (서버 부하 방지)
     await new Promise(r => setTimeout(r, 800))
@@ -58,15 +66,8 @@ export async function crawlTopics(topicKeys, onProgress) {
 }
 
 export async function crawlStale(onProgress) {
-  const schedule = readSchedule()
-  const TEN_MIN = 10 * 60 * 1000
-
-  const staleKeys = Object.keys(MENU_TOPICS).filter(key => {
-    const last = schedule[key]
-    if (!last) return true
-    return Date.now() - new Date(last).getTime() > TEN_MIN
-  })
-
+  // 모든 MENU_TOPICS 토픽을 대상으로 stale 크롤링
+  const staleKeys = Object.keys(MENU_TOPICS)
   if (staleKeys.length === 0) return {}
   return crawlTopics(staleKeys, onProgress)
 }

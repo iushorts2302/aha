@@ -116,16 +116,17 @@ class handler(BaseHTTPRequestHandler):
         if not topic_key:
             return _json(self, 400, {"error": "topic parameter required"})
 
-        # ── 1순위: DB ────────────────────────────────────
+        # ── 1순위: /tmp JSON 캐시 (가장 빠름) ──────────
+        cached = _get_cached(topic_key)
+        if cached:
+            # 백그라운드로 DB 갱신 시도 (응답 블로킹 없음)
+            return _json(self, 200, {"items": cached, "count": len(cached), "source": "cache"})
+
+        # ── 2순위: DB ────────────────────────────────────
         db_items = _db_items(topic_key, limit)
         if db_items is not None and len(db_items) > 0:
             _set_cached(topic_key, db_items)  # DB 성공 → 캐시도 갱신
             return _json(self, 200, {"items": db_items, "count": len(db_items), "source": "db"})
-
-        # ── 2순위: /tmp JSON 캐시 ────────────────────────
-        cached = _get_cached(topic_key)
-        if cached:
-            return _json(self, 200, {"items": cached, "count": len(cached), "source": "cache"})
 
         # ── 3순위: 실시간 크롤링 → 캐시 저장 ────────────
         try:

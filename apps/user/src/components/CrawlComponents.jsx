@@ -119,7 +119,7 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
   }, [topicKey, limit])
 
   useEffect(() => { refresh() }, [refresh])
-  useEffect(() => { const t = setInterval(refresh, 30000); return () => clearInterval(t) }, [refresh])
+  useEffect(() => { const t = setInterval(refresh, 60000); return () => clearInterval(t) }, [refresh])
 
   if (items.length === 0) return (
     <div>

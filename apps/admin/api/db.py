@@ -1,7 +1,7 @@
 """
-db.py — MariaDB/MySQL 연결 공통 모듈
-Aiven Cloud MySQL (SSL 필수)
-환경변수 우선, 없으면 하드코딩 기본값 사용
+db.py — MySQL 연결 모듈 (Aiven Cloud, SSL 필수)
+- connect_timeout 3초로 단축 (빠른 실패)
+- 쿼리 실행 타임아웃 추가
 """
 import os
 import pymysql
@@ -11,14 +11,15 @@ DB_CONFIG = {
     "host":     os.environ.get("DB_HOST",     "mysql-aha-db-aha.a.aivencloud.com"),
     "port":     int(os.environ.get("DB_PORT", "14157")),
     "user":     os.environ.get("DB_USER",     "avnadmin"),
-    "password": os.environ.get("DB_PASSWORD", ""),      # Vercel 환경변수에서 주입
+    "password": os.environ.get("DB_PASSWORD", ""),
     "database": os.environ.get("DB_NAME",     "defaultdb"),
     "charset":  "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
-    "connect_timeout": 5,
+    "connect_timeout": 3,   # 콜드스타트 3초 제한
+    "read_timeout":    8,
+    "write_timeout":   8,
     "autocommit": False,
-    # Aiven Cloud: SSL 필수
-    "ssl": {"ssl": {}},
+    "ssl": {"ssl": {}},     # Aiven 필수
 }
 
 def get_conn():

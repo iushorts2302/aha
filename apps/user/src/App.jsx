@@ -52,7 +52,7 @@ function AppInner() {
   // 서킷브레이커 상태 구독
   useEffect(() => onStateChange(setCbState), [])
 
-  // 앱 구동 시 /api/init 반복 호출 — 3개씩 순차 크롤링 (최대 7회)
+  // 앱 구동 3초 후 /api/init 백그라운드 호출 (초기 렌더링 블로킹 방지)
   useEffect(() => {
     let round = 0
     async function triggerInit() {
@@ -61,14 +61,14 @@ function AppInner() {
           { signal: AbortSignal.timeout(28000) })
         if (!r.ok) return
         const d = await r.json()
-        // 아직 크롤링 필요한 토픽이 남아있으면 재호출
         if (d.topics_needed > 0 && round < 7) {
           round++
-          setTimeout(triggerInit, 1000)
+          setTimeout(triggerInit, 3000)  // 3초 간격으로 재호출
         }
-      } catch {} // 실패해도 앱 동작에 영향 없음
+      } catch {}
     }
-    triggerInit()
+    const t = setTimeout(triggerInit, 3000)  // 초기 3초 지연
+    return () => clearTimeout(t)
   }, [])
 
   // OPEN 상태 → 서버 점검 페이지

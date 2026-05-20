@@ -93,7 +93,7 @@ const _initTriggered = new Set()
 // ── DB API에서 크롤링 아이템 조회 ────────────────────────
 async function fetchFromDB(topicKey) {
   const cached = _cache.get(topicKey)
-  if (cached && Date.now() - cached.fetchedAt < 30000) return cached.items
+  if (cached && Date.now() - cached.fetchedAt < 60000) return cached.items
 
   try {
     const r = await fetch(
