@@ -52,10 +52,23 @@ function AppInner() {
   // 서킷브레이커 상태 구독
   useEffect(() => onStateChange(setCbState), [])
 
-  // 앱 구동 시 /api/init 백그라운드 호출 — 빈 토픽 즉시 크롤링
+  // 앱 구동 시 /api/init 반복 호출 — 3개씩 순차 크롤링 (최대 7회)
   useEffect(() => {
-    fetch('https://admin-vert-psi.vercel.app/api/init', { signal: AbortSignal.timeout(30000) })
-      .catch(() => {}) // 실패해도 앱 동작에 영향 없음
+    let round = 0
+    async function triggerInit() {
+      try {
+        const r = await fetch('https://admin-vert-psi.vercel.app/api/init',
+          { signal: AbortSignal.timeout(28000) })
+        if (!r.ok) return
+        const d = await r.json()
+        // 아직 크롤링 필요한 토픽이 남아있으면 재호출
+        if (d.topics_needed > 0 && round < 7) {
+          round++
+          setTimeout(triggerInit, 1000)
+        }
+      } catch {} // 실패해도 앱 동작에 영향 없음
+    }
+    triggerInit()
   }, [])
 
   // OPEN 상태 → 서버 점검 페이지

@@ -188,14 +188,14 @@ class handler(BaseHTTPRequestHandler):
                 if cnt <= 0:
                     topics_to_crawl.append(key)
 
-        # 3. 크롤링 실행 (최대 10개 — Vercel 서버리스 30초 제한)
+        # 3. 크롤링 실행 — Vercel 서버리스 최대 25초 제한
+        # 한 번에 3개씩 처리 (반복 호출로 전체 토픽 순차 완료)
         crawled = 0
-        for key in topics_to_crawl[:10]:
+        for key in topics_to_crawl[:3]:
             r = _crawl_and_save(key, force=force)
             results[key] = r
             if r.get("count", 0) > 0:
                 crawled += 1
-            time.sleep(0.15)   # 과부하 방지
 
         elapsed = round(time.time() - t0, 2)
 

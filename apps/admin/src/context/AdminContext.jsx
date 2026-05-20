@@ -102,16 +102,22 @@ export function AdminProvider({ children }) {
     if (!admin) return
     // 1. 관리자 데이터 로드
     loadAll()
-    // 2. /api/init 호출 — DB 빈 토픽 즉시 크롤링
-    fetch('https://admin-vert-psi.vercel.app/api/init', { signal: AbortSignal.timeout(30000) })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.topics_crawled > 0) {
-          // 크롤링 완료 후 데이터 새로고침
-          setTimeout(() => loadAll(), 3000)
+    // 2. /api/init 반복 호출 — 3개씩 순차 크롤링
+    let round = 0
+    async function triggerInit() {
+      try {
+        const r = await fetch('https://admin-vert-psi.vercel.app/api/init',
+          { signal: AbortSignal.timeout(28000) })
+        if (!r.ok) return
+        const d = await r.json()
+        if (d.topics_crawled > 0) loadAll()   // 크롤링 있으면 즉시 갱신
+        if (d.topics_needed > 0 && round < 7) {
+          round++
+          setTimeout(triggerInit, 2000)
         }
-      })
-      .catch(() => {})
+      } catch {}
+    }
+    triggerInit()
   }, [admin])
 
   // ── 로그인 ───────────────────────────────────────────
