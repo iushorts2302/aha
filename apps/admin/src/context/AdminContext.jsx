@@ -5,7 +5,21 @@ const ADMIN_API    = 'https://admin-vert-psi.vercel.app'
 const LS_ADMIN_KEY = 'aha_admin_session'
 
 async function api(path, options = {}) {
-  const res = await fetch(`${ADMIN_API}/api${path}`, {
+  // /xxx  → /api/v1?resource=xxx  (통합 라우터)
+  // /xxx?a=b → /api/v1?resource=xxx&a=b
+  let url
+  if (path.startsWith('/v1') || path.startsWith('/auth') ||
+      path.startsWith('/config') || path.startsWith('/blocked') ||
+      path.startsWith('/data') || path.startsWith('/init') ||
+      path.startsWith('/setup') || path.startsWith('/cron')) {
+    url = `${ADMIN_API}/api${path}`
+  } else {
+    // /categories → /v1?resource=categories
+    // /posts?status=all&limit=50 → /v1?resource=posts&status=all&limit=50
+    const [base, qs] = path.replace(/^\//, '').split('?')
+    url = `${ADMIN_API}/api/v1?resource=${base}${qs ? '&' + qs : ''}`
+  }
+  const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   })
@@ -59,18 +73,20 @@ export function AdminProvider({ children }) {
   // DB 데이터 로드
   async function loadAll() {
     try {
-      const [catData, srcData, userData, postData] = await Promise.all([
+      const [catData, topicData, srcData, userData, postData] = await Promise.all([
         api('/categories'),
+        api('/topics').catch(() => ({ topics: [] })),
         api('/sources').catch(() => ({ sources: [] })),
         api('/users').catch(() => ({ users: [] })),
-        api('/posts?status=all&limit=50').catch(() => ({ posts: [] })),
+        api('/posts?limit=50').catch(() => ({ posts: [] })),
       ])
       const cats = catData.categories || []
-      setCategories(cats.map(c => ({ ...c, id: String(c.seq_no), name: c.label })))
-      const flatTopics = cats.flatMap(c => (c.topics||[]).map(t => ({
-        ...t, id: String(t.seq_no), categoryId: String(c.seq_no)
+      setCategories(cats.map(c => ({ ...c, id: String(c.seq_no || c.category_id), name: c.label })))
+      // topics: /v1?resource=topics 결과 사용
+      const allTopics = topicData.topics || []
+      setTopics(allTopics.map(t => ({
+        ...t, id: String(t.seq_no), categoryId: String(t.category_seq_no)
       })))
-      setTopics(flatTopics)
       setSources((srcData.sources || []).map(s => ({
         ...s, id: String(s.seq_no), active: s.active_yn === 'Y'
       })))
@@ -87,9 +103,10 @@ export function AdminProvider({ children }) {
         status: blockedIds.has(String(p.seq_no)) ? 'hidden' : (p.status || 'published'),
       })))
       // 통계
-      const activeUsers = rawUsers.filter(u => u.status === 'active').length
+      const activeUsers = rawUsers.filter(u => (u.status||'active') === 'active').length
       const totalViews  = rawPosts.reduce((s, p) => s + (p.view_count || 0), 0)
-      const activeSrcs  = (srcData.sources||[]).filter(s => s.active_yn === 'Y').length
+      const activeSrcs  = (srcData.sources||[]).filter(s => s.active_yn !== 'N').length
+      const totalCrawled = 0  // crawl_items는 별도 API로 조회
       setStats({ totalUsers: rawUsers.length, activeUsers, totalPosts: rawPosts.length, totalViews, activeSources: activeSrcs })
       setDbAvailable(true)
     } catch (e) {
