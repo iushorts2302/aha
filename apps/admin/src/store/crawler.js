@@ -10,8 +10,9 @@ const CRAWL_API  = 'https://admin-vert-psi.vercel.app/api/crawl'
 const SAVE_API   = 'https://admin-vert-psi.vercel.app/api/v1?resource=crawl_items'
 
 export async function crawlTopic(topicKey) {
-  const topic = MENU_TOPICS[topicKey]
-  if (!topic) throw new Error(`Unknown topic: ${topicKey}`)
+  // MENU_TOPICS 존재 여부와 무관하게 crawl.py에 위임
+  // crawl.py의 TOPIC_CRAWLERS가 84개 토픽 지원
+  const topic = MENU_TOPICS[topicKey] || { label: topicKey, category: topicKey.split('.')[0] }
 
   // 1. 크롤링 실행
   const response = await fetch(CRAWL_API, {
