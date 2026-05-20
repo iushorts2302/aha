@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useAdmin } from '../context/AdminContext'
 
 function PageHeader({ title, subtitle }) {
@@ -13,6 +13,34 @@ function PageHeader({ title, subtitle }) {
 /* ── 대시보드 ──────────────────────────────────────────── */
 export function DashboardPage() {
   const { stats, posts, categories } = useAdmin()
+  const [dbSetupStatus, setDbSetupStatus] = useState(null) // null|'loading'|'done'|'error'
+  const [dbCheck, setDbCheck] = useState(null)
+
+  // DB 상태 확인
+  React.useEffect(() => {
+    fetch('https://admin-vert-psi.vercel.app/api/setup?check=1')
+      .then(r => r.json())
+      .then(d => setDbCheck(d.tables || {}))
+      .catch(() => {})
+  }, [])
+
+  async function handleSetup() {
+    setDbSetupStatus('loading')
+    try {
+      const r = await fetch('https://admin-vert-psi.vercel.app/api/setup')
+      const d = await r.json()
+      setDbSetupStatus(d.ok ? 'done' : 'error')
+      // 완료 후 현황 갱신
+      const r2 = await fetch('https://admin-vert-psi.vercel.app/api/setup?check=1')
+      setDbCheck((await r2.json()).tables || {})
+    } catch {
+      setDbSetupStatus('error')
+    }
+  }
+
+  const catCount = dbCheck?.tb_category
+  const needsSetup = catCount === 0 || catCount === 'ERROR: ...'
+
   const statCards = [
     { label: '총 사용자',    value: stats.totalUsers,    color: 'primary', icon: '👥' },
     { label: '활성 사용자',  value: stats.activeUsers,   color: 'success', icon: '✅' },
@@ -23,6 +51,34 @@ export function DashboardPage() {
   return (
     <div className="fade-up">
       <PageHeader title="대시보드" subtitle="aha! 플랫폼 현황" />
+
+      {/* DB 초기화 배너 */}
+      {dbCheck !== null && (
+        <div style={{
+          marginBottom: 20, padding: '12px 16px',
+          background: needsSetup ? '#fff8e0' : '#f0faf4',
+          border: `1px solid ${needsSetup ? 'rgba(255,180,0,0.3)' : 'rgba(0,180,80,0.2)'}`,
+          borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 16 }}>{needsSetup ? '⚠️' : '✅'}</span>
+          <div style={{ flex: 1 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#1D1D1F' }}>
+              {needsSetup ? 'DB 초기화 필요' : 'DB 정상 연결'}
+            </span>
+            <span style={{ fontSize: 12, color: '#777', marginLeft: 8 }}>
+              {`카테고리 ${dbCheck.tb_category ?? '-'}개 · 토픽 ${dbCheck.tb_topic ?? '-'}개 · 크롤링 ${dbCheck.tb_crawl_item ?? '-'}개`}
+            </span>
+          </div>
+          {needsSetup && (
+            <button onClick={handleSetup} disabled={dbSetupStatus === 'loading'}
+              className="btn btn-primary" style={{ height: 32, fontSize: 13 }}>
+              {dbSetupStatus === 'loading' ? '초기화 중...' :
+               dbSetupStatus === 'done'    ? '✅ 완료' :
+               dbSetupStatus === 'error'   ? '❌ 오류' : 'DB 초기화 실행'}
+            </button>
+          )}
+        </div>
+      )}
       <div className="row g-3 mb-4">
         {statCards.map(s => (
           <div key={s.label} className="col-6 col-md-4 col-xl-2-4">

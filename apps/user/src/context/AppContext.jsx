@@ -103,6 +103,33 @@ export function AppProvider({ children }) {
       })
   }, [])
 
+  // localStorage 게시글 → DB 마이그레이션 (DB 연결 후 1회)
+  useEffect(() => {
+    if (!dbAvailable) return
+    const localPosts = readLS(POSTS_KEY, [])
+    const unsynced = localPosts.filter(p => p.authorId && !p.seq_no)
+    if (unsynced.length === 0) return
+    // 비동기 백그라운드 동기화
+    ;(async () => {
+      for (const p of unsynced) {
+        try {
+          const res = await postAPI.create({
+            author_id: p.authorId, category_id: p.categoryId,
+            title: p.title, body: p.body || '',
+            tags: p.tags || [], post_type: 'user',
+          })
+          if (res.seq_no) {
+            setPosts(prev => {
+              const n = prev.map(pp =>
+                pp.id === p.id ? { ...pp, seq_no: res.seq_no } : pp)
+              writeLS(POSTS_KEY, n); return n
+            })
+          }
+        } catch {}
+      }
+    })()
+  }, [dbAvailable])
+
   // 차단 목록 폴링 (10초)
   useEffect(() => {
     async function sync() {
