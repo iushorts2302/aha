@@ -1,4 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
+
+// 스피너 keyframes — 한 번만 주입
+if (typeof document !== 'undefined' && !document.getElementById('aha-spin-style')) {
+  const s = document.createElement('style')
+  s.id = 'aha-spin-style'
+  s.textContent = '@keyframes spin { to { transform: rotate(360deg) } }'
+  document.head.appendChild(s)
+}
 import { getItems } from '../store/crawlStore.js'
 import { saveDetail } from '../store/crawlDetailStore.js'
 import { getCrawlViews, getCrawlLikes } from '../store/crawlInteractionStore.js'
@@ -145,12 +153,19 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
   )
 }
 
-/** 빈 상태 */
-export function EmptyState({ message = '콘텐츠를 불러오는 중입니다.', sub = '잠시 후 자동으로 업데이트됩니다.' }) {
+/** 빈 상태 — 로딩 스피너 + 간결한 메시지 */
+export function EmptyState({ message = '불러오는 중...', sub = '' }) {
   return (
-    <div className="text-center py-5">
-      <p className="text-muted mb-1">{message}</p>
-      <small className="text-muted">{sub}</small>
+    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+      <div style={{
+        width: 28, height: 28, margin: '0 auto 12px',
+        border: '3px solid var(--color-border-soft)',
+        borderTopColor: 'var(--color-primary, #0066CC)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+      <p style={{ fontSize: 13, color: 'var(--color-muted, #888)', margin: 0 }}>{message}</p>
+      {sub && <p style={{ fontSize: 12, color: 'var(--color-muted, #888)', marginTop: 4 }}>{sub}</p>}
     </div>
   )
 }
