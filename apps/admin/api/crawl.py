@@ -72,6 +72,7 @@ def gh_trending(lang="", since="daily", limit=8):
         lang_m = re.search(r'itemprop="programmingLanguage"[^>]*>(.*?)<', art)
         repo = (name_m.group(1) if name_m else "").strip("/")
         if not repo or "/" not in repo: continue
+        if repo.startswith("sponsors/"): continue
         desc  = clean(desc_m.group(1)) if desc_m else ""
         stars = (star_m.group(1) if star_m else "").strip()
         pl    = clean(lang_m.group(1)) if lang_m else ""
