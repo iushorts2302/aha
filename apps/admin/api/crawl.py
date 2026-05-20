@@ -340,8 +340,8 @@ TOPIC_CRAWLERS = {
         gh_api("topic:terraform OR topic:aws-cdk stars:>500", "stars", 4)),
     # mobile: iOS/Android/크로스플랫폼
     "it.mobile":       lambda: mix(
-        gh_api("topic:flutter stars:>1000", "stars", 4),
-        gh_api("topic:react-native stars:>500", "stars", 4)),
+        gh_api("topic:flutter stars:>200", "stars", 4),
+        gh_api("topic:react-native stars:>100", "stars", 4)),
 
     # ── design (3) — 디자인/프론트엔드 ──────────────────
     # ui: UI 컴포넌트 라이브러리
@@ -368,8 +368,8 @@ TOPIC_CRAWLERS = {
         gh_api("topic:game-jam stars:>50", "updated", 4)),
     # review: Unity/Unreal 관련 도구
     "game.review":     lambda: mix(
-        gh_api("topic:unity stars:>100", "updated", 4),
-        gh_api("topic:unreal-engine stars:>50", "stars", 4)),
+        gh_api("topic:game-development stars:>50", "updated", 4),
+        gh_api("topic:gamedev stars:>30", "stars", 4)),
 
     # ── finance (3) — 금융/투자 ──────────────────────────
     # stock: 주식 분석/퀀트 트레이딩 도구
@@ -438,8 +438,8 @@ TOPIC_CRAWLERS = {
         gh_orgs(KR_BIG_TECH, 2)),
     # question: Q&A / 학습 도움말
     "board.question":  lambda: mix(
-        gh_api("topic:faq stars:>200", "stars", 4),
-        gh_api("topic:cheatsheet stars:>500", "stars", 4)),
+        gh_api("topic:cheatsheet stars:>100", "stars", 4),
+        gh_api("topic:awesome stars:>500 language:Python", "stars", 4)),
 }
 
 TOPIC_LABELS = {
