@@ -1,30 +1,30 @@
 """
-db.py — MariaDB 연결 공통 모듈
+db.py — MariaDB/MySQL 연결 공통 모듈
+Aiven Cloud MySQL (SSL 필수)
 환경변수 우선, 없으면 하드코딩 기본값 사용
 """
 import os
 import pymysql
 import pymysql.cursors
 
-# DB 접속 정보 — 환경변수 > 기본값
 DB_CONFIG = {
-    "host":     os.environ.get("DB_HOST",     "0.tcp.jp.ngrok.io"),
-    "port":     int(os.environ.get("DB_PORT", "10840")),
-    "user":     os.environ.get("DB_USER",     "srvaha"),
-    "password": os.environ.get("DB_PASSWORD", "qwER12#$"),
-    "database": os.environ.get("DB_NAME",     "aha_db"),
+    "host":     os.environ.get("DB_HOST",     "mysql-aha-db-aha.a.aivencloud.com"),
+    "port":     int(os.environ.get("DB_PORT", "14157")),
+    "user":     os.environ.get("DB_USER",     "avnadmin"),
+    "password": os.environ.get("DB_PASSWORD", ""),      # Vercel 환경변수에서 주입
+    "database": os.environ.get("DB_NAME",     "defaultdb"),
     "charset":  "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
-    "connect_timeout": 5,
+    "connect_timeout": 10,
     "autocommit": False,
+    # Aiven Cloud: SSL 필수
+    "ssl": {"ssl": {}},
 }
 
 def get_conn():
-    """DB 커넥션 반환. 실패 시 예외 발생."""
     return pymysql.connect(**DB_CONFIG)
 
 def query(sql, args=None):
-    """SELECT — 결과 list[dict] 반환"""
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -34,12 +34,10 @@ def query(sql, args=None):
         conn.close()
 
 def query_one(sql, args=None):
-    """SELECT — 단일 행 dict 반환 (없으면 None)"""
     rows = query(sql, args)
     return rows[0] if rows else None
 
 def execute(sql, args=None):
-    """INSERT/UPDATE/DELETE — lastrowid 반환"""
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -53,7 +51,6 @@ def execute(sql, args=None):
         conn.close()
 
 def execute_many(sql, args_list):
-    """executemany — 영향받은 행 수 반환"""
     conn = get_conn()
     try:
         with conn.cursor() as cur:
