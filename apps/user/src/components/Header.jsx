@@ -209,6 +209,9 @@ export default function Header({ currentPage, navigate }) {
             padding: '12px 0 20px',
             maxHeight: '80vh',
             overflowY: 'auto',
+            overflowX: 'hidden',
+            width: '100%',
+            boxSizing: 'border-box',
           }}>
             {/* 검색 */}
             <div style={{ padding: '0 16px 12px' }}>

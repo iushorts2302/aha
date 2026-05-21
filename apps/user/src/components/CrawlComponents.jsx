@@ -95,15 +95,35 @@ export function CrawlCard({ item, onClick, rank, navigate }) {
 /** 섹션 헤더 */
 export function SectionHeader({ title, count, onRefresh, loading, source }) {
   return (
-    <div className="d-flex align-items-baseline justify-content-between mb-3 pb-2" style={{ borderBottom: '2px solid var(--color-ink)' }}>
-      <div className="d-flex align-items-baseline gap-2">
-        <h5 className="mb-0 fw-semibold" style={{ letterSpacing: '0.231px' }}>{title}</h5>
-        {count > 0 && <small className="text-muted">{count}개</small>}
-        {source === 'fresh' && <span className="small text-primary fw-semibold">● 실시간</span>}
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      borderBottom: '2px solid var(--color-ink)',
+      marginBottom: 12, paddingBottom: 8,
+      gap: 8, flexWrap: 'nowrap', minWidth: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+        <h5 style={{
+          margin: 0, fontWeight: 600, letterSpacing: '0.2px',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{title}</h5>
+        {count > 0 && <small style={{ color: 'var(--color-muted)', flexShrink: 0 }}>{count}개</small>}
+        {source === 'fresh' && (
+          <span style={{ fontSize: 11, color: 'var(--color-primary, #0066CC)', fontWeight: 600, flexShrink: 0 }}>
+            ● 실시간
+          </span>
+        )}
       </div>
       {onRefresh && (
-        <button className="btn btn-link btn-sm p-0 text-decoration-none" onClick={onRefresh} disabled={loading}>
-          {'새로고침'}
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={loading}
+          style={{
+            flexShrink: 0, background: 'none', border: 'none',
+            fontSize: 12, color: 'var(--color-muted)', cursor: 'pointer', padding: '0 2px',
+          }}
+        >
+          새로고침
         </button>
       )}
     </div>
