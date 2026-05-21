@@ -50,6 +50,194 @@ def enrich(items, topic_key, label, category, limit=8):
         })
     return out
 
+
+# ═══════════════════════════════════════════════════════════
+# 다양한 외부 데이터 소스 (Vercel에서 검증 완료)
+# ═══════════════════════════════════════════════════════════
+
+def hn_top(tags="story", limit=8):
+    """Hacker News (Algolia API) — IT/개발 인기 글"""
+    try:
+        url = f"https://hn.algolia.com/api/v1/search?tags={tags}&hitsPerPage={limit}"
+        d = fetch_json(url)
+        return [{
+            "title":   h.get("title") or h.get("story_title","")[:100],
+            "summary": f"📰 HN · {h.get('points',0)}점 · 💬 {h.get('num_comments',0)}",
+            "tags":    ["HackerNews", "IT"] + ([h.get("author","")] if h.get("author") else []),
+            "source":  h.get("url") or f"https://news.ycombinator.com/item?id={h.get('objectID','')}",
+        } for h in d.get("hits", []) if h.get("title") or h.get("story_title")][:limit]
+    except Exception:
+        return []
+
+def hn_search(query, limit=8):
+    """HN 검색"""
+    try:
+        url = f"https://hn.algolia.com/api/v1/search?query={quote_plus(query)}&tags=story&hitsPerPage={limit}"
+        d = fetch_json(url)
+        return [{
+            "title":   h.get("title","")[:100],
+            "summary": f"📰 HN · {h.get('points',0)}점 · 💬 {h.get('num_comments',0)}",
+            "tags":    ["HackerNews", query],
+            "source":  h.get("url") or f"https://news.ycombinator.com/item?id={h.get('objectID','')}",
+        } for h in d.get("hits", []) if h.get("title")][:limit]
+    except Exception:
+        return []
+
+def devto_articles(tag=None, limit=8):
+    """dev.to 개발자 글"""
+    try:
+        url = f"https://dev.to/api/articles?per_page={limit}"
+        if tag: url += f"&tag={tag}"
+        d = fetch_json(url)
+        return [{
+            "title":   a.get("title","")[:100],
+            "summary": f"📝 dev.to · ❤️ {a.get('positive_reactions_count',0)} · 💬 {a.get('comments_count',0)}",
+            "tags":    ["dev.to"] + (a.get("tag_list") or [])[:3],
+            "source":  a.get("url",""),
+        } for a in d if a.get("title")][:limit]
+    except Exception:
+        return []
+
+def arxiv_recent(category="cs.AI", limit=6):
+    """ArXiv 최신 논문 (Atom 피드 파싱)"""
+    try:
+        html = fetch(f"http://export.arxiv.org/api/query?search_query=cat:{category}&sortBy=submittedDate&sortOrder=descending&max_results={limit}")
+        items = []
+        for entry in re.findall(r'<entry>(.*?)</entry>', html, re.DOTALL)[:limit]:
+            t = re.search(r'<title>(.*?)</title>', entry, re.DOTALL)
+            s = re.search(r'<summary>(.*?)</summary>', entry, re.DOTALL)
+            l = re.search(r'<id>(.*?)</id>', entry)
+            au = re.findall(r'<name>(.*?)</name>', entry)
+            title = clean(t.group(1)) if t else ""
+            if title:
+                items.append({
+                    "title":   title[:100],
+                    "summary": (clean(s.group(1))[:120] if s else "") + (f" · {len(au)}명 저자" if au else ""),
+                    "tags":    ["arXiv", category, "논문"],
+                    "source":  l.group(1).strip() if l else "",
+                })
+        return items
+    except Exception:
+        return []
+
+def coingecko_top(limit=8):
+    """CoinGecko 시가총액 상위 코인"""
+    try:
+        url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page={limit}&page=1"
+        d = fetch_json(url)
+        return [{
+            "title":   f"{c.get('name','?')} ({c.get('symbol','').upper()})",
+            "summary": f"💰 ${c.get('current_price',0):,.2f} · {c.get('price_change_percentage_24h',0):+.2f}% (24h)",
+            "tags":    ["코인", c.get("symbol","").upper()],
+            "source":  f"https://www.coingecko.com/en/coins/{c.get('id','')}",
+        } for c in d if c.get("id")][:limit]
+    except Exception:
+        return []
+
+def velog_recent(limit=8):
+    """Velog (한국 개발자 블로그) 최근 글"""
+    try:
+        # GraphQL 호출 대신 HTML 파싱 — velog.io는 SSR 사용
+        html = fetch("https://velog.io/")
+        items = []
+        for m in re.findall(r'<a[^>]*href="(/@[^"]+)"[^>]*>.*?<h2[^>]*>(.*?)</h2>.*?<p[^>]*>(.*?)</p>', html, re.DOTALL)[:limit]:
+            href, title, desc = m
+            title = clean(title)
+            if title:
+                items.append({
+                    "title":   title[:100],
+                    "summary": f"📝 Velog · {clean(desc)[:90]}",
+                    "tags":    ["Velog", "한국개발자"],
+                    "source":  f"https://velog.io{href}",
+                })
+        return items
+    except Exception:
+        return []
+
+def dribbble_popular(limit=6):
+    """Dribbble 인기 디자인 — RSS"""
+    try:
+        html = fetch("https://dribbble.com/shots/popular.rss")
+        items = []
+        for item in re.findall(r'<item>(.*?)</item>', html, re.DOTALL)[:limit]:
+            t = re.search(r'<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>', item)
+            l = re.search(r'<link>(.*?)</link>', item)
+            d = re.search(r'<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</description>', item, re.DOTALL)
+            title = clean(t.group(1)) if t else ""
+            if title:
+                items.append({
+                    "title":   title[:100],
+                    "summary": "🎨 Dribbble 인기 디자인",
+                    "tags":    ["Dribbble", "디자인"],
+                    "source":  l.group(1).strip() if l else "",
+                })
+        return items
+    except Exception:
+        return []
+
+def stackoverflow_qa(tag="javascript", limit=8):
+    """StackOverflow 인기 질문"""
+    try:
+        url = f"https://api.stackexchange.com/2.3/questions?order=desc&sort=hot&tagged={tag}&site=stackoverflow&pagesize={limit}"
+        d = fetch_json(url)
+        return [{
+            "title":   q.get("title","")[:100],
+            "summary": f"❓ StackOverflow · 👁 {q.get('view_count',0):,} · ⬆ {q.get('score',0)}",
+            "tags":    ["StackOverflow"] + (q.get("tags") or [])[:3],
+            "source":  q.get("link",""),
+        } for q in d.get("items", []) if q.get("title")][:limit]
+    except Exception:
+        return []
+
+def disquiet_makers(limit=6):
+    """Disquiet — 한국 스타트업/메이커 커뮤니티"""
+    try:
+        # disquiet.io 메인에서 최신 프로젝트 추출 (간단한 HTML 파싱)
+        html = fetch("https://disquiet.io/")
+        items = []
+        for m in re.findall(r'<a[^>]*href="(/product/[^"]+)"[^>]*>.*?<(?:h\d|span)[^>]*>(.*?)<', html, re.DOTALL)[:limit*2]:
+            href, title = m
+            title = clean(title)
+            if title and 5 < len(title) < 80:
+                items.append({
+                    "title":   f"🚀 {title}",
+                    "summary": "Disquiet · 한국 메이커 프로젝트",
+                    "tags":    ["Disquiet", "스타트업", "한국"],
+                    "source":  f"https://disquiet.io{href}",
+                })
+                if len(items) >= limit: break
+        return items
+    except Exception:
+        return []
+
+def rubygems_popular(limit=6):
+    """RubyGems 인기 패키지"""
+    try:
+        url = f"https://rubygems.org/api/v1/search.json?query=rails"
+        d = fetch_json(url)
+        return [{
+            "title":   f"{g.get('name','')}  v{g.get('version','')}",
+            "summary": (g.get("info","") or "")[:100],
+            "tags":    ["Ruby", "RubyGems"],
+            "source":  f"https://rubygems.org/gems/{g.get('name','')}",
+        } for g in d[:limit]]
+    except Exception:
+        return []
+
+def packagist_php(limit=6):
+    """Packagist PHP 패키지"""
+    try:
+        d = fetch_json("https://packagist.org/explore/popular.json?per_page=6")
+        return [{
+            "title":   f"{p.get('name','')}",
+            "summary": (p.get("description","") or "")[:100] + f"  ⭐{p.get('favers',0)}",
+            "tags":    ["PHP", "Packagist"],
+            "source":  f"https://packagist.org/packages/{p.get('name','')}",
+        } for p in d.get("packages", [])[:limit]]
+    except Exception:
+        return []
+
+
 # ── GitHub ────────────────────────────────────────────────
 
 def gh_trending(lang="", since="daily", limit=8):
@@ -217,201 +405,197 @@ KR_GAME = [
 
 TOPIC_CRAWLERS = {
 
-    # ── home (4) — 종합 피드 ──────────────────────────────
-    # trending: 오늘의 GitHub 전체 + 한국 대기업
+    # ── home (3) — 종합 피드 ──────────────────────────────
+    # trending: HN top + GitHub 트렌딩 (가장 인기있는 글)
     "home.trending":   lambda: mix(
-        gh_trending(since="daily", limit=5),
-        gh_orgs(KR_BIG_TECH[:2], 2)),
-    # rising: 이번 주 급상승 + 한국 스타트업
+        hn_top("front_page", 5),
+        gh_api("stars:>5000 pushed:>2025-01-01", "updated", 3)),
+    # rising: 주간 인기 + 한국 스타트업
     "home.rising":     lambda: mix(
         gh_api("stars:>1000 pushed:>2025-01-01", "updated", 5),
         gh_orgs(KR_STARTUPS[:2], 2)),
-    # ai_feed: AI 특화 (home과 겹치지 않게 AI만)
+    # ai_feed: arxiv AI 논문 + huggingface
     "home.ai_feed":    lambda: mix(
-        gh_api("topic:llm stars:>1000", "updated", 4),
-        gh_orgs(KR_AI[:2], 3)),
+        arxiv_recent("cs.AI", 5),
+        gh_api("topic:llm stars:>1000", "updated", 3)),
 
-    # ── dev (5) — 언어/분야별 분리 ───────────────────────
-    # trending: 전체 언어 오늘의 트렌딩
+    # ── dev (5) — 개발 ───────────────────────────────────
+    # trending: GitHub Trending + HN
     "dev.trending":    lambda: mix(
-        gh_api("stars:>5000 pushed:>2025-01-01", "updated", 4),
-        gh_orgs(KR_BIG_TECH + KR_STARTUPS[:2], 2)),
-    # javascript: JS/TS 패키지 + Trending
+        gh_api("stars:>5000 pushed:>2025-01-01", "updated", 5),
+        hn_top("ask_hn", 3)),
+    # javascript: dev.to JS 태그 + NPM
     "dev.javascript":  lambda: mix(
-        gh_trending("javascript", "daily", 4),
-        npm("javascript framework utility", 4)),
-    # python: Python 생태계 + PyPI 최신
+        devto_articles("javascript", 5),
+        npm("javascript popular", 3)),
+    # python: dev.to Python + PyPI
     "dev.python":      lambda: mix(
-        gh_trending("python", "daily", 4),
-        pypi_rss(4)),
-    # devops: 인프라/배포 도구
+        devto_articles("python", 5),
+        pypi_rss(3)),
+    # devops: HN + GitHub
     "dev.devops":      lambda: mix(
-        gh_api("topic:devops stars:>1000", "stars", 4),
-        gh_api("topic:kubernetes stars:>2000", "updated", 4)),
-    # tools: 개발자 도구 (CLI/유틸리티)
+        hn_search("devops kubernetes", 4),
+        gh_api("topic:devops stars:>1000", "stars", 4)),
+    # tools: dev.to + GitHub
     "dev.tools":       lambda: mix(
-        npm("developer tools cli productivity", 4),
-        pypi("development cli tools", 4)),
+        devto_articles("tools", 4),
+        npm("developer tools cli", 4)),
 
-    # ── ai (4) — 분야별 AI ───────────────────────────────
-    # news: LLM/ChatGPT 관련 인기 저장소
+    # ── ai (4) — AI ──────────────────────────────────────
+    # news: HN AI 검색 + GitHub LLM
     "ai.news":         lambda: mix(
-        gh_api("topic:large-language-model stars:>500", "updated", 4),
-        gh_api("topic:chatgpt stars:>500", "updated", 4)),
-    # tools: AI 활용 도구/SDK
+        hn_search("AI OR LLM OR GPT", 4),
+        gh_api("topic:large-language-model stars:>500", "updated", 4)),
+    # tools: dev.to AI 태그 + GitHub
     "ai.tools":        lambda: mix(
-        gh_api("topic:ai-tools stars:>200", "stars", 4),
-        npm("ai openai sdk langchain", 4)),
-    # trend: 생성형 AI / Diffusion
+        devto_articles("ai", 4),
+        gh_api("topic:ai-tools stars:>200", "stars", 4)),
+    # trend: HN + GitHub generative
     "ai.trend":        lambda: mix(
-        gh_api("topic:generative-ai stars:>500", "stars", 4),
+        hn_search("generative ai diffusion", 4),
         gh_api("topic:stable-diffusion stars:>1000", "updated", 4)),
-    # research: 딥러닝 논문 구현체 + ML 라이브러리
+    # research: arxiv 논문
     "ai.research":     lambda: mix(
-        gh_api("topic:paper-implementation stars:>100", "updated", 4),
-        pypi("transformer neural network", 4)),
+        arxiv_recent("cs.AI", 4),
+        arxiv_recent("cs.LG", 4)),
 
-    # ── startup (3) — 한국 스타트업 오픈소스 ──────────────
-    # new: 스타트업 전체 최신
-    "startup.new":     lambda: gh_orgs(KR_STARTUPS, 3),
-    # funding: 핀테크/투자 관련
+    # ── startup (3) — 스타트업 ─────────────────────────────
+    # new: Disquiet (한국 메이커) + 한국 스타트업
+    "startup.new":     lambda: mix(
+        disquiet_makers(4),
+        gh_orgs(KR_STARTUPS, 2)),
+    # funding: HN + GitHub fintech
     "startup.funding": lambda: mix(
-        gh_org("toss", "토스", ["핀테크","토스"], 4),
-        gh_api("topic:fintech language:TypeScript stars:>100", "updated", 4)),
-    # product: 앱/서비스 관련
+        hn_search("startup funding", 4),
+        gh_api("topic:fintech stars:>500", "updated", 4)),
+    # product: HN Show + Disquiet
     "startup.product": lambda: mix(
-        gh_org("daangn", "당근마켓", ["C2C","모바일"], 4),
-        gh_api("topic:react-native stars:>500", "stars", 4)),
+        hn_top("show_hn", 4),
+        disquiet_makers(4)),
 
-    # ── oss (3) — 오픈소스 생태계 ───────────────────────
-    # trending: 주간 오픈소스 트렌딩
+    # ── oss (3) — 오픈소스 ──────────────────────────────
     "oss.trending":    lambda: mix(
-        gh_trending(since="weekly", limit=5),
-        gh_orgs(KR_BIG_TECH + KR_STARTUPS, 1)),
-    # awesome: Awesome 시리즈 (큐레이션 목록)
+        gh_api("stars:>5000 pushed:>2025-01-01", "updated", 5),
+        hn_search("open source", 3)),
     "oss.awesome":     lambda: mix(
-        gh_api("awesome topic:awesome stars:>5000", "stars", 4),
-        gh_api("topic:awesome-list stars:>3000", "stars", 4)),
-    # new: NPM/PyPI 최신 패키지
-    "oss.new":         lambda: mix(pypi_rss(4), npm("popular new release", 4)),
+        gh_api("awesome topic:awesome stars:>5000", "stars", 5),
+        gh_api("topic:awesome-list stars:>3000", "stars", 3)),
+    "oss.new":         lambda: mix(pypi_rss(4), npm("popular new", 4)),
 
-    # ── it (4) — IT 인프라/보안 분야 ─────────────────────
-    # news: IT 전반 (웹 개발 동향)
+    # ── it (4) — IT ─────────────────────────────────────
+    # news: HN + dev.to
     "it.news":         lambda: mix(
-        gh_api("topic:web-development stars:>1000", "updated", 4),
-        gh_api("topic:backend stars:>500", "stars", 4)),
-    # security: 보안/취약점 분석 도구
+        hn_top("front_page", 5),
+        devto_articles("webdev", 3)),
+    # security: HN security + GitHub
     "it.security":     lambda: mix(
-        gh_api("topic:cybersecurity stars:>500", "updated", 4),
-        gh_api("topic:penetration-testing stars:>300", "stars", 4)),
-    # cloud: 클라우드 네이티브/인프라
+        hn_search("security vulnerability", 4),
+        gh_api("topic:cybersecurity stars:>500", "updated", 4)),
+    # cloud: HN cloud + GitHub
     "it.cloud":        lambda: mix(
-        gh_api("topic:cloud-native stars:>1000", "updated", 4),
-        gh_api("topic:terraform OR topic:aws-cdk stars:>500", "stars", 4)),
-    # mobile: iOS/Android/크로스플랫폼
+        hn_search("cloud aws kubernetes", 4),
+        gh_api("topic:cloud-native stars:>1000", "updated", 4)),
+    # mobile: dev.to mobile + GitHub
     "it.mobile":       lambda: mix(
-        gh_api("topic:flutter stars:>200", "stars", 4),
-        gh_api("topic:react-native stars:>100", "stars", 4)),
+        devto_articles("flutter", 4),
+        devto_articles("ios", 4)),
 
-    # ── design (3) — 디자인/프론트엔드 ──────────────────
-    # ui: UI 컴포넌트 라이브러리
+    # ── design (3) — 디자인 ─────────────────────────────
+    # ui: Dribbble + GitHub UI
     "design.ui":       lambda: mix(
-        gh_api("topic:ui-components stars:>1000", "stars", 4),
-        npm("ui component design system react", 4)),
-    # ux: UX/디자인 시스템
+        dribbble_popular(4),
+        gh_api("topic:ui-components stars:>1000", "stars", 4)),
+    # ux: dev.to UX + Dribbble
     "design.ux":       lambda: mix(
-        gh_api("topic:design-system stars:>500", "stars", 4),
-        npm("ux pattern accessibility", 4)),
-    # css: CSS 프레임워크/애니메이션
+        devto_articles("design", 4),
+        dribbble_popular(4)),
+    # css: dev.to CSS + GitHub
     "design.css":      lambda: mix(
-        gh_trending("css", "daily", 4),
-        npm("css animation tailwind", 4)),
+        devto_articles("css", 5),
+        gh_trending("css", "daily", 3)),
 
-    # ── game (3) — 게임 개발 ─────────────────────────────
-    # news: 게임 엔진 + 한국 게임사 오픈소스
+    # ── game (3) — 게임 ──────────────────────────────────
+    # news: GitHub game-engine + 한국 게임사
     "game.news":       lambda: mix(
         gh_api("topic:game-engine stars:>500", "updated", 4),
         gh_orgs(KR_GAME, 2)),
-    # indie: 인디게임 / 게임 잼
+    # indie: HN indiehackers + GitHub
     "game.indie":      lambda: mix(
-        gh_api("topic:indie-game stars:>100", "stars", 4),
-        gh_api("topic:game-jam stars:>50", "updated", 4)),
-    # review: Unity/Unreal 관련 도구
+        hn_search("indie game", 4),
+        gh_api("topic:indie-game stars:>100", "stars", 4)),
+    # review: dev.to gaming + GitHub
     "game.review":     lambda: mix(
-        gh_api("topic:game-development stars:>50", "updated", 4),
-        gh_api("topic:gamedev stars:>30", "stars", 4)),
+        devto_articles("gamedev", 4),
+        gh_api("topic:game-development stars:>50", "updated", 4)),
 
-    # ── finance (3) — 금융/투자 ──────────────────────────
-    # stock: 주식 분석/퀀트 트레이딩 도구
+    # ── finance (3) — 금융 ──────────────────────────────
+    # stock: HN + GitHub trading
     "finance.stock":   lambda: mix(
-        gh_api("topic:algorithmic-trading stars:>100", "stars", 4),
-        pypi("stock market finance", 4)),
-    # crypto: 블록체인/암호화폐
+        hn_search("stock market trading", 4),
+        gh_api("topic:algorithmic-trading stars:>100", "stars", 4)),
+    # crypto: CoinGecko 시세 + GitHub blockchain
     "finance.crypto":  lambda: mix(
-        gh_api("topic:blockchain stars:>200", "updated", 4),
-        gh_api("topic:defi stars:>100", "stars", 4)),
-    # invest: 퀀트/포트폴리오 분석
+        coingecko_top(4),
+        gh_api("topic:blockchain stars:>200", "updated", 4)),
+    # invest: CoinGecko + GitHub 퀀트
     "finance.invest":  lambda: mix(
-        gh_api("topic:quantitative-finance stars:>100", "stars", 4),
-        pypi("portfolio backtest", 4)),
+        coingecko_top(3),
+        gh_api("topic:quantitative-finance stars:>100", "stars", 5)),
 
-    # ── market (2) — 커머스/중고마켓 ────────────────────
-    # deal: 이커머스 플랫폼/도구
+    # ── market (2) — 마켓 ───────────────────────────────
     "market.deal":     lambda: mix(
         gh_api("topic:ecommerce stars:>500", "updated", 4),
-        npm("ecommerce shopping payment", 4)),
-    # used: C2C/중고마켓 관련
+        devto_articles("ecommerce", 4)),
     "market.used":     lambda: mix(
         gh_org("daangn", "당근마켓", ["C2C","중고거래"], 4),
         gh_api("topic:marketplace stars:>300", "stars", 4)),
 
-    # ── job (3) — 취업/커리어 ─────────────────────────────
-    # dev: 개발자 취업 준비 (인터뷰 자료)
+    # ── job (3) — 취업 ──────────────────────────────────
+    # dev: HN job + GitHub 인터뷰
     "job.dev":         lambda: mix(
-        gh_api("topic:coding-interview stars:>500", "stars", 4),
-        gh_api("topic:interview-questions stars:>200", "stars", 4)),
-    # startup: 스타트업 취업 (한국 스타트업 기술스택)
+        hn_search("interview job", 3),
+        gh_api("topic:coding-interview stars:>500", "stars", 5)),
+    # startup: HN startup + Disquiet
     "job.startup":     lambda: mix(
-        gh_orgs(KR_STARTUPS[:3], 2),
-        gh_api("topic:startup stars:>300", "stars", 3)),
-    # algorithm: 알고리즘/자료구조
+        hn_top("job", 4),
+        disquiet_makers(4)),
+    # algorithm: GitHub + StackOverflow
     "job.algorithm":   lambda: mix(
         gh_api("topic:algorithms stars:>500", "stars", 4),
-        gh_api("topic:data-structures stars:>300", "stars", 4)),
+        stackoverflow_qa("algorithm", 4)),
 
-    # ── learn (4) — 학습자료 ─────────────────────────────
-    # tutorial: 실습형 튜토리얼 (stars 상위)
+    # ── learn (4) — 학습 ────────────────────────────────
+    # tutorial: dev.to + GitHub
     "learn.tutorial":  lambda: mix(
-        gh_api("topic:tutorial stars:>500", "stars", 4),
-        gh_api("topic:beginners stars:>200", "stars", 4)),
-    # course: 강의/커리큘럼 자료
+        devto_articles("tutorial", 4),
+        gh_api("topic:tutorial stars:>500", "stars", 4)),
+    # course: GitHub + dev.to
     "learn.course":    lambda: mix(
         gh_api("topic:course stars:>300", "stars", 4),
-        gh_api("topic:mooc stars:>100", "stars", 4)),
-    # book: 프로그래밍 책 코드 저장소
+        devto_articles("learning", 4)),
+    # book: GitHub awesome books
     "learn.book":      lambda: mix(
         gh_api("topic:book stars:>200", "stars", 4),
-        gh_api("topic:ebook stars:>100", "stars", 4)),
-    # korean: 한국어 개발 학습자료
+        gh_api("topic:programming-book stars:>100", "stars", 4)),
+    # korean: Velog (한국 개발자) + GitHub Korean
     "learn.korean":    lambda: mix(
-        gh_api("topic:korean language:Python stars:>10", "stars", 4),
-        gh_api("topic:korean language:JavaScript stars:>10", "stars", 4)),
+        velog_recent(5),
+        gh_api("topic:korean language:Python stars:>10", "stars", 3)),
 
-    # ── board (3) — 게시판 (사용자 게시판 보조 데이터) ───
-    # free: 전반적 트렌드 (자유게시판 성격)
+    # ── board (3) — 게시판 ──────────────────────────────
+    # free: HN + GitHub
     "board.free":      lambda: mix(
-        gh_api("stars:>3000 pushed:>2025-01-01", "updated", 4),
-        gh_orgs(KR_BIG_TECH[:2] + KR_STARTUPS[:2], 2)),
-    # it: IT 토론거리 (기술 이슈)
+        hn_top("front_page", 5),
+        gh_api("stars:>3000 pushed:>2025-01-01", "updated", 3)),
+    # it: StackOverflow + HN
     "board.it":        lambda: mix(
-        gh_api("topic:developer-tools stars:>1000", "updated", 4),
-        gh_orgs(KR_BIG_TECH, 2)),
-    # question: Q&A / 학습 도움말
+        stackoverflow_qa("javascript", 4),
+        hn_top("ask_hn", 4)),
+    # question: StackOverflow + dev.to
     "board.question":  lambda: mix(
-        gh_api("topic:cheatsheet stars:>100", "stars", 4),
-        gh_api("topic:awesome stars:>500 language:Python", "stars", 4)),
+        stackoverflow_qa("python", 4),
+        devto_articles("help", 4)),
 }
-
 TOPIC_LABELS = {
     # home
     "home.trending": "오늘의 인기",  "home.rising": "이번 주 급상승",
