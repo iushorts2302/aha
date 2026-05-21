@@ -10,6 +10,8 @@ const NAV_ITEMS = [
   { key: 'users',      label: '사용자 관리',      icon: '👥' },
   { key: 'posts',      label: '게시글 관리',      icon: '📝' },
   { key: 'comments',   label: '댓글 관리',        icon: '💬' },
+  { key: 'reports',    label: '신고 처리',        icon: '🚩' },
+  { key: 'logs',       label: '활동 로그',        icon: '📜' },
 ]
 
 /* 사이드바 내용 (데스크톱 + 오프캔버스 공용) */

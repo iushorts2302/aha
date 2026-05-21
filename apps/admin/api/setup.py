@@ -159,6 +159,38 @@ DDL_TABLES = [
     UNIQUE KEY uq_reaction (target_type, target_seq_no, user_seq_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
 
+"""CREATE TABLE IF NOT EXISTS tb_admin_log (
+    seq_no BIGINT NOT NULL AUTO_INCREMENT,
+    admin_seq_no BIGINT NULL COMMENT '관리자 ID (NULL = 시스템)',
+    action_type VARCHAR(40) NOT NULL COMMENT 'post_hide | post_delete | comment_delete | report_resolve | user_suspend ...',
+    target_type VARCHAR(20) NULL COMMENT 'post | comment | user | report',
+    target_seq_no BIGINT NULL,
+    detail VARCHAR(500) NULL COMMENT '추가 설명',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (seq_no),
+    INDEX idx_log_admin (admin_seq_no),
+    INDEX idx_log_action (action_type),
+    INDEX idx_log_created (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='관리자 활동 로그'""",
+
+"""CREATE TABLE IF NOT EXISTS tb_report (
+    seq_no BIGINT NOT NULL AUTO_INCREMENT,
+    target_type VARCHAR(20) NOT NULL COMMENT 'post | comment',
+    target_seq_no BIGINT NOT NULL,
+    reporter_seq_no BIGINT NULL,
+    reason_code VARCHAR(30) NOT NULL COMMENT 'spam | abuse | nsfw | misinfo | etc',
+    reason_text VARCHAR(500) NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'pending | resolved | rejected',
+    resolved_at DATETIME NULL,
+    resolved_by BIGINT NULL,
+    resolved_action VARCHAR(30) NULL COMMENT 'hide | delete | warn | none',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (seq_no),
+    INDEX idx_report_target (target_type, target_seq_no),
+    INDEX idx_report_status (status),
+    INDEX idx_report_created (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 신고'""",
+
 """CREATE TABLE IF NOT EXISTS tb_crawl_source (
     seq_no BIGINT NOT NULL AUTO_INCREMENT,
     source_id VARCHAR(100) NOT NULL,

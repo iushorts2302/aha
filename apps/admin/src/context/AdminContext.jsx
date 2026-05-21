@@ -67,6 +67,8 @@ export function AdminProvider({ children }) {
     return [].map(p => blocked.has(p.id) ? { ...p, status: 'hidden' } : p)
   })
   const [comments, setComments]       = useState([])
+  const [reports, setReports]         = useState([])
+  const [reportStats, setReportStats] = useState({})
   const [stats, setStats] = useState({
     totalUsers: 0, activeUsers: 0, totalPosts: 0, totalViews: 0, activeSources: 0
   })
@@ -74,13 +76,14 @@ export function AdminProvider({ children }) {
   // DB 데이터 로드
   async function loadAll() {
     try {
-      const [catData, topicData, srcData, userData, postData, cmtData] = await Promise.all([
+      const [catData, topicData, srcData, userData, postData, cmtData, repData] = await Promise.all([
         api('/categories'),
         api('/topics').catch(() => ({ topics: [] })),
         api('/sources').catch(() => ({ sources: [] })),
         api('/users').catch(() => ({ users: [] })),
         api('/posts?limit=50').catch(() => ({ posts: [] })),
         api('/comments?limit=100&status=all').catch(() => ({ comments: [] })),
+        api('/reports?status=pending&limit=200').catch(() => ({ reports: [], stats: {} })),
       ])
       const cats = catData.categories || []
       setCategories(cats.map(c => ({ ...c, id: String(c.seq_no || c.category_id), name: c.label })))
@@ -120,6 +123,19 @@ export function AdminProvider({ children }) {
         postTitle: c.post_title || '',
         createdAt: c.created_at || '',
       })))
+      // 신고 매핑
+      const rawReports = repData.reports || []
+      setReports(rawReports.map(r => ({
+        ...r, id: String(r.seq_no),
+        targetId: String(r.target_seq_no),
+        reporterId: r.reporter_seq_no ? String(r.reporter_seq_no) : null,
+        reporterNickname: r.reporter_nickname || '익명',
+        targetPreview: r.target_preview || '',
+        targetStatus: r.target_status || '',
+        reasonLabel: r.reason_label || r.reason_code,
+        createdAt: r.created_at || '',
+      })))
+      setReportStats(repData.stats || {})
       setDbAvailable(true)
     } catch (e) {
       console.warn('DB 로드 실패, 기본 데이터 사용:', e)
@@ -309,15 +325,46 @@ export function AdminProvider({ children }) {
     } catch {}
   }
 
+  // ── 신고 관리 ────────────────────────────────────────
+  async function refreshReports(status = 'pending') {
+    if (!dbAvailable) return
+    try {
+      const d = await api(`/reports?status=${status}&limit=200`)
+      setReports((d.reports || []).map(r => ({
+        ...r, id: String(r.seq_no),
+        targetId: String(r.target_seq_no),
+        reporterId: r.reporter_seq_no ? String(r.reporter_seq_no) : null,
+        reporterNickname: r.reporter_nickname || '익명',
+        targetPreview: r.target_preview || '',
+        targetStatus: r.target_status || '',
+        reasonLabel: r.reason_label || r.reason_code,
+        createdAt: r.created_at || '',
+      })))
+      setReportStats(d.stats || {})
+    } catch {}
+  }
+  async function resolveReport(id, action) {
+    // action: 'resolve' | 'reject' | 'hide_target' | 'delete_target'
+    if (!dbAvailable) return
+    try {
+      await api('/reports', { method: 'PATCH', body: JSON.stringify({ id, action }) })
+      // 처리된 신고는 목록에서 제거 (pending 필터일 때)
+      setReports(rs => rs.filter(r => r.id !== id))
+    } catch (e) {
+      alert('신고 처리 실패: ' + (e.message || ''))
+    }
+  }
+
   return (
     <AdminContext.Provider value={{
-      admin, dbAvailable, stats, categories, topics, sources, users, posts, comments,
+      admin, dbAvailable, stats, categories, topics, sources, users, posts, comments, reports, reportStats,
       login, logout, loadAll,
       addCategory, updateCategory, deleteCategory,
       addTopic, updateTopic, deleteTopic,
       addSource, updateSource, deleteSource, toggleSource,
       toggleUserStatus, hidePost, deletePost, restorePost,
       deleteComment, refreshComments,
+      refreshReports, resolveReport,
     }}>
       {children}
     </AdminContext.Provider>

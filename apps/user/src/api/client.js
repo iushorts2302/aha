@@ -120,3 +120,8 @@ export const reactionAPI = {
 export const categoryAPI = {
   list: () => req('categories', 'GET'),
 }
+
+export const reportAPI = {
+  create: ({ target_type, target_id, reporter_id, reason_code, reason_text }) =>
+    req('reports', 'POST', { target_type, target_id, reporter_id, reason_code, reason_text }),
+}

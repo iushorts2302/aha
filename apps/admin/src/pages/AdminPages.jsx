@@ -12,7 +12,7 @@ function PageHeader({ title, subtitle }) {
 
 /* ── 대시보드 ──────────────────────────────────────────── */
 export function DashboardPage() {
-  const { stats, posts, categories } = useAdmin()
+  const { stats, posts, categories, comments, reports, reportStats, users } = useAdmin()
   const [dbSetupStatus, setDbSetupStatus] = useState(null) // null|'loading'|'done'|'error'
   const [dbCheck, setDbCheck] = useState(null)
 
@@ -41,12 +41,22 @@ export function DashboardPage() {
   const catCount = dbCheck?.tb_category
   const needsSetup = catCount === 0 || catCount === 'ERROR: ...'
 
+  // 추가 통계 계산
+  const activeComments = comments.filter(c => c.status === 'active').length
+  const pendingReports = reportStats?.pending || 0
+  const today = new Date().toISOString().slice(0, 10)
+  const newUsersToday = users.filter(u => String(u.createdAt || '').startsWith(today)).length
+  const newPostsToday = posts.filter(p => String(p.created_at || p.createdAt || '').startsWith(today)).length
+
   const statCards = [
-    { label: '총 사용자',    value: stats.totalUsers,    color: 'primary', icon: '👥' },
-    { label: '활성 사용자',  value: stats.activeUsers,   color: 'success', icon: '✅' },
-    { label: '총 게시글',    value: stats.totalPosts,    color: 'info',    icon: '📝' },
-    { label: '총 조회수',    value: stats.totalViews?.toLocaleString(), color: 'warning', icon: '👁' },
-    { label: '활성 소스',    value: stats.activeSources, color: 'secondary',icon: '🔗' },
+    { label: '총 사용자',    value: stats.totalUsers,    icon: '👥' },
+    { label: '활성 사용자',  value: stats.activeUsers,   icon: '✅' },
+    { label: '오늘 가입',    value: newUsersToday,       icon: '🆕' },
+    { label: '총 게시글',    value: stats.totalPosts,    icon: '📝' },
+    { label: '오늘 게시',    value: newPostsToday,       icon: '✍️' },
+    { label: '활성 댓글',    value: activeComments,      icon: '💬' },
+    { label: '대기 신고',    value: pendingReports,      icon: '🚩' },
+    { label: '총 조회수',    value: stats.totalViews?.toLocaleString(), icon: '👁' },
   ]
   return (
     <div className="fade-up">
@@ -81,8 +91,9 @@ export function DashboardPage() {
       )}
       <div className="row g-3 mb-4">
         {statCards.map(s => (
-          <div key={s.label} className="col-6 col-md-4 col-xl-2-4">
-            <div className="card h-100">
+          <div key={s.label} className="col-6 col-md-3">
+            <div className="card h-100"
+              style={(s.label === '대기 신고' && s.value > 0) ? { background:'#fff8e0', borderColor:'rgba(255,180,0,0.4)' } : {}}>
               <div className="card-body">
                 <div className="fs-4 mb-1">{s.icon}</div>
                 <div className="fw-bold fs-4">{s.value}</div>
@@ -114,6 +125,31 @@ export function DashboardPage() {
           </div>
         </div>
         <div className="col-lg-4">
+          {/* 최근 대기 신고 — 우선 처리 안내 */}
+          <div className="card mb-3" style={pendingReports > 0 ? { borderColor:'rgba(255,180,0,0.5)' } : {}}>
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <span>🚩 대기 중인 신고</span>
+              <span className={`badge ${pendingReports > 0 ? 'bg-warning text-dark' : 'bg-secondary'}`}>
+                {pendingReports}
+              </span>
+            </div>
+            <div className="card-body" style={{ padding:'12px 16px' }}>
+              {reports.slice(0, 3).map(r => (
+                <div key={r.id} style={{ padding:'6px 0', borderBottom:'1px solid #f0f0f0', fontSize:12 }}>
+                  <div style={{ fontWeight:600, color:'#333' }}>
+                    [{r.target_type === 'post' ? '게시글' : '댓글'}] {r.reasonLabel}
+                  </div>
+                  <div className="text-muted text-truncate" style={{ maxWidth:'100%' }}>
+                    {r.targetPreview}
+                  </div>
+                </div>
+              ))}
+              {reports.length === 0 && (
+                <div className="text-muted small text-center py-2">대기 중인 신고가 없습니다</div>
+              )}
+            </div>
+          </div>
+
           <div className="card">
             <div className="card-header">카테고리 분포</div>
             <div className="card-body">
@@ -597,6 +633,234 @@ export function CommentManager() {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── 신고 관리 ────────────────────────────────────────── */
+export function ReportManager() {
+  const { reports, reportStats, refreshReports, resolveReport } = useAdmin()
+  const [statusFilter, setStatusFilter] = useState('pending')
+  const [typeFilter, setTypeFilter]     = useState('all')
+
+  useEffect(() => { refreshReports(statusFilter) }, [statusFilter])
+
+  const filtered = reports.filter(r => typeFilter === 'all' || r.target_type === typeFilter)
+
+  const pendingCount  = reportStats.pending  || 0
+  const resolvedCount = reportStats.resolved || 0
+  const rejectedCount = reportStats.rejected || 0
+
+  return (
+    <div className="fade-up">
+      <PageHeader
+        title="신고 관리"
+        subtitle={`대기 ${pendingCount} · 처리 ${resolvedCount} · 반려 ${rejectedCount} · 표시 ${filtered.length}`}
+      />
+      <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
+          style={{ height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}>
+          <option value="pending">대기 중</option>
+          <option value="resolved">처리됨</option>
+          <option value="rejected">반려됨</option>
+          <option value="all">전체</option>
+        </select>
+        <select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}
+          style={{ height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}>
+          <option value="all">전체 대상</option>
+          <option value="post">게시글</option>
+          <option value="comment">댓글</option>
+        </select>
+        <button
+          onClick={() => refreshReports(statusFilter)}
+          style={{ height:36, padding:'0 16px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', background:'#fff',
+            fontSize:13, cursor:'pointer' }}>
+          새로고침
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="table-responsive">
+          <table className="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>유형</th>
+                <th>대상 미리보기</th>
+                <th>신고 사유</th>
+                <th>신고자</th>
+                <th>접수일</th>
+                <th>상태</th>
+                <th style={{ minWidth:160 }}>처리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} className="text-center text-muted py-4">신고가 없습니다</td></tr>
+              )}
+              {filtered.map(r => (
+                <tr key={r.id}>
+                  <td>
+                    <span className={`badge ${r.target_type === 'post' ? 'bg-primary' : 'bg-info text-dark'}`}>
+                      {r.target_type === 'post' ? '게시글' : '댓글'}
+                    </span>
+                  </td>
+                  <td style={{ maxWidth:240 }}>
+                    <span className="text-truncate d-inline-block" style={{ maxWidth:220 }}
+                      title={r.targetPreview}>{r.targetPreview}</span>
+                    {r.targetStatus === 'deleted' && (
+                      <span className="badge bg-secondary ms-1" style={{ fontSize:10 }}>이미 삭제</span>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ fontSize:13, fontWeight:600 }}>{r.reasonLabel}</div>
+                    {r.reason_text && <div className="small text-muted">{r.reason_text}</div>}
+                  </td>
+                  <td className="small">{r.reporterNickname}</td>
+                  <td className="small text-muted">
+                    {r.createdAt ? String(r.createdAt).slice(0,16) : '-'}
+                  </td>
+                  <td>
+                    <span className={`badge ${
+                      r.status === 'pending'  ? 'bg-warning text-dark' :
+                      r.status === 'resolved' ? 'bg-success' : 'bg-secondary'
+                    }`}>
+                      {r.status === 'pending' ? '대기' : r.status === 'resolved' ? '처리' : '반려'}
+                    </span>
+                  </td>
+                  <td>
+                    {r.status === 'pending' ? (
+                      <div className="d-flex gap-1 flex-wrap">
+                        <button className="btn btn-xs btn-outline-warning"
+                          onClick={() => { if (confirm('대상을 숨김 처리하시겠습니까?')) resolveReport(r.id, 'hide_target') }}>
+                          숨김
+                        </button>
+                        <button className="btn btn-xs btn-outline-danger"
+                          onClick={() => { if (confirm('대상을 삭제하시겠습니까?')) resolveReport(r.id, 'delete_target') }}>
+                          삭제
+                        </button>
+                        <button className="btn btn-xs btn-outline-secondary"
+                          onClick={() => resolveReport(r.id, 'reject')}>
+                          반려
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="small text-muted">
+                        {r.resolved_action === 'hide' ? '숨김 완료' :
+                         r.resolved_action === 'delete' ? '삭제 완료' : '—'}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── 활동 로그 ────────────────────────────────────────── */
+const ACTION_LABELS = {
+  post_hide:        { label: '게시글 숨김', icon: '👁‍🗨', color: 'warning' },
+  post_delete:      { label: '게시글 삭제', icon: '🗑', color: 'danger' },
+  post_restore:     { label: '게시글 복원', icon: '↩️', color: 'success' },
+  comment_delete:   { label: '댓글 삭제',  icon: '💬', color: 'danger' },
+  report_hide_target:   { label: '신고 → 숨김',  icon: '🚩', color: 'warning' },
+  report_delete_target: { label: '신고 → 삭제',  icon: '🚩', color: 'danger' },
+  report_resolve:       { label: '신고 처리',    icon: '✅', color: 'success' },
+  report_reject:        { label: '신고 반려',    icon: '❎', color: 'secondary' },
+  user_suspend:    { label: '사용자 정지', icon: '🚫', color: 'danger' },
+  user_restore:    { label: '사용자 복원', icon: '✅', color: 'success' },
+}
+
+export function LogPage() {
+  const [logs, setLogs]     = useState([])
+  const [loading, setLoading] = useState(false)
+  const [filter, setFilter]   = useState('all')
+
+  async function load(actionType = 'all') {
+    setLoading(true)
+    try {
+      const ADMIN_API = 'https://admin-vert-psi.vercel.app'
+      const r = await fetch(`${ADMIN_API}/api/v1?resource=admin_logs&limit=200&action_type=${actionType}`)
+      const d = await r.json()
+      setLogs(d.logs || [])
+    } catch (e) {
+      console.warn('로그 로드 실패', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+  useEffect(() => { load(filter) }, [filter])
+
+  return (
+    <div className="fade-up">
+      <PageHeader title="활동 로그" subtitle={`최근 ${logs.length}건의 관리자 액션`} />
+      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+        <select value={filter} onChange={e=>setFilter(e.target.value)}
+          style={{ height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}>
+          <option value="all">전체 액션</option>
+          {Object.entries(ACTION_LABELS).map(([key, def]) => (
+            <option key={key} value={key}>{def.label}</option>
+          ))}
+        </select>
+        <button onClick={() => load(filter)} disabled={loading}
+          style={{ height:36, padding:'0 16px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', background:'#fff',
+            fontSize:13, cursor:'pointer' }}>
+          {loading ? '...' : '새로고침'}
+        </button>
+      </div>
+      <div className="card">
+        <div className="table-responsive">
+          <table className="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>시간</th>
+                <th>액션</th>
+                <th>대상</th>
+                <th>관리자</th>
+                <th>상세</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.length === 0 && (
+                <tr><td colSpan={5} className="text-center text-muted py-4">
+                  {loading ? '불러오는 중...' : '로그가 없습니다'}
+                </td></tr>
+              )}
+              {logs.map(l => {
+                const def = ACTION_LABELS[l.action_type] || { label: l.action_type, icon: '·', color: 'secondary' }
+                return (
+                  <tr key={l.seq_no}>
+                    <td className="small text-muted" style={{ whiteSpace:'nowrap' }}>
+                      {l.created_at ? String(l.created_at).slice(0, 16) : '-'}
+                    </td>
+                    <td>
+                      <span className={`badge bg-${def.color}`}>{def.icon} {def.label}</span>
+                    </td>
+                    <td className="small">
+                      {l.target_type && (
+                        <span className="text-muted">{l.target_type} #{l.target_seq_no}</span>
+                      )}
+                    </td>
+                    <td className="small">{l.admin_email || '시스템'}</td>
+                    <td className="small text-muted" style={{ maxWidth:240 }}>
+                      <span className="text-truncate d-inline-block" style={{ maxWidth:220 }}
+                        title={l.detail}>{l.detail || '-'}</span>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

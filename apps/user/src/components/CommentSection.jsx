@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ReportButton from './ReportButton.jsx'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 
@@ -137,7 +138,7 @@ export default function CommentSection({ postId, navigate }) {
                     {timeAgo(comment.createdAt)}
                   </span>
                 </div>
-                {isOwner && (
+                {isOwner ? (
                   <button
                     type="button"
                     onClick={() => deleteComment(comment.id)}
@@ -148,6 +149,8 @@ export default function CommentSection({ postId, navigate }) {
                     onMouseEnter={e => e.currentTarget.style.color = '#dc3545'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted-48)'}
                   >삭제</button>
+                ) : currentUser && (
+                  <ReportButton targetType="comment" targetId={comment.id} compact />
                 )}
               </div>
               <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--color-body)', margin: 0 }}>

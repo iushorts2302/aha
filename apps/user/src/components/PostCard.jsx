@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext'
+import ReportButton from './ReportButton.jsx'
 import { useApp } from '../context/AppContext'
 import { ahaScore } from '../store/algorithm.js'
 import ReactionBar from './ReactionBar.jsx'
@@ -99,6 +100,10 @@ export default function PostCard({ post: postProp, navigate }) {
             onClick={e => { e.stopPropagation(); if (currentUser) toggleBookmark(post.id) }}>
             {isBookmarked ? '★' : '☆'}
           </button>
+          {/* 신고 — 로그인 + 본인 글 아닐 때만 */}
+          {currentUser && String(currentUser.id) !== String(post.authorId) && (
+            <ReportButton targetType="post" targetId={post.id} compact />
+          )}
         </div>
       </div>
     </article>

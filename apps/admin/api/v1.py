@@ -151,6 +151,7 @@ def posts_post(p, b):
     return 201, {"seq_no": seq}
 
 def posts_patch(p, b):
+    _log_target = b.get("id")
     pid = b.get("id")
     if not pid: return 400, {"error": "id 필수"}
     sets, args = [], []
@@ -167,6 +168,7 @@ def posts_patch(p, b):
 def posts_delete(p, b):
     pid = b.get("id")
     if not pid: return 400, {"error": "id 필수"}
+    _log_admin("post_delete", "post", pid)
     db.execute("UPDATE tb_post SET status='deleted',deleted_at=NOW() WHERE seq_no=%s", (pid,))
     return 200, {"ok": True}
 
@@ -214,6 +216,7 @@ def comments_delete(p, b):
     row = db.query_one("SELECT post_seq_no FROM tb_comment WHERE seq_no=%s AND status='active'", (cid,))
     if not row: return 404, {"error": "not found"}
     db.execute("UPDATE tb_comment SET status='deleted',deleted_at=NOW() WHERE seq_no=%s", (cid,))
+    _log_admin("comment_delete", "comment", cid)
     db.execute("UPDATE tb_post SET comment_count=GREATEST(0,comment_count-1) WHERE seq_no=%s", (row["post_seq_no"],))
     return 200, {"ok": True}
 
@@ -510,6 +513,173 @@ def crawl_items_delete(p, b):
     db.execute("UPDATE tb_crawl_item SET blocked_yn='Y' WHERE seq_no=%s", (iid,))
     return 200, {"ok": True}
 
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ADMIN LOG (활동 감사)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def _log_admin(action_type, target_type=None, target_seq_no=None, detail=None, admin_seq_no=None):
+    """관리자 액션 자동 로깅. 실패해도 본 작업에 영향 없음"""
+    try:
+        db.execute(
+            "INSERT INTO tb_admin_log (admin_seq_no, action_type, target_type, target_seq_no, detail) "
+            "VALUES(%s,%s,%s,%s,%s)",
+            (admin_seq_no, action_type, target_type, target_seq_no, (detail or "")[:500]))
+    except Exception:
+        pass
+
+def admin_logs_get(p, b):
+    limit       = min(200, int(p.get("limit", ["100"])[0]))
+    action_type = p.get("action_type", ["all"])[0]
+
+    where, args = [], []
+    if action_type != "all":
+        where.append("l.action_type=%s"); args.append(action_type)
+    where_sql = "WHERE " + " AND ".join(where) if where else ""
+    args.append(limit)
+
+    rows = db.query(
+        "SELECT l.seq_no, l.admin_seq_no, l.action_type, l.target_type, l.target_seq_no, "
+        "l.detail, l.created_at, a.email admin_email "
+        "FROM tb_admin_log l LEFT JOIN tb_admin a ON a.seq_no=l.admin_seq_no "
+        f"{where_sql} ORDER BY l.created_at DESC LIMIT %s",
+        tuple(args))
+    return 200, {"logs": rows, "count": len(rows)}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# REPORTS (신고)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REPORT_REASONS = {
+    "spam":    "스팸/광고",
+    "abuse":   "욕설/괴롭힘",
+    "nsfw":    "음란/혐오",
+    "misinfo": "허위 정보",
+    "etc":     "기타",
+}
+
+def reports_get(p, b):
+    """관리자용 신고 목록 조회"""
+    status      = p.get("status", ["pending"])[0]
+    target_type = p.get("target_type", ["all"])[0]
+    limit       = min(200, int(p.get("limit", ["100"])[0]))
+
+    where, args = [], []
+    if status != "all":
+        where.append("r.status=%s"); args.append(status)
+    if target_type != "all":
+        where.append("r.target_type=%s"); args.append(target_type)
+    where_sql = "WHERE " + " AND ".join(where) if where else ""
+    args.append(limit)
+
+    rows = db.query(
+        "SELECT r.seq_no, r.target_type, r.target_seq_no, r.reporter_seq_no, "
+        "r.reason_code, r.reason_text, r.status, r.resolved_at, r.resolved_action, "
+        "r.created_at, u.nickname reporter_nickname "
+        "FROM tb_report r LEFT JOIN tb_user u ON u.seq_no=r.reporter_seq_no "
+        f"{where_sql} ORDER BY r.created_at DESC LIMIT %s",
+        tuple(args)
+    )
+
+    # 신고 대상 미리보기 (제목/본문 일부)
+    for r in rows:
+        if r["target_type"] == "post":
+            post = db.query_one("SELECT title, body, status FROM tb_post WHERE seq_no=%s", (r["target_seq_no"],))
+            r["target_preview"] = post["title"] if post else "(삭제됨)"
+            r["target_status"]  = post["status"] if post else "deleted"
+        elif r["target_type"] == "comment":
+            cm = db.query_one("SELECT body, status FROM tb_comment WHERE seq_no=%s", (r["target_seq_no"],))
+            r["target_preview"] = (cm["body"] or "")[:80] if cm else "(삭제됨)"
+            r["target_status"]  = cm["status"] if cm else "deleted"
+        r["reason_label"] = REPORT_REASONS.get(r["reason_code"], r["reason_code"])
+
+    # 통계
+    stats = db.query("SELECT status, COUNT(*) c FROM tb_report GROUP BY status")
+    stats_dict = {s["status"]: s["c"] for s in stats}
+
+    return 200, {"reports": rows, "count": len(rows), "stats": stats_dict, "reasons": REPORT_REASONS}
+
+def reports_post(p, b):
+    """사용자 신고 등록"""
+    target_type = b.get("target_type")     # 'post' | 'comment'
+    target_id   = b.get("target_id")
+    reporter_id = b.get("reporter_id")
+    reason_code = b.get("reason_code", "etc")
+    reason_text = (b.get("reason_text", "") or "")[:500]
+
+    if target_type not in ("post", "comment"):
+        return 400, {"error": "target_type은 post 또는 comment"}
+    if not target_id:
+        return 400, {"error": "target_id 필수"}
+    if reason_code not in REPORT_REASONS:
+        return 400, {"error": "유효하지 않은 reason_code"}
+
+    # 동일 사용자가 동일 대상에 중복 신고 방지 (24시간 내)
+    if reporter_id:
+        existing = db.query_one(
+            "SELECT seq_no FROM tb_report WHERE target_type=%s AND target_seq_no=%s "
+            "AND reporter_seq_no=%s AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+            (target_type, target_id, reporter_id))
+        if existing:
+            return 409, {"error": "이미 신고하셨습니다"}
+
+    seq = db.execute(
+        "INSERT INTO tb_report (target_type, target_seq_no, reporter_seq_no, reason_code, reason_text) "
+        "VALUES(%s,%s,%s,%s,%s)",
+        (target_type, target_id, reporter_id, reason_code, reason_text))
+    return 201, {"seq_no": seq, "ok": True}
+
+def reports_patch(p, b):
+    """관리자 — 신고 처리 (resolve/reject + 대상 액션)"""
+    rid    = b.get("id")
+    action = b.get("action")  # 'resolve' | 'reject' | 'hide_target' | 'delete_target'
+    if not rid or not action:
+        return 400, {"error": "id, action 필수"}
+
+    rep = db.query_one("SELECT * FROM tb_report WHERE seq_no=%s", (rid,))
+    if not rep: return 404, {"error": "신고 없음"}
+
+    # 대상 처리 액션
+    if action == "hide_target":
+        if rep["target_type"] == "post":
+            db.execute("UPDATE tb_post SET status='hidden' WHERE seq_no=%s", (rep["target_seq_no"],))
+        elif rep["target_type"] == "comment":
+            db.execute("UPDATE tb_comment SET status='deleted', deleted_at=NOW() WHERE seq_no=%s", (rep["target_seq_no"],))
+        resolved_action = "hide"
+        new_status = "resolved"
+    elif action == "delete_target":
+        if rep["target_type"] == "post":
+            db.execute("UPDATE tb_post SET status='deleted', deleted_at=NOW() WHERE seq_no=%s", (rep["target_seq_no"],))
+        elif rep["target_type"] == "comment":
+            db.execute("UPDATE tb_comment SET status='deleted', deleted_at=NOW() WHERE seq_no=%s", (rep["target_seq_no"],))
+        resolved_action = "delete"
+        new_status = "resolved"
+    elif action == "resolve":
+        resolved_action = "none"
+        new_status = "resolved"
+    elif action == "reject":
+        resolved_action = "none"
+        new_status = "rejected"
+    else:
+        return 400, {"error": f"알 수 없는 action: {action}"}
+
+    db.execute(
+        "UPDATE tb_report SET status=%s, resolved_at=NOW(), resolved_action=%s WHERE seq_no=%s",
+        (new_status, resolved_action, rid))
+    _log_admin(f"report_{action}", rep["target_type"], rep["target_seq_no"],
+               f"reason={rep['reason_code']}")
+
+    # 같은 대상에 대한 다른 pending 신고도 함께 처리
+    if new_status == "resolved":
+        db.execute(
+            "UPDATE tb_report SET status='resolved', resolved_at=NOW(), resolved_action=%s "
+            "WHERE target_type=%s AND target_seq_no=%s AND status='pending' AND seq_no!=%s",
+            (resolved_action, rep["target_type"], rep["target_seq_no"], rid))
+
+    return 200, {"ok": True, "status": new_status}
+
+
 # ── 라우팅 테이블 ──────────────────────────────────────────
 ROUTES = {
     "auth":       {"POST": auth_post},
@@ -524,6 +694,8 @@ ROUTES = {
     "topics":     {"GET": topics_get, "POST": topics_post, "PATCH": topics_patch, "DELETE": topics_delete},
     "sources":    {"GET": sources_get, "POST": sources_post, "PATCH": sources_patch, "DELETE": sources_delete},
     "crawl_items":{"GET": crawl_items_get, "POST": crawl_items_post, "PATCH": crawl_items_patch, "DELETE": crawl_items_delete},
+    "reports":    {"GET": reports_get, "POST": reports_post, "PATCH": reports_patch},
+    "admin_logs": {"GET": admin_logs_get},
 }
 
 # ── Vercel Handler ─────────────────────────────────────────
@@ -568,6 +740,8 @@ class handler(BaseHTTPRequestHandler):
                         "users":      {"users": [], "count": 0},
                         "posts":      {"posts": [], "total": 0, "page": 1, "limit": 20},
                         "comments":   {"comments": [], "count": 0},
+                        "reports":    {"reports": [], "count": 0, "stats": {}, "reasons": {}},
+                        "admin_logs": {"logs": [], "count": 0},
                         "likes":      {"liked": False, "like_count": 0},
                         "bookmarks":  {"bookmarks": []},
                         "reactions":  {"counts": {}, "user_reaction": None},
