@@ -19,10 +19,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 CACHE_FILE = "/tmp/crawl_cache.json"
 CACHE_TTL  = 30 * 60  # 30분
 
-# 진행 중인 크롤링 토픽 (중복 트리거 방지)
-_in_flight = set()
-_in_flight_lock = threading.Lock()
-
 # ── CORS / JSON ────────────────────────────────────────────
 def _cors(h):
     h.send_header("Access-Control-Allow-Origin", "*")
@@ -130,34 +126,6 @@ def _save_to_db(items, topic_key):
     except Exception:
         pass
 
-# ── 백그라운드 크롤링 (응답 후 실행) ────────────────────────
-def _background_crawl(topic_key, limit):
-    """캐시 미스 시 호출 — 응답 차단 없이 비동기 수집"""
-    with _in_flight_lock:
-        if topic_key in _in_flight: return
-        _in_flight.add(topic_key)
-    try:
-        # 1. DB 시도
-        db_items = _db_items(topic_key, limit)
-        if db_items:
-            _set_cached(topic_key, db_items)
-            return
-        # 2. 크롤링
-        from crawl import TOPIC_CRAWLERS, enrich
-        fn = TOPIC_CRAWLERS.get(topic_key)
-        if not fn: return
-        raw   = fn()
-        label = topic_key.split(".")[-1].replace("_", " ").title()
-        items = enrich(raw[:limit], topic_key, label, topic_key.split(".")[0])
-        if items:
-            _set_cached(topic_key, items)
-            _save_to_db(items, topic_key)
-    except Exception:
-        pass
-    finally:
-        with _in_flight_lock:
-            _in_flight.discard(topic_key)
-
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -183,12 +151,10 @@ class handler(BaseHTTPRequestHandler):
         if cached is not None and len(cached) > 0:
             return _json(self, 200, {"items": cached, "count": len(cached), "source": "cache"})
 
-        # ── 2순위: stale 캐시 + 백그라운드 갱신 ────────────
-        # 30분 지난 데이터라도 즉시 반환하고 백그라운드에서 갱신
+        # ── 2순위: stale 캐시 즉시 반환 (cron이 다음 사이클에 갱신) ──
+        # 30분 지난 데이터라도 즉시 반환 - cron이 10분마다 모든 토픽 갱신
         stale = _get_cached(topic_key, allow_stale=True) if not force else None
         if stale is not None and len(stale) > 0:
-            # 백그라운드 갱신 트리거 (응답 차단 없음)
-            threading.Thread(target=_background_crawl, args=(topic_key, limit), daemon=True).start()
             return _json(self, 200, {"items": stale, "count": len(stale), "source": "stale"})
 
         # ── 3순위: wait=1이면 동기 대기 (관리자/cron용) ────
@@ -212,8 +178,27 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 return _json(self, 200, {"items": [], "count": 0, "source": "error", "error": str(e)[:100]})
 
-        # ── 4순위: 캐시 없음 → 빈 배열 즉시 반환 + 백그라운드 시작 ──
-        threading.Thread(target=_background_crawl, args=(topic_key, limit), daemon=True).start()
-        return _json(self, 200, {"items": [], "count": 0, "source": "queued"})
+        # ── 4순위: 캐시 없음 + DB 없음 → 동기 크롤링 (10초 제한) ──
+        # Vercel 서버리스는 응답 후 즉시 종료 → 백그라운드 불가
+        # 빠른 크롤링만 시도 (DB 우선)
+        try:
+            db_items = _db_items(topic_key, limit)
+            if db_items is not None and len(db_items) > 0:
+                _set_cached(topic_key, db_items)
+                return _json(self, 200, {"items": db_items, "count": len(db_items), "source": "db"})
+            # 크롤링 - 빠른 토픽만 (느리면 timeout 발생)
+            from crawl import TOPIC_CRAWLERS, enrich
+            fn = TOPIC_CRAWLERS.get(topic_key)
+            if not fn:
+                return _json(self, 200, {"items": [], "count": 0, "source": "empty"})
+            raw   = fn()
+            label = topic_key.split(".")[-1].replace("_", " ").title()
+            items = enrich(raw[:limit], topic_key, label, topic_key.split(".")[0])
+            if items:
+                _set_cached(topic_key, items)
+                # DB 저장은 다음 cron이 처리 (응답 차단 없도록 생략)
+            return _json(self, 200, {"items": items, "count": len(items), "source": "fresh"})
+        except Exception as e:
+            return _json(self, 200, {"items": [], "count": 0, "source": "error", "error": str(e)[:100]})
 
     def log_message(self, *a): pass

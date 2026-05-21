@@ -9,20 +9,49 @@ sys.path.insert(0, os.path.dirname(__file__))
 from crawl import TOPIC_CRAWLERS, enrich
 
 PRIORITY_TOPICS = [
-    "home.trending","home.rising","home.ai_feed",
-    "dev.trending","dev.javascript","dev.python",
-    "ai.news","ai.trend",
-    "startup.new",
-    "it.news","it.cloud",
-    "oss.trending",
-    "game.news",
-    "finance.crypto",
-    "learn.tutorial",
-    "job.dev",
     "home.trending",
-    "board.it",
+    "home.rising",
+    "home.ai_feed",
+    "dev.trending",
+    "dev.javascript",
+    "dev.python",
+    "dev.devops",
+    "dev.tools",
+    "ai.news",
+    "ai.tools",
+    "ai.trend",
     "ai.research",
+    "startup.new",
+    "startup.funding",
+    "startup.product",
+    "oss.trending",
+    "oss.awesome",
+    "oss.new",
+    "it.news",
+    "it.security",
+    "it.cloud",
+    "it.mobile",
+    "design.ui",
+    "design.ux",
+    "design.css",
+    "game.news",
+    "game.indie",
+    "game.review",
+    "finance.stock",
+    "finance.crypto",
+    "finance.invest",
     "market.deal",
+    "market.used",
+    "job.dev",
+    "job.startup",
+    "job.algorithm",
+    "learn.tutorial",
+    "learn.course",
+    "learn.book",
+    "learn.korean",
+    "board.free",
+    "board.it",
+    "board.question",
 ]
 
 def _save_to_db(items, topic_key):
@@ -82,7 +111,19 @@ class handler(BaseHTTPRequestHandler):
         start = time.time()
         crawled, errors = {}, {}
 
-        for key in PRIORITY_TOPICS:
+        # Round-robin: 매 호출마다 다른 토픽부터 시작 (10분 주기로 전체 커버)
+        import datetime
+        minute_block = (datetime.datetime.utcnow().minute // 10) % 6
+        rotation = (minute_block * 8) % len(PRIORITY_TOPICS)
+        rotated_topics = PRIORITY_TOPICS[rotation:] + PRIORITY_TOPICS[:rotation]
+
+        DEADLINE = 25  # 25초 한계 (Vercel 30초 - 5초 여유)
+
+        for key in rotated_topics:
+            # 시간 초과 시 중단
+            if time.time() - start > DEADLINE:
+                errors[key] = "deadline_reached"
+                break
             fn = TOPIC_CRAWLERS.get(key)
             if not fn: continue
             t0 = time.time()

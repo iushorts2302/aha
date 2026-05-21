@@ -91,7 +91,7 @@ async function fetchFromDB(topicKey) {
   try {
     const r = await fetch(
       `${ADMIN_API}/api/data?topic=${encodeURIComponent(topicKey)}`,
-      { signal: AbortSignal.timeout(5000) }  // 5초로 단축 — 서버는 즉시 응답하므로
+      { signal: AbortSignal.timeout(12000) }
     )
     if (!r.ok) return lsRead(topicKey)?.items || []
     const data = await r.json()
@@ -123,7 +123,7 @@ async function _pollUntilReady(topicKey) {
     try {
       const r = await fetch(
         `${ADMIN_API}/api/data?topic=${encodeURIComponent(topicKey)}`,
-        { signal: AbortSignal.timeout(5000) }
+        { signal: AbortSignal.timeout(12000) }
       )
       if (!r.ok) continue
       const data = await r.json()
