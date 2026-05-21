@@ -194,12 +194,30 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
   }, [topicKey, limit])
   useEffect(() => { const t = setInterval(refresh, 60000); return () => clearInterval(t) }, [refresh])
 
-  if (items.length === 0) return (
-    <div>
-      <SectionHeader title={title} count={0} onRefresh={refresh} loading={loading} />
-      <EmptyState />
-    </div>
-  )
+  if (items.length === 0) {
+    // 로딩 중 → 스피너 / 로딩 끝남 → '아직 데이터가 없습니다' 안내
+    return (
+      <div>
+        <SectionHeader title={title} count={0} onRefresh={refresh} loading={loading} />
+        {loading ? <EmptyState /> : (
+          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--color-muted, #888)' }}>
+            <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.5 }}>📭</div>
+            <p style={{ fontSize: 14, margin: 0 }}>아직 데이터가 없습니다</p>
+            <p style={{ fontSize: 12, margin: '4px 0 12px' }}>잠시 후 다시 시도해 주세요</p>
+            <button
+              onClick={refresh}
+              style={{
+                padding: '6px 14px', fontSize: 12,
+                border: '1px solid var(--color-border-soft)', background: '#fff',
+                borderRadius: 6, cursor: 'pointer', color: 'var(--color-ink)',
+              }}>
+              새로고침
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>

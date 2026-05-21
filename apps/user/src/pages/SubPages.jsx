@@ -139,11 +139,9 @@ export function BoardPageNew({ navigate, searchQuery }) {
   const { currentUser } = useAuth()
   const { posts, comments } = useApp()
   const TABS = [
-    { key: 'free', label: '자유' }, { key: 'question', label: '질문' },
-    { key: 'info', label: '정보' }, { key: 'humor', label: '유머' },
-    { key: 'it', label: 'IT' },     { key: 'game', label: '게임' },
-    { key: 'sports', label: '스포츠' }, { key: 'politics', label: '정치' },
-    { key: 'anon', label: '익명' },
+    { key: 'free',     label: '자유' },
+    { key: 'question', label: '질문' },
+    { key: 'it',       label: 'IT' },
   ]
   const SORTS = [{ key: 'hot', label: '인기순' }, { key: 'new', label: '최신순' }, { key: 'top', label: '추천순' }]
   const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
@@ -195,7 +193,6 @@ export function AIPage({ navigate }) {
     { key: 'tools',    label: 'AI 도구' },
     { key: 'trend',    label: 'AI 트렌드' },
     { key: 'research', label: 'AI 리서치' },
-    { key: 'summary',  label: 'AI 요약' },
   ]
   return (
     <div className="fade-up">
@@ -232,7 +229,6 @@ export function DevPage({ navigate }) {
     { key: 'python',    label: 'Python' },
     { key: 'devops',    label: 'DevOps' },
     { key: 'tools',     label: '개발 도구' },
-    { key: 'opensource',label: '오픈소스' },
   ]
   return (
     <div className="fade-up">
@@ -264,10 +260,9 @@ export function OSSPage({ navigate }) {
 export function DesignPage({ navigate }) {
   const [tab, setTab] = useState('ui')
   const TABS = [
-    { key: 'ui',    label: 'UI 컴포넌트' },
-    { key: 'ux',    label: 'UX 디자인' },
-    { key: 'tools', label: '디자인 도구' },
-    { key: 'css',   label: 'CSS/스타일' },
+    { key: 'ui',  label: 'UI 컴포넌트' },
+    { key: 'ux',  label: 'UX 디자인' },
+    { key: 'css', label: 'CSS/스타일' },
   ]
   return (
     <div className="fade-up">
@@ -349,7 +344,7 @@ export function KnowledgePage({ navigate }) {
 export function MarketPage({ navigate }) {
   const [tab, setTab] = useState('deal')
   const TABS = [
-    { key: 'deal', label: '핫딜' }, { key: 'coupon', label: '쿠폰/할인' }, { key: 'used', label: '중고거래' },
+    { key: 'deal', label: '핫딜' }, { key: 'used', label: '중고거래' },
   ]
   return (
     <div className="fade-up">
@@ -394,7 +389,7 @@ export function FinancePage({ navigate }) {
 export function JobPage({ navigate }) {
   const [tab, setTab] = useState('dev')
   const TABS = [
-    { key: 'dev', label: '개발 채용' }, { key: 'startup', label: '스타트업 채용' }, { key: 'remote', label: '원격 근무' },
+    { key: 'dev', label: '개발 채용' }, { key: 'startup', label: '스타트업 채용' }, { key: 'algorithm', label: '알고리즘' },
   ]
   return (
     <div className="fade-up">
