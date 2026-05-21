@@ -79,6 +79,9 @@ function lsWrite(topicKey, items) {
   } catch {}
 }
 
+// 진행 중 폴링 추적 (중복 폴링 방지)
+const _polling = new Set()
+
 // ── DB API에서 크롤링 아이템 조회 ────────────────────────
 async function fetchFromDB(topicKey) {
   // 메모리 캐시 (60초)
@@ -88,30 +91,53 @@ async function fetchFromDB(topicKey) {
   try {
     const r = await fetch(
       `${ADMIN_API}/api/data?topic=${encodeURIComponent(topicKey)}`,
-      { signal: AbortSignal.timeout(15000) }
+      { signal: AbortSignal.timeout(5000) }  // 5초로 단축 — 서버는 즉시 응답하므로
     )
     if (!r.ok) return lsRead(topicKey)?.items || []
     const data = await r.json()
     const items = (data.items || []).filter(i => i.blocked_yn !== 'Y')
+    const source = data.source
 
     if (items.length > 0) {
       _cache.set(topicKey, { items, fetchedAt: Date.now() })
-      lsWrite(topicKey, items)  // localStorage 저장
+      lsWrite(topicKey, items)
     }
 
-    // 데이터 없으면 init 트리거
-    if (items.length === 0 && !_initTriggered.has(topicKey)) {
-      _initTriggered.add(topicKey)
-      fetch(`${ADMIN_API}/api/init`, { signal: AbortSignal.timeout(30000) })
-        .then(res => res.ok ? res.json() : null)
-        .then(d => { if (d?.topics_crawled > 0) _cache.delete(topicKey) })
-        .catch(() => {})
+    // queued = 서버가 백그라운드로 크롤링 시작함 → 짧은 폴링으로 확인
+    if (source === 'queued' && !_polling.has(topicKey)) {
+      _polling.add(topicKey)
+      _pollUntilReady(topicKey)
     }
 
     return items
   } catch {
     return lsRead(topicKey)?.items || []
   }
+}
+
+/** queued 응답 시 백그라운드에서 짧은 폴링으로 데이터 도착 감지 */
+async function _pollUntilReady(topicKey) {
+  const delays = [2000, 3000, 5000, 8000]  // 2/3/5/8초 후 재시도 (최대 18초)
+  for (const wait of delays) {
+    await new Promise(res => setTimeout(res, wait))
+    try {
+      const r = await fetch(
+        `${ADMIN_API}/api/data?topic=${encodeURIComponent(topicKey)}`,
+        { signal: AbortSignal.timeout(5000) }
+      )
+      if (!r.ok) continue
+      const data = await r.json()
+      const items = (data.items || []).filter(i => i.blocked_yn !== 'Y')
+      if (items.length > 0) {
+        _cache.set(topicKey, { items, fetchedAt: Date.now() })
+        lsWrite(topicKey, items)
+        // 폴링 성공 → 화면 갱신 이벤트
+        window.dispatchEvent(new CustomEvent('aha:crawl-updated', { detail: { topicKey, items } }))
+        break
+      }
+    } catch {}
+  }
+  _polling.delete(topicKey)
 }
 
 // ── 공개 API ────────────────────────────────────────────

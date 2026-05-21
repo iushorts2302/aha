@@ -179,6 +179,19 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
     setSource(stale.length > 0 ? 'stale' : null)
     refresh()            // 동시에 최신 데이터 fetch
   }, [topicKey])
+
+  // 백그라운드 폴링 완료 이벤트 수신 → 자동 갱신
+  useEffect(() => {
+    function onCrawlUpdated(e) {
+      if (e.detail?.topicKey === topicKey) {
+        const fresh = (e.detail.items || []).slice(0, limit)
+        setItems(fresh)
+        setSource('fresh')
+      }
+    }
+    window.addEventListener('aha:crawl-updated', onCrawlUpdated)
+    return () => window.removeEventListener('aha:crawl-updated', onCrawlUpdated)
+  }, [topicKey, limit])
   useEffect(() => { const t = setInterval(refresh, 60000); return () => clearInterval(t) }, [refresh])
 
   if (items.length === 0) return (
