@@ -197,7 +197,7 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
   if (items.length === 0) {
     // 로딩 중 → 스피너 / 로딩 끝남 → '아직 데이터가 없습니다' 안내
     return (
-      <div>
+      <div style={{ marginBottom: 36 }}>
         <SectionHeader title={title} count={0} onRefresh={refresh} loading={loading} />
         {loading ? <EmptyState /> : (
           <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--color-muted, #888)' }}>
@@ -220,7 +220,7 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
   }
 
   return (
-    <div>
+    <div style={{ marginBottom: 36 }}>
       <SectionHeader title={title} count={items.length} onRefresh={refresh} loading={loading} source={source} />
       {items.map((item, i) => (
         <CrawlCard key={item.id} item={item} rank={showRank ? i + 1 : null} navigate={navigate} />
@@ -247,7 +247,7 @@ export function EmptyState() {
 /** 탭 네비게이션 — Bootstrap nav-tabs */
 export function TabNav({ tabs, active, onChange }) {
   return (
-    <ul className="nav nav-tabs mb-0">
+    <ul className="nav nav-tabs mb-4">
       {tabs.map(tab => (
         <li className="nav-item" key={tab.key}>
           <button
