@@ -355,15 +355,43 @@ export function SourceManager() {
 /* ── 사용자 관리 ────────────────────────────────────────── */
 export function UserManager() {
   const { users, toggleUserStatus } = useAdmin()
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('all')  // all|active|suspended
+
+  const filtered = users.filter(u => {
+    if (filter !== 'all' && u.status !== filter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return (u.email||'').toLowerCase().includes(q) ||
+             (u.nickname||'').toLowerCase().includes(q)
+    }
+    return true
+  })
+
   return (
     <div className="fade-up">
-      <PageHeader title="사용자 관리" subtitle={`총 ${users.length}명`} />
+      <PageHeader title="사용자 관리" subtitle={`총 ${users.length}명 · 표시 ${filtered.length}명`} />
+      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+        <input
+          value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="이메일/닉네임 검색..."
+          style={{ flex:1, height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}
+        />
+        <select value={filter} onChange={e=>setFilter(e.target.value)}
+          style={{ height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}>
+          <option value="all">전체</option>
+          <option value="active">활성</option>
+          <option value="suspended">정지</option>
+        </select>
+      </div>
       <div className="card">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
             <thead><tr><th>이메일</th><th>닉네임</th><th>역할</th><th>게시글</th><th>가입일</th><th>상태</th><th>작업</th></tr></thead>
             <tbody>
-              {users.map(u => (
+              {filtered.map(u => (
                 <tr key={u.id}>
                   <td className="small">{u.email}</td>
                   <td className="fw-medium">{u.nickname}</td>
@@ -385,15 +413,51 @@ export function UserManager() {
 /* ── 게시글 관리 ────────────────────────────────────────── */
 export function PostManager() {
   const { posts, categories, hidePost, deletePost, restorePost } = useAdmin()
+  const [search, setSearch] = useState('')
+  const [catFilter, setCatFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+
+  const filtered = posts.filter(p => {
+    if (catFilter !== 'all' && String(p.categoryId) !== String(catFilter)) return false
+    if (statusFilter !== 'all' && p.status !== statusFilter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return (p.title||'').toLowerCase().includes(q) ||
+             (p.authorNickname||'').toLowerCase().includes(q)
+    }
+    return true
+  })
+
   return (
     <div className="fade-up">
-      <PageHeader title="게시글 관리" subtitle={`총 ${posts.length}개`} />
+      <PageHeader title="게시글 관리" subtitle={`총 ${posts.length}개 · 표시 ${filtered.length}개`} />
+      <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+        <input
+          value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="제목/작성자 검색..."
+          style={{ flex:'1 1 250px', minWidth:0, height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}
+        />
+        <select value={catFilter} onChange={e=>setCatFilter(e.target.value)}
+          style={{ height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}>
+          <option value="all">전체 분야</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
+          style={{ height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}>
+          <option value="all">전체 상태</option>
+          <option value="published">게시중</option>
+          <option value="hidden">숨김</option>
+        </select>
+      </div>
       <div className="card">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
             <thead><tr><th>제목</th><th>작성자</th><th>분야</th><th>조회</th><th>상태</th><th>작업</th></tr></thead>
             <tbody>
-              {posts.map(p => {
+              {filtered.map(p => {
                 const cat = categories.find(c => c.id === p.categoryId)
                 return (
                   <tr key={p.id} style={{ opacity: p.status === 'hidden' ? 0.6 : 1 }}>

@@ -174,9 +174,30 @@ def posts_delete(p, b):
 # COMMENTS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def comments_get(p, b):
-    pid = p.get("post_id", [None])[0]
-    if not pid: return 400, {"error": "post_id 필수"}
-    rows = db.query("SELECT c.seq_no,c.post_seq_no,c.parent_seq_no,c.body,c.like_count,c.status,c.created_at,u.nickname author_nickname,u.seq_no author_seq_no FROM tb_comment c LEFT JOIN tb_user u ON u.seq_no=c.author_seq_no WHERE c.post_seq_no=%s AND c.status='active' ORDER BY c.created_at", (pid,))
+    pid    = p.get("post_id", [None])[0]
+    limit  = min(100, int(p.get("limit", ["50"])[0]))
+    status = p.get("status", ["all"])[0]
+
+    where = []
+    args  = []
+    if pid:
+        where.append("c.post_seq_no=%s"); args.append(pid)
+    if status != "all":
+        where.append("c.status=%s"); args.append(status)
+    where_sql = "WHERE " + " AND ".join(where) if where else ""
+    args.append(limit)
+
+    rows = db.query(
+        "SELECT c.seq_no,c.post_seq_no,c.parent_seq_no,c.body,c.like_count,c.status,"
+        "c.created_at,u.nickname author_nickname,u.seq_no author_seq_no,"
+        "p.title post_title "
+        "FROM tb_comment c "
+        "LEFT JOIN tb_user u ON u.seq_no=c.author_seq_no "
+        "LEFT JOIN tb_post p ON p.seq_no=c.post_seq_no "
+        f"{where_sql} "
+        "ORDER BY c.created_at DESC LIMIT %s",
+        tuple(args)
+    )
     return 200, {"comments": rows, "count": len(rows)}
 
 def comments_post(p, b):
