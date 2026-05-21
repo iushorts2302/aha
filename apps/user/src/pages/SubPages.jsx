@@ -8,28 +8,21 @@ import PostCard from '../components/PostCard.jsx'
 
 // ── 홈 ─────────────────────────────────────────────────────
 export function HomePage({ navigate }) {
-  const [tab, setTab] = useState('trending')
   const { currentUser } = useAuth()
   const { posts, comments } = useApp()
-  const TABS = [
-    { key: 'trending',  label: '오늘의 인기글' },
-    { key: 'rising',    label: '🔥 실시간 급상승' },
-    { key: 'ai_feed',   label: 'AI 추천 피드' },
-    { key: 'following', label: '팔로잉' },
-  ]
   const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
-  const hotPosts    = sortPosts(posts, commentsMap, 'hot').slice(0, 10)
-  const risingPosts = posts.filter(p => (Date.now() - new Date(p.createdAt).getTime()) < 3*3600000)
-                          .sort((a,b) => (b.likes?.length+b.views)-(a.likes?.length+a.views)).slice(0,10)
-  const followPosts = currentUser ? posts.filter(p => currentUser.following.includes(p.authorId)) : []
+  const hotPosts = sortPosts(posts, commentsMap, 'hot').slice(0, 5)
 
   return (
     <div className="fade-up">
+      {/* 히어로 — 환영 메시지 */}
       <div style={{ padding: 'var(--sp-section) 0 var(--sp-xxl)', borderBottom: '1px solid var(--color-divider)' }}>
         <h1 style={{ fontSize: 'var(--text-hero)', fontWeight: 600, letterSpacing: '-0.28px', lineHeight: 1.07, color: 'var(--color-ink)', marginBottom: '8px' }}>
           <span style={{ color: 'var(--color-primary)' }}>aha!</span>
         </h1>
-        <p style={{ fontSize: 'var(--text-lead-lg)', fontWeight: 400, lineHeight: 1.14, color: 'var(--color-muted-48)' }}>전문 정보 큐레이션 & 공유 커뮤니티</p>
+        <p style={{ fontSize: 'var(--text-lead-lg)', fontWeight: 400, lineHeight: 1.14, color: 'var(--color-muted-48)' }}>
+          오늘의 IT · 스타트업 · AI 큐레이션
+        </p>
         {!currentUser && (
           <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
             <button onClick={() => navigate('signup')} className="btn-primary">지금 가입하기</button>
@@ -37,20 +30,52 @@ export function HomePage({ navigate }) {
           </div>
         )}
       </div>
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'trending'  && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.trending" title="오늘의 인기글" limit={10} showRank navigate={navigate} />)}
-      {tab === 'rising'    && (risingPosts.length > 0 ? <div>{risingPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.rising" title="실시간 급상승" limit={10} showRank navigate={navigate} />)}
-      {tab === 'ai_feed'   && <CrawlFeed topicKey="home.ai_feed" title="AI 추천 피드" limit={10} navigate={navigate} />}
-      {tab === 'following' && (
-        currentUser
-          ? followPosts.length > 0
-            ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>
-            : <Empty msg="팔로잉 게시글이 없습니다." />
-          : <LoginPrompt navigate={navigate} />
-      )}
+
+      {/* 큐레이션 섹션 — 클릭 없이 다양한 컨텐츠 즉시 노출 */}
+      <div style={{ marginTop: 'var(--sp-xxl)' }}>
+        {/* 1. 사용자 게시글 (있으면) */}
+        {hotPosts.length > 0 && (
+          <section style={{ marginBottom: 32 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, paddingBottom: 8,
+              borderBottom: '2px solid var(--color-ink)' }}>🔥 오늘의 인기 글</h2>
+            {hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}
+          </section>
+        )}
+
+        {/* 2. 실시간 IT 이슈 */}
+        <section style={{ marginBottom: 32 }}>
+          <CrawlFeed topicKey="home.trending" title="🔴 실시간 인기" limit={5} showRank navigate={navigate} />
+        </section>
+
+        {/* 3. AI 트렌드 */}
+        <section style={{ marginBottom: 32 }}>
+          <CrawlFeed topicKey="ai.news" title="🤖 AI 뉴스" limit={5} navigate={navigate} />
+        </section>
+
+        {/* 4. 한국 스타트업 */}
+        <section style={{ marginBottom: 32 }}>
+          <CrawlFeed topicKey="startup.new" title="🚀 한국 스타트업" limit={5} navigate={navigate} />
+        </section>
+
+        {/* 5. 개발 트렌딩 */}
+        <section style={{ marginBottom: 32 }}>
+          <CrawlFeed topicKey="dev.trending" title="💻 개발 트렌딩" limit={5} navigate={navigate} />
+        </section>
+
+        {/* 6. 코인 시세 */}
+        <section style={{ marginBottom: 32 }}>
+          <CrawlFeed topicKey="finance.crypto" title="💰 코인 시세" limit={5} navigate={navigate} />
+        </section>
+
+        {/* 7. 한국 개발자 글 (Velog) */}
+        <section style={{ marginBottom: 32 }}>
+          <CrawlFeed topicKey="learn.korean" title="📚 한국 개발자 글" limit={5} navigate={navigate} />
+        </section>
+      </div>
     </div>
   )
 }
+
 
 // ── 인기(Trending) ───────────────────────────────────────────
 export function TrendingPage({ navigate }) {

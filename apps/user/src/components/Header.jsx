@@ -3,22 +3,14 @@ import { useAuth } from '../context/AuthContext'
 
 const NAV_ITEMS = [
   { label: '홈',       key: 'home' },
-  { label: '인기',     key: 'trending' },
-  { label: 'AI 뉴스',  key: 'ai' },
+  { label: 'AI',       key: 'ai' },
   { label: '개발',     key: 'dev' },
-  { label: '오픈소스', key: 'oss' },
   { label: '스타트업', key: 'startup' },
-  { label: 'IT 뉴스',  key: 'itnews' },
   { label: '디자인',   key: 'design' },
-  { label: '게시판',   key: 'board' },
   { label: '게임',     key: 'game' },
-  { label: '주식/코인',key: 'finance' },
-  { label: '마켓',     key: 'market' },
-  { label: '취업',     key: 'job' },
+  { label: '금융',     key: 'finance' },
   { label: '학습',     key: 'learn' },
-  { label: '논문',     key: 'research' },
-  { label: '영상',     key: 'video' },
-  { label: '라이브',   key: 'live' },
+  { label: '게시판',   key: 'board' },
 ]
 
 export default function Header({ currentPage, navigate }) {
