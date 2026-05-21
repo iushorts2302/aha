@@ -15,9 +15,9 @@ DB_CONFIG = {
     "database": os.environ.get("DB_NAME",     "defaultdb"),
     "charset":  "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
-    "connect_timeout": 3,   # 콜드스타트 3초 제한
-    "read_timeout":    8,
-    "write_timeout":   8,
+    "connect_timeout": 10,  # Aiven SSL 핸드셰이크 3.5s + 여유
+    "read_timeout":    20,
+    "write_timeout":   20,
     "autocommit": False,
     "ssl": {"ssl": {}},     # Aiven 필수
 }

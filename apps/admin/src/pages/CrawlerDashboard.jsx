@@ -192,14 +192,16 @@ export default function CrawlerDashboard() {
         </div>
       </div>
 
-      {/* 통계 카드 */}
+      {/* DB 연결 상태 — 아코디언 (오류 시에만 펼침) */}
+      <DbStatusBar dbStatus={dbStatus} log={log} />
+
+      {/* 통계 카드 — 4개 그리드 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 1, background: 'var(--color-border-soft)', border: '1px solid var(--color-border-soft)', marginBottom: 20 }}>
         {[
           { label: '총 수집 콘텐츠', value: totalItems.toLocaleString(), unit: '개' },
           { label: '활성 토픽',      value: activeCount,                  unit: '개' },
           { label: '만료 토픽',      value: staleCount,                   unit: '개', warn: staleCount > 0 },
           { label: '자동 스케줄',    value: autoRunning ? 'ON' : 'OFF',   unit: '', ok: autoRunning },
-        { label: 'DB 상태', value: dbStatus === 'connected' ? '연결됨' : dbStatus === 'disconnected' ? 'DB 없음' : '확인 중', unit: '', ok: dbStatus === 'connected', warn: dbStatus === 'disconnected' },
         ].map(s => (
           <div key={s.label} style={{ padding: 20, background: '#fff' }}>
             <p style={{ fontSize: 26, fontWeight: 800, color: s.warn ? '#E03131' : s.ok ? 'var(--color-accent)' : 'var(--color-ink)' }}>
@@ -355,3 +357,77 @@ export default function CrawlerDashboard() {
     </div>
   )
 }
+
+/* DB 연결 상태 표시줄 — 정상이면 한 줄, 오류 시 아코디언으로 로그 펼치기 */
+function DbStatusBar({ dbStatus, log }) {
+  const [open, setOpen] = useState(false)
+
+  // 상태별 시각
+  const isConnected = dbStatus === 'connected'
+  const isUnknown   = dbStatus === 'unknown'
+  const isError     = dbStatus === 'disconnected'
+
+  const color = isConnected ? '#00B84F' : isError ? '#E03131' : '#FAB005'
+  const label = isConnected ? 'DB 연결됨' : isError ? 'DB 연결 오류' : 'DB 상태 확인 중'
+  const bg    = isConnected ? '#f0faf4' : isError ? '#fff5f5' : '#fffaf0'
+  const border= isConnected ? 'rgba(0,184,79,0.25)' : isError ? 'rgba(224,49,49,0.25)' : 'rgba(250,176,5,0.25)'
+
+  // 오류 관련 로그만 필터 (최근 50개 중 type=error/warn)
+  const errorLogs = log.filter(l => l.type === 'error' || l.type === 'warn').slice(0, 20)
+
+  return (
+    <div style={{
+      marginBottom: 20, background: bg, border: `1px solid ${border}`,
+      borderRadius: 8, overflow: 'hidden',
+    }}>
+      <div
+        onClick={() => isError && setOpen(o => !o)}
+        style={{
+          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10,
+          cursor: isError ? 'pointer' : 'default',
+          userSelect: 'none',
+        }}>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%', background: color,
+          display: 'inline-block',
+          boxShadow: isConnected ? `0 0 6px ${color}99` : 'none',
+        }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>{label}</span>
+        {isError && (
+          <>
+            <span style={{ fontSize: 11, color: 'var(--color-muted)', marginLeft: 'auto' }}>
+              로그 {errorLogs.length}건
+            </span>
+            <span style={{ fontSize: 14, color: 'var(--color-muted)', transition: 'transform 0.2s',
+              transform: open ? 'rotate(180deg)' : 'rotate(0)' }}>▾</span>
+          </>
+        )}
+      </div>
+
+      {isError && open && (
+        <div style={{
+          borderTop: `1px solid ${border}`, padding: '12px 16px',
+          background: '#fff', maxHeight: 240, overflowY: 'auto',
+        }}>
+          {errorLogs.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--color-muted)', margin: 0 }}>
+              아직 기록된 오류 로그가 없습니다. 작업 후 다시 확인하세요.
+            </p>
+          ) : (
+            errorLogs.map(entry => (
+              <div key={entry.id} style={{
+                fontSize: 12, padding: '6px 0', borderBottom: '1px solid #f5f5f5',
+                color: entry.type === 'error' ? '#C92A2A' : '#5C3A00',
+                fontFamily: 'monospace',
+              }}>
+                <span style={{ color: '#999', marginRight: 8 }}>{entry.ts}</span>
+                {entry.msg}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
