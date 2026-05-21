@@ -23,7 +23,21 @@ DB_CONFIG = {
 }
 
 def get_conn():
-    return pymysql.connect(**DB_CONFIG)
+    """DB 연결. Aiven socket EAGAIN 대비 짧은 백오프 재시도"""
+    import time as _t
+    last_err = None
+    for attempt in range(3):
+        try:
+            return pymysql.connect(**DB_CONFIG)
+        except (pymysql.err.OperationalError, OSError) as e:
+            last_err = e
+            # Errno 16 (resource busy) / 11 (EAGAIN) → 짧은 대기 후 재시도
+            msg = str(e)
+            if 'Errno 16' in msg or 'Errno 11' in msg or 'EAGAIN' in msg:
+                _t.sleep(0.3 * (attempt + 1))
+                continue
+            raise
+    raise last_err
 
 def query(sql, args=None):
     conn = get_conn()
