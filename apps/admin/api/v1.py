@@ -757,7 +757,8 @@ class handler(BaseHTTPRequestHandler):
                     }
                     fallback = EMPTY.get(resource, {"error": "DB unavailable", "db_down": True})
                     status = 401 if resource == "auth" else 200
-                    return self._json(status, {**fallback, "db_down": True})
+                    _debug_trace = traceback.format_exc()[-400:]
+                    return self._json(status, {**fallback, "db_down": True, "_debug": err_msg[:200], "_trace": _debug_trace})
             self._json(500, {"error": err_msg, "trace": traceback.format_exc()[-300:]})
 
     def do_GET(self):    self._handle("GET")
