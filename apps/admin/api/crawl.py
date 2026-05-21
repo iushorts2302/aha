@@ -166,34 +166,6 @@ def mix(*args):
     return r
 
 
-def _youtube_shorts():
-    """인기 테크 YouTube Shorts 큐레이션 (iframe 임베드용)"""
-    # 카테고리별 인기 tech Shorts 채널 영상 검색
-    # GitHub의 awesome-youtube-channels 등에서 채널 ID 수집
-    shorts = [
-        # 프로그래밍 튜토리얼
-        {"id": "dQw4w9WgXcQ", "ch": "Programming with Mosh", "tag": "Python"},
-        {"id": "eIrMbAQSU34", "ch": "Fireship", "tag": "JavaScript"},
-        {"id": "rfscVS0vtbw", "ch": "freeCodeCamp", "tag": "Web"},
-        {"id": "HXV3zeQKqGY", "ch": "Traversy Media", "tag": "CSS"},
-        {"id": "W6NZfCO5SIk", "ch": "JavaScript Mastery", "tag": "React"},
-        {"id": "pTFZFxd5lvs", "ch": "Tech With Tim", "tag": "Python"},
-        {"id": "8JJ101D3knE", "ch": "Kevin Powell", "tag": "CSS"},
-        {"id": "SqcY0GlETPk", "ch": "Theo", "tag": "TypeScript"},
-    ]
-    import time, random
-    random.shuffle(shorts)
-    ts = int(time.time())
-    return [{
-        "title":   f"[Shorts] {s['tag']} — {s['ch']}",
-        "summary": f"{s['ch']} 채널의 인기 숏폼 영상",
-        "tags":    ["YouTube", "Shorts", s["tag"]],
-        "source":  f"https://www.youtube.com/shorts/{s['id']}",
-        "embed":   f"https://www.youtube.com/embed/{s['id']}",
-        "videoId": s["id"],
-        "channel": s["ch"],
-    } for s in shorts[:8]]
-
 # ── 한국 기업 그룹 ─────────────────────────────────────────
 
 KR_STARTUPS = [
@@ -246,8 +218,6 @@ KR_GAME = [
 TOPIC_CRAWLERS = {
 
     # ── home (4) — 종합 피드 ──────────────────────────────
-    # shortform: YouTube Shorts 기술 영상 (iframe 임베드)
-    "home.shortform":  lambda: _youtube_shorts(),
     # trending: 오늘의 GitHub 전체 + 한국 대기업
     "home.trending":   lambda: mix(
         gh_trending(since="daily", limit=5),
@@ -444,7 +414,6 @@ TOPIC_CRAWLERS = {
 
 TOPIC_LABELS = {
     # home
-    "home.shortform": "숏폼 영상",
     "home.trending": "오늘의 인기",  "home.rising": "이번 주 급상승",
     "home.ai_feed":  "AI 추천 피드",
     # dev

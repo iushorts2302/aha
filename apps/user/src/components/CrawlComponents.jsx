@@ -103,7 +103,7 @@ export function SectionHeader({ title, count, onRefresh, loading, source }) {
       </div>
       {onRefresh && (
         <button className="btn btn-link btn-sm p-0 text-decoration-none" onClick={onRefresh} disabled={loading}>
-          {loading ? '로딩중...' : '새로고침'}
+          {'새로고침'}
         </button>
       )}
     </div>
@@ -154,18 +154,16 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
 }
 
 /** 빈 상태 — 로딩 스피너 + 간결한 메시지 */
-export function EmptyState({ message = '불러오는 중...', sub = '' }) {
+export function EmptyState() {
   return (
     <div style={{ textAlign: 'center', padding: '48px 0' }}>
       <div style={{
-        width: 28, height: 28, margin: '0 auto 12px',
+        width: 28, height: 28, margin: '0 auto',
         border: '3px solid var(--color-border-soft)',
         borderTopColor: 'var(--color-primary, #0066CC)',
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite',
       }} />
-      <p style={{ fontSize: 13, color: 'var(--color-muted, #888)', margin: 0 }}>{message}</p>
-      {sub && <p style={{ fontSize: 12, color: 'var(--color-muted, #888)', marginTop: 4 }}>{sub}</p>}
     </div>
   )
 }

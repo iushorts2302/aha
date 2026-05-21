@@ -34,7 +34,6 @@ DEFAULT_CONFIG = {
         {"key":"home.trending",    "catId":"home",    "label":"오늘의 인기글",  "active":True},
         {"key":"home.rising",      "catId":"home",    "label":"실시간 급상승",  "active":True},
         {"key":"home.ai_feed",     "catId":"home",    "label":"AI 추천 피드",   "active":True},
-        {"key":"home.shortform",   "catId":"home",    "label":"숏폼 콘텐츠",    "active":True},
         # ai
         {"key":"ai.news",          "catId":"ai",      "label":"AI 뉴스",        "active":True},
         {"key":"ai.tools",         "catId":"ai",      "label":"AI 도구",        "active":True},

@@ -296,7 +296,7 @@ function GitHubContent({ source, item }) {
 
   if (loading) return (
     <div style={{ padding: 32, background: 'var(--color-parchment)', borderRadius: 'var(--r-lg)', textAlign: 'center' }}>
-      <p style={{ fontSize: 13, color: 'var(--color-muted-48)' }}>README 불러오는 중...</p>
+      <p style={{ fontSize: 13, color: 'var(--color-muted-48)' }}></p>
     </div>
   )
 

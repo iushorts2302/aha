@@ -4,7 +4,6 @@ import { useApp } from '../context/AppContext'
 import { sortPosts } from '../store/algorithm.js'
 import { CrawlFeed, TabNav, PageHeader, ComingSoon } from '../components/CrawlComponents.jsx'
 import { LiveIssueRanking } from '../components/LiveChat.jsx'
-import ShortformFeed from '../components/ShortformFeed.jsx'
 import PostCard from '../components/PostCard.jsx'
 
 // ── 홈 ─────────────────────────────────────────────────────
@@ -16,7 +15,6 @@ export function HomePage({ navigate }) {
     { key: 'trending',  label: '오늘의 인기글' },
     { key: 'rising',    label: '🔥 실시간 급상승' },
     { key: 'ai_feed',   label: 'AI 추천 피드' },
-    { key: 'shortform', label: '숏폼' },
     { key: 'following', label: '팔로잉' },
   ]
   const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
@@ -43,7 +41,6 @@ export function HomePage({ navigate }) {
       {tab === 'trending'  && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.trending" title="오늘의 인기글" limit={10} showRank navigate={navigate} />)}
       {tab === 'rising'    && (risingPosts.length > 0 ? <div>{risingPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="home.rising" title="실시간 급상승" limit={10} showRank navigate={navigate} />)}
       {tab === 'ai_feed'   && <CrawlFeed topicKey="home.ai_feed" title="AI 추천 피드" limit={10} navigate={navigate} />}
-      {tab === 'shortform' && <ShortformFeed topicKey="home.shortform" navigate={navigate} />}
       {tab === 'following' && (
         currentUser
           ? followPosts.length > 0
@@ -91,7 +88,6 @@ export function FeedPage({ navigate }) {
     { key: 'following',   label: 'Following' },
     { key: 'latest',      label: '최신글' },
     { key: 'recommended', label: '추천글' },
-    { key: 'shortform',   label: '숏폼' },
     { key: 'ai',          label: 'AI 맞춤 피드' },
   ]
   const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
@@ -105,7 +101,6 @@ export function FeedPage({ navigate }) {
       {tab === 'following'  && (currentUser ? (followPosts.length > 0 ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <Empty msg="팔로잉 게시글이 없습니다." />) : <LoginPrompt navigate={navigate} />)}
       {tab === 'latest'     && <div>{latestPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>}
       {tab === 'recommended'&& <CrawlFeed topicKey="home.trending" title="추천글" limit={10} navigate={navigate} />}
-      {tab === 'shortform'  && <ShortformFeed topicKey="home.shortform" navigate={navigate} />}
       {tab === 'ai'         && <CrawlFeed topicKey="home.ai_feed" title="AI 맞춤 피드" limit={10} navigate={navigate} />}
     </div>
   )
@@ -437,7 +432,6 @@ export function VideoPage({ navigate }) {
       <PageHeader title="영상" subtitle="YouTube Trending · TikTok · Vimeo 기반 인기 영상" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'trending' && <CrawlFeed topicKey="video.trending" title="인기 영상" limit={10} navigate={navigate} />}
-      {tab === 'shorts'   && <ShortformFeed topicKey="home.shortform" navigate={navigate} />}
     </div>
   )
 }
