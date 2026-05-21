@@ -66,6 +66,7 @@ export function AdminProvider({ children }) {
     const blocked = getBlockedIds()
     return [].map(p => blocked.has(p.id) ? { ...p, status: 'hidden' } : p)
   })
+  const [comments, setComments]       = useState([])
   const [stats, setStats] = useState({
     totalUsers: 0, activeUsers: 0, totalPosts: 0, totalViews: 0, activeSources: 0
   })
@@ -73,12 +74,13 @@ export function AdminProvider({ children }) {
   // DB 데이터 로드
   async function loadAll() {
     try {
-      const [catData, topicData, srcData, userData, postData] = await Promise.all([
+      const [catData, topicData, srcData, userData, postData, cmtData] = await Promise.all([
         api('/categories'),
         api('/topics').catch(() => ({ topics: [] })),
         api('/sources').catch(() => ({ sources: [] })),
         api('/users').catch(() => ({ users: [] })),
         api('/posts?limit=50').catch(() => ({ posts: [] })),
+        api('/comments?limit=100&status=all').catch(() => ({ comments: [] })),
       ])
       const cats = catData.categories || []
       setCategories(cats.map(c => ({ ...c, id: String(c.seq_no || c.category_id), name: c.label })))
@@ -108,6 +110,16 @@ export function AdminProvider({ children }) {
       const activeSrcs  = (srcData.sources||[]).filter(s => s.active_yn !== 'N').length
       const totalCrawled = 0  // crawl_items는 별도 API로 조회
       setStats({ totalUsers: rawUsers.length, activeUsers, totalPosts: rawPosts.length, totalViews, activeSources: activeSrcs })
+      // 댓글 매핑
+      const rawComments = cmtData.comments || []
+      setComments(rawComments.map(c => ({
+        ...c, id: String(c.seq_no),
+        postId: String(c.post_seq_no),
+        authorId: String(c.author_seq_no),
+        authorNickname: c.author_nickname || '',
+        postTitle: c.post_title || '',
+        createdAt: c.created_at || '',
+      })))
       setDbAvailable(true)
     } catch (e) {
       console.warn('DB 로드 실패, 기본 데이터 사용:', e)
@@ -275,14 +287,37 @@ export function AdminProvider({ children }) {
     setPosts(p => p.map(post => post.id === id ? { ...post, status: 'published' } : post))
   }
 
+  // ── 댓글 관리 ────────────────────────────────────────
+  async function deleteComment(id) {
+    if (dbAvailable) {
+      try { await api('/comments', { method: 'DELETE', body: JSON.stringify({ id }) }) } catch {}
+    }
+    setComments(cs => cs.map(c => c.id === id ? { ...c, status: 'deleted' } : c))
+  }
+  async function refreshComments() {
+    if (!dbAvailable) return
+    try {
+      const d = await api('/comments?limit=100&status=all')
+      setComments((d.comments || []).map(c => ({
+        ...c, id: String(c.seq_no),
+        postId: String(c.post_seq_no),
+        authorId: String(c.author_seq_no),
+        authorNickname: c.author_nickname || '',
+        postTitle: c.post_title || '',
+        createdAt: c.created_at || '',
+      })))
+    } catch {}
+  }
+
   return (
     <AdminContext.Provider value={{
-      admin, dbAvailable, stats, categories, topics, sources, users, posts,
+      admin, dbAvailable, stats, categories, topics, sources, users, posts, comments,
       login, logout, loadAll,
       addCategory, updateCategory, deleteCategory,
       addTopic, updateTopic, deleteTopic,
       addSource, updateSource, deleteSource, toggleSource,
       toggleUserStatus, hidePost, deletePost, restorePost,
+      deleteComment, refreshComments,
     }}>
       {children}
     </AdminContext.Provider>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AdminProvider, useAdmin } from './context/AdminContext'
 import { AdminHeader, AdminSidebar, AdminOffcanvas } from './components/AdminLayout'
 import AdminLoginPage from './pages/AdminLoginPage'
-import { DashboardPage, UserManager, PostManager } from './pages/AdminPages'
+import { DashboardPage, UserManager, PostManager, CommentManager} from './pages/AdminPages'
 import { CategoryManager, TopicManager, SourceManager } from './pages/CrawlConfigManager'
 import CrawlerDashboard from './pages/CrawlerDashboard'
 import DataPreview from './pages/DataPreview'
@@ -23,6 +23,7 @@ function AdminApp() {
       case 'sources':    return <SourceManager />
       case 'users':      return <UserManager />
       case 'posts':      return <PostManager />
+      case 'comments':   return <CommentManager />
       default:           return <DashboardPage />
     }
   }

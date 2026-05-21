@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { key: 'sources',    label: '크롤링 소스',      icon: '🔗' },
   { key: 'users',      label: '사용자 관리',      icon: '👥' },
   { key: 'posts',      label: '게시글 관리',      icon: '📝' },
+  { key: 'comments',   label: '댓글 관리',        icon: '💬' },
 ]
 
 /* 사이드바 내용 (데스크톱 + 오프캔버스 공용) */

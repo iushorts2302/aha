@@ -492,3 +492,116 @@ export function PostManager() {
     </div>
   )
 }
+
+/* ── 댓글 관리 ────────────────────────────────────────── */
+export function CommentManager() {
+  const { comments, deleteComment, refreshComments } = useAdmin()
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')  // all|active|deleted
+
+  const filtered = comments.filter(c => {
+    if (statusFilter !== 'all' && c.status !== statusFilter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return (c.body || '').toLowerCase().includes(q) ||
+             (c.authorNickname || '').toLowerCase().includes(q) ||
+             (c.postTitle || '').toLowerCase().includes(q)
+    }
+    return true
+  })
+
+  const activeCount  = comments.filter(c => c.status === 'active').length
+  const deletedCount = comments.filter(c => c.status === 'deleted').length
+
+  return (
+    <div className="fade-up">
+      <PageHeader
+        title="댓글 관리"
+        subtitle={`총 ${comments.length}개 · 활성 ${activeCount} · 삭제 ${deletedCount} · 표시 ${filtered.length}`}
+      />
+      <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+        <input
+          value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="댓글 내용 / 작성자 / 글 제목 검색..."
+          style={{ flex:'1 1 250px', minWidth:0, height:36, padding:'0 12px',
+            borderRadius:8, border:'1px solid var(--color-border-soft)', fontSize:13 }}
+        />
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
+          style={{ height:36, padding:'0 12px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', fontSize:13 }}>
+          <option value="all">전체 상태</option>
+          <option value="active">활성</option>
+          <option value="deleted">삭제됨</option>
+        </select>
+        <button
+          onClick={refreshComments}
+          style={{ height:36, padding:'0 16px', borderRadius:8,
+            border:'1px solid var(--color-border-soft)', background:'#fff',
+            fontSize:13, cursor:'pointer' }}>
+          새로고침
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="table-responsive">
+          <table className="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th style={{ width:'40%' }}>내용</th>
+                <th>작성자</th>
+                <th>원글</th>
+                <th>좋아요</th>
+                <th>작성일</th>
+                <th>상태</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} className="text-center text-muted py-4">댓글이 없습니다</td></tr>
+              )}
+              {filtered.map(c => (
+                <tr key={c.id} style={{ opacity: c.status === 'deleted' ? 0.5 : 1 }}>
+                  <td style={{ maxWidth:300 }}>
+                    <span className="text-truncate d-inline-block" style={{ maxWidth:280 }}
+                      title={c.body}>{c.body}</span>
+                  </td>
+                  <td className="fw-medium">{c.authorNickname || '-'}</td>
+                  <td style={{ maxWidth:160 }}>
+                    <span className="text-truncate d-inline-block small text-muted"
+                      style={{ maxWidth:140 }} title={c.postTitle}>{c.postTitle || '-'}</span>
+                  </td>
+                  <td>{c.like_count || 0}</td>
+                  <td className="small text-muted">
+                    {c.createdAt ? String(c.createdAt).slice(0,16) : '-'}
+                  </td>
+                  <td>
+                    <span className={`badge ${c.status === 'active' ? 'bg-success' : 'bg-secondary'}`}>
+                      {c.status === 'active' ? '활성' : '삭제됨'}
+                    </span>
+                  </td>
+                  <td>
+                    {c.status === 'active' ? (
+                      <button
+                        className="btn btn-xs btn-outline-danger"
+                        onClick={() => {
+                          if (confirm('이 댓글을 삭제하시겠습니까?\n삭제 후 사용자에게 보이지 않습니다.')) {
+                            deleteComment(c.id)
+                          }
+                        }}>
+                        삭제
+                      </button>
+                    ) : (
+                      <span className="small text-muted">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
