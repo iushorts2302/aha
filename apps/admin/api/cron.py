@@ -19,9 +19,9 @@ PRIORITY_TOPICS = [
     "finance.crypto",
     "learn.tutorial",
     "job.dev",
-    "trending.realtime",
+    "home.trending",
     "board.it",
-    "research.ai",
+    "ai.research",
     "market.deal",
 ]
 
