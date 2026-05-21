@@ -387,11 +387,15 @@ class handler(BaseHTTPRequestHandler):
 
             step = params.get("step", ["all"])[0]
 
-            if step in ("all", "tables"):
+            if step in ("all", "tables", "new"):
                 # ── 1. 테이블 생성 ──────────────────────────
+                # 'new' = 신규 추가 테이블만 처리 (tb_report, tb_admin_log)
+                NEW_ONLY = ("tb_report", "tb_admin_log")
                 created = 0
                 for ddl in DDL_TABLES:
                     table_name = ddl.split("EXISTS")[1].split("(")[0].strip()
+                    if step == "new" and table_name not in NEW_ONLY:
+                        continue
                     try:
                         db.execute(ddl)
                         result["tables"][table_name] = "ok"
