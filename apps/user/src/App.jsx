@@ -57,9 +57,11 @@ function AppInner() {
   useEffect(() => {
     const t = setTimeout(() => {
       prefetchTopics([
-        'home.trending', 'dev.trending', 'ai.news',
-        'it.news', 'game.news', 'startup.new',
-        'oss.trending', 'finance.crypto', 'job.dev', 'learn.tutorial',
+        // AI 최상단 섹션 — 가장 먼저 캐시 워밍
+        'ai.trend', 'ai.tools', 'ai.research',
+        // 그 외 홈 큐레이션 섹션
+        'home.trending', 'ai.news', 'startup.new',
+        'dev.trending', 'finance.crypto', 'learn.korean',
       ])
     }, 2000)
     return () => clearTimeout(t)

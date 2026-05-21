@@ -33,7 +33,32 @@ export function HomePage({ navigate }) {
 
       {/* 큐레이션 섹션 — 클릭 없이 다양한 컨텐츠 즉시 노출 */}
       <div style={{ marginTop: 'var(--sp-xxl)' }}>
-        {/* 1. 사용자 게시글 (있으면) */}
+        {/* 1. AI 트렌드 — 최상단 강조 (그라데이션 배경 박스) */}
+        <section style={{
+          marginBottom: 32, padding: '20px 20px 4px',
+          background: 'linear-gradient(135deg, #f0f6ff 0%, #faf5ff 100%)',
+          border: '1px solid rgba(0,102,204,0.12)',
+          borderRadius: 14,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 20 }}>🤖</span>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--color-ink)' }}>
+              AI 트렌드
+            </h2>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99,
+              background: 'var(--color-primary, #0066CC)', color: '#fff', letterSpacing: '0.3px',
+            }}>HOT</span>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--color-muted, #888)', margin: '0 0 16px' }}>
+            지금 가장 빠르게 변화하는 AI 트렌드 · 도구 · 연구를 한눈에
+          </p>
+          <CrawlFeed topicKey="ai.trend"     title="🔥 AI 트렌드"   limit={5} showRank navigate={navigate} />
+          <CrawlFeed topicKey="ai.tools"     title="🛠 AI 도구/SDK"  limit={5} navigate={navigate} />
+          <CrawlFeed topicKey="ai.research"  title="📄 AI 논문/연구" limit={4} navigate={navigate} />
+        </section>
+
+        {/* 2. 사용자 게시글 (있으면) */}
         {hotPosts.length > 0 && (
           <section style={{ marginBottom: 32 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, paddingBottom: 8,
@@ -42,32 +67,32 @@ export function HomePage({ navigate }) {
           </section>
         )}
 
-        {/* 2. 실시간 IT 이슈 */}
+        {/* 3. 실시간 IT 이슈 */}
         <section style={{ marginBottom: 32 }}>
           <CrawlFeed topicKey="home.trending" title="🔴 실시간 인기" limit={5} showRank navigate={navigate} />
         </section>
 
-        {/* 3. AI 트렌드 */}
+        {/* 4. AI 일반 뉴스 */}
         <section style={{ marginBottom: 32 }}>
-          <CrawlFeed topicKey="ai.news" title="🤖 AI 뉴스" limit={5} navigate={navigate} />
+          <CrawlFeed topicKey="ai.news" title="📰 AI 뉴스" limit={5} navigate={navigate} />
         </section>
 
-        {/* 4. 한국 스타트업 */}
+        {/* 5. 한국 스타트업 */}
         <section style={{ marginBottom: 32 }}>
           <CrawlFeed topicKey="startup.new" title="🚀 한국 스타트업" limit={5} navigate={navigate} />
         </section>
 
-        {/* 5. 개발 트렌딩 */}
+        {/* 6. 개발 트렌딩 */}
         <section style={{ marginBottom: 32 }}>
           <CrawlFeed topicKey="dev.trending" title="💻 개발 트렌딩" limit={5} navigate={navigate} />
         </section>
 
-        {/* 6. 코인 시세 */}
+        {/* 7. 코인 시세 */}
         <section style={{ marginBottom: 32 }}>
           <CrawlFeed topicKey="finance.crypto" title="💰 코인 시세" limit={5} navigate={navigate} />
         </section>
 
-        {/* 7. 한국 개발자 글 (Velog) */}
+        {/* 8. 한국 개발자 글 (Velog) */}
         <section style={{ marginBottom: 32 }}>
           <CrawlFeed topicKey="learn.korean" title="📚 한국 개발자 글" limit={5} navigate={navigate} />
         </section>

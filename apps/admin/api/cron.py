@@ -9,18 +9,20 @@ sys.path.insert(0, os.path.dirname(__file__))
 from crawl import TOPIC_CRAWLERS, enrich
 
 PRIORITY_TOPICS = [
+    # AI 우선 (홈 최상단 섹션)
+    "ai.trend",
+    "ai.tools",
+    "ai.research",
+    "ai.news",
+    "home.ai_feed",
+    # 홈/개발
     "home.trending",
     "home.rising",
-    "home.ai_feed",
     "dev.trending",
     "dev.javascript",
     "dev.python",
     "dev.devops",
     "dev.tools",
-    "ai.news",
-    "ai.tools",
-    "ai.trend",
-    "ai.research",
     "startup.new",
     "startup.funding",
     "startup.product",
