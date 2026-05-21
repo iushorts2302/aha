@@ -99,18 +99,34 @@ export default function WritePage({ navigate }) {
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-placeholder)', marginBottom: 'var(--space-2)' }}>
                 # 제목 &nbsp;## 소제목 &nbsp;- 목록 &nbsp;1. 번호 목록 지원
               </p>
-              <textarea className="input" style={{ minHeight: '360px', lineHeight: 1.7, fontSize: 'var(--text-sm)' }}
+              <textarea
                 placeholder="내용을 입력하세요..."
-                value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} />
+                value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+                style={{
+                  width: '100%', minHeight: '360px',
+                  padding: '14px 16px',
+                  border: '1px solid var(--color-border, #e0e0e0)',
+                  borderRadius: '10px',
+                  fontSize: 'var(--text-sm)', lineHeight: 1.7,
+                  color: 'var(--color-ink)', outline: 'none',
+                  fontFamily: 'inherit', resize: 'vertical',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s',
+                }}
+                onFocus={e => e.target.style.borderColor = 'var(--color-primary, #0066CC)'}
+                onBlur={e => e.target.style.borderColor = 'var(--color-border, #e0e0e0)'}
+              />
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-placeholder)', marginTop: 'var(--space-1)', textAlign: 'right' }}>
                 {charCount}자 · {wordCount}단어
               </p>
             </>
           ) : (
             <div style={{
-              minHeight: '360px', padding: 'var(--space-5)',
-              border: '1px solid var(--color-border)', borderRadius: 'var(--radius-btn)',
-              background: 'var(--color-surface)',
+              minHeight: '360px',
+              padding: '20px 24px',
+              border: '1px solid var(--color-border, #e0e0e0)',
+              borderRadius: '10px',
+              background: '#fafafa',
               overflowY: 'auto',
             }}>
               {renderPreview(form.body)}
