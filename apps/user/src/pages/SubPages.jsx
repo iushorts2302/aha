@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { sortPosts } from '../store/algorithm.js'
 import { CrawlFeed, TabNav, PageHeader, ComingSoon } from '../components/CrawlComponents.jsx'
-import { LiveIssueRanking } from '../components/LiveChat.jsx'
 import PostCard from '../components/PostCard.jsx'
 
 // ── 홈 ─────────────────────────────────────────────────────
@@ -102,60 +101,6 @@ export function HomePage({ navigate }) {
   )
 }
 
-
-// ── 인기(Trending) ───────────────────────────────────────────
-export function TrendingPage({ navigate }) {
-  const [tab, setTab] = useState('realtime')
-  const { posts, comments } = useApp()
-  const TABS = [
-    { key: 'realtime', label: '🔴 실시간 인기' },
-    { key: 'daily',    label: '일간 베스트' },
-    { key: 'weekly',   label: '주간 베스트' },
-    { key: 'debate',   label: '💬 논쟁중' },
-  ]
-  const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
-  const hotPosts = sortPosts(posts, commentsMap, 'hot').slice(0, 15)
-  const topPosts = sortPosts(posts, commentsMap, 'top').slice(0, 15)
-  const debatePosts = posts.filter(p => (commentsMap[p.id]||0) >= 2).sort((a,b) => (commentsMap[b.id]||0)-(commentsMap[a.id]||0)).slice(0,15)
-
-  return (
-    <div className="fade-up">
-      <PageHeader title="인기" subtitle="Hot Score 알고리즘 기반 실시간 랭킹" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'realtime' && (hotPosts.length > 0 ? <div>{hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.realtime" title="실시간 인기" limit={15} showRank navigate={navigate} />)}
-      {tab === 'daily'    && (topPosts.length > 0 ? <div>{topPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.daily" title="일간 베스트" limit={15} showRank navigate={navigate} />)}
-      {tab === 'weekly'   && <CrawlFeed topicKey="trending.weekly" title="주간 베스트" limit={15} showRank navigate={navigate} />}
-      {tab === 'debate'   && (debatePosts.length > 0 ? <div>{debatePosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <CrawlFeed topicKey="trending.realtime" title="논쟁중" limit={15} navigate={navigate} />)}
-    </div>
-  )
-}
-
-// ── 피드(Feed) ───────────────────────────────────────────────
-export function FeedPage({ navigate }) {
-  const [tab, setTab] = useState('latest')
-  const { currentUser } = useAuth()
-  const { posts, comments } = useApp()
-  const TABS = [
-    { key: 'following',   label: 'Following' },
-    { key: 'latest',      label: '최신글' },
-    { key: 'recommended', label: '추천글' },
-    { key: 'ai',          label: 'AI 맞춤 피드' },
-  ]
-  const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
-  const followPosts = currentUser ? sortPosts(posts.filter(p => currentUser.following.includes(p.authorId)), commentsMap, 'hot') : []
-  const latestPosts = sortPosts(posts, commentsMap, 'new')
-
-  return (
-    <div className="fade-up">
-      <PageHeader title="피드" subtitle="나만의 맞춤 콘텐츠 피드" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'following'  && (currentUser ? (followPosts.length > 0 ? <div>{followPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <Empty msg="팔로잉 게시글이 없습니다." />) : <LoginPrompt navigate={navigate} />)}
-      {tab === 'latest'     && <div>{latestPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div>}
-      {tab === 'recommended'&& <CrawlFeed topicKey="home.trending" title="추천글" limit={10} navigate={navigate} />}
-      {tab === 'ai'         && <CrawlFeed topicKey="home.ai_feed" title="AI 맞춤 피드" limit={10} navigate={navigate} />}
-    </div>
-  )
-}
 
 // ── 게시판(Board) ────────────────────────────────────────────
 export function BoardPageNew({ navigate, searchQuery }) {
@@ -266,23 +211,6 @@ export function DevPage({ navigate }) {
   )
 }
 
-// ── 오픈소스(OSS) ────────────────────────────────────────────
-export function OSSPage({ navigate }) {
-  const [tab, setTab] = useState('trending')
-  const TABS = [
-    { key: 'trending', label: 'OSS 트렌딩' },
-    { key: 'awesome',  label: 'Awesome 리스트' },
-    { key: 'new',      label: '신규 OSS' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="오픈소스" subtitle="GitHub · Awesome Lists · GitLab 기반" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`oss.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
 // ── 디자인(Design) ───────────────────────────────────────────
 export function DesignPage({ navigate }) {
   const [tab, setTab] = useState('ui')
@@ -296,88 +224,6 @@ export function DesignPage({ navigate }) {
       <PageHeader title="디자인" subtitle="Dribbble · Behance · Awwwards 기반 UI/UX 레퍼런스" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`design.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
-// ── IT 뉴스 ─────────────────────────────────────────────────
-export function ITNewsPage({ navigate }) {
-  const [tab, setTab] = useState('news')
-  const TABS = [
-    { key: 'news',     label: 'IT 뉴스' },
-    { key: 'security', label: '보안' },
-    { key: 'cloud',    label: '클라우드' },
-    { key: 'mobile',   label: '모바일' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="IT 뉴스" subtitle="ZDNet · GeekNews · Ars Technica 기반 기술 뉴스" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`it.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
-// ── 갤러리(Gallery) ──────────────────────────────────────────
-export function GalleryPage({ navigate }) {
-  const [tab, setTab] = useState('trending')
-  const TABS = [
-    { key: 'trending', label: '인기 이미지' },
-    { key: 'ai',       label: 'AI 이미지' },
-    { key: 'design',   label: '디자인 에셋' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="갤러리" subtitle="Pinterest · Unsplash · Pexels 기반 이미지 큐레이션" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`image.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
-// ── 커뮤니티(Community) ──────────────────────────────────────
-export function CommunityPage({ navigate }) {
-  const [tab, setTab] = useState('dev')
-  const TABS = [
-    { key: 'dev', label: '개발' }, { key: 'invest', label: '투자' },
-    { key: 'travel', label: '여행' }, { key: 'fashion', label: '패션' }, { key: 'fitness', label: '운동' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="커뮤니티" subtitle="관심사 기반 전문 커뮤니티" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`community.${tab}`} title={TABS.find(t=>t.key===tab)?.label + ' 커뮤니티'} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
-// ── 정보(Knowledge) ──────────────────────────────────────────
-export function KnowledgePage({ navigate }) {
-  const [tab, setTab] = useState('news')
-  const TABS = [
-    { key: 'news', label: '뉴스' }, { key: 'tips', label: '팁' },
-    { key: 'review', label: '리뷰' }, { key: 'tutorial', label: '튜토리얼' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="정보" subtitle="검증된 지식과 정보" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`knowledge.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
-// ── 마켓(Market) ─────────────────────────────────────────────
-export function MarketPage({ navigate }) {
-  const [tab, setTab] = useState('deal')
-  const TABS = [
-    { key: 'deal', label: '핫딜' }, { key: 'used', label: '중고거래' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="마켓" subtitle="뽐뿌 · 퀘이사존 · Slickdeals 기반 핫딜/할인" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`market.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
   )
 }
@@ -412,21 +258,6 @@ export function FinancePage({ navigate }) {
   )
 }
 
-// ── 취업(Job) ────────────────────────────────────────────────
-export function JobPage({ navigate }) {
-  const [tab, setTab] = useState('dev')
-  const TABS = [
-    { key: 'dev', label: '개발 채용' }, { key: 'startup', label: '스타트업 채용' }, { key: 'algorithm', label: '알고리즘' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="취업" subtitle="원티드 · 로켓펀치 · LinkedIn Jobs 기반 채용 정보" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`job.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
 // ── 학습(Learn) ──────────────────────────────────────────────
 export function LearnPage({ navigate }) {
   const [tab, setTab] = useState('tutorial')
@@ -438,79 +269,6 @@ export function LearnPage({ navigate }) {
       <PageHeader title="학습/강의" subtitle="Inflearn · Coursera · Udemy 기반 교육 콘텐츠" />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`learn.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
-// ── 논문/리서치(Research) ────────────────────────────────────
-export function ResearchPage({ navigate }) {
-  const [tab, setTab] = useState('ai')
-  const TABS = [
-    { key: 'ai', label: 'AI 논문' }, { key: 'paper', label: '최신 논문' }, { key: 'data', label: '데이터 사이언스' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="논문/리서치" subtitle="arXiv · Google Scholar · Semantic Scholar 기반" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`research.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
-// ── 유머/밈(Humor) ───────────────────────────────────────────
-export function HumorPage({ navigate }) {
-  const [tab, setTab] = useState('meme')
-  const TABS = [{ key: 'meme', label: '밈' }, { key: 'funny', label: '유머' }]
-  return (
-    <div className="fade-up">
-      <PageHeader title="유머/밈" subtitle="9GAG · Imgur · Reddit Memes 기반 밈 콘텐츠" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <CrawlFeed topicKey={`humor.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
-    </div>
-  )
-}
-
-// ── 영상(Video) ──────────────────────────────────────────────
-export function VideoPage({ navigate }) {
-  const [tab, setTab] = useState('trending')
-  const TABS = [{ key: 'trending', label: '인기 영상' }, { key: 'shorts', label: '숏폼' }]
-  return (
-    <div className="fade-up">
-      <PageHeader title="영상" subtitle="YouTube Trending · TikTok · Vimeo 기반 인기 영상" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'trending' && <CrawlFeed topicKey="video.trending" title="인기 영상" limit={10} navigate={navigate} />}
-    </div>
-  )
-}
-
-// ── 라이브(Live) ─────────────────────────────────────────────
-export function LivePage({ navigate }) {
-  return (
-    <div className="fade-up">
-      <PageHeader title="라이브" subtitle="지금 이 순간, 실시간 이슈" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'start' }}>
-        <CrawlFeed topicKey="home.trending" title="🔴 실시간 이슈" limit={10} navigate={navigate} />
-        <LiveIssueRanking />
-      </div>
-    </div>
-  )
-}
-
-// ── AI 허브(AIHub) ───────────────────────────────────────────
-export function AIHubPage({ navigate }) {
-  const [tab, setTab] = useState('trend')
-  const TABS = [
-    { key: 'trend',   label: 'AI 트렌드' },
-    { key: 'summary', label: 'AI 요약' },
-    { key: 'tools',   label: 'AI 도구' },
-  ]
-  return (
-    <div className="fade-up">
-      <PageHeader title="AI 허브" subtitle="AI로 더 스마트하게 탐색하기" />
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'trend'   && <CrawlFeed topicKey="aihub.trend" title="AI 트렌드" limit={10} navigate={navigate} />}
-      {tab === 'summary' && <CrawlFeed topicKey="aihub.summary" title="AI 요약" limit={10} navigate={navigate} />}
-      {tab === 'tools'   && <CrawlFeed topicKey="ai.tools" title="AI 도구" limit={10} navigate={navigate} />}
     </div>
   )
 }

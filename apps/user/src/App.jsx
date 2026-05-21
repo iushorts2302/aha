@@ -1,4 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import {
+  useState,
+  useRef,
+  useEffect } from 'react'
 import { AuthProvider } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
 import Header from './components/Header'
@@ -9,29 +12,35 @@ import CrawlDetailPage from './pages/CrawlDetailPage'
 import WritePage       from './pages/WritePage'
 import ProfilePage     from './pages/ProfilePage'
 import SearchPage      from './pages/SearchPage'
-import { BookmarksPage, CategoryPage } from './pages/MiscPages'
-import { LoginPage, SignupPage }       from './pages/AuthPages'
+import { BookmarksPage,
+  CategoryPage } from './pages/MiscPages'
+import { LoginPage,
+  SignupPage }       from './pages/AuthPages'
 import MaintenancePage from './pages/MaintenancePage'
-import { getState, onStateChange, CB_STATE } from './store/circuitBreaker.js'
+import { getState,
+  onStateChange,
+  CB_STATE } from './store/circuitBreaker.js'
 import { prefetchTopics } from './store/crawlStore.js'
 
 import {
-  HomePage, TrendingPage, FeedPage, BoardPageNew,
-  AIPage, StartupPage, DevPage, OSSPage, DesignPage,
-  ITNewsPage, GalleryPage, CommunityPage, KnowledgePage,
-  MarketPage, GamePage, FinancePage, JobPage, LearnPage,
-  ResearchPage, HumorPage, VideoPage, LivePage, AIHubPage,
-  NotificationPage, MyPage,
+  HomePage,
+  BoardPageNew,
+  AIPage,
+  StartupPage,
+  DevPage,
+  DesignPage,
+  GamePage,
+  FinancePage,
+  LearnPage,
+  NotificationPage,
+  MyPage,
 } from './pages/SubPages'
 
 const NAV_MAP = {
-  home: HomePage, trending: TrendingPage, feed: FeedPage, board: BoardPageNew,
-  ai: AIPage, startup: StartupPage, dev: DevPage, oss: OSSPage,
-  design: DesignPage, itnews: ITNewsPage, gallery: GalleryPage,
-  community: CommunityPage, knowledge: KnowledgePage, market: MarketPage,
-  game: GamePage, finance: FinancePage, job: JobPage, learn: LearnPage,
-  research: ResearchPage, humor: HumorPage, video: VideoPage, live: LivePage,
-  aihub: AIHubPage, notification: NotificationPage, my: MyPage,
+  home: HomePage, board: BoardPageNew,
+  ai: AIPage, startup: StartupPage, dev: DevPage,
+  design: DesignPage, game: GamePage, finance: FinancePage, learn: LearnPage,
+  notification: NotificationPage, my: MyPage,
 }
 
 function parseRoute(route) {

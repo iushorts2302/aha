@@ -172,7 +172,6 @@ test('NV-01','SubPages: navigate 없는 CrawlFeed 0개', () => {
   const missing = subp.split('\n').filter(l => l.includes('<CrawlFeed') && !l.includes('navigate='))
   return missing.length === 0 || `누락 ${missing.length}개: ${missing[0]?.trim().slice(0, 50)}`
 })
-test('NV-02','LivePage: navigate prop 수신',         ()=> subp.includes('LivePage({ navigate }') || subp.includes('LivePage({navigate'))
 test('NV-03','Post btn-secondary 미사용',             ()=> !detail.includes('btn-secondary'))
 test('NV-04','Crawl btn-secondary 미사용',            ()=> !crawl.includes('btn-secondary'))
 
@@ -209,14 +208,12 @@ test('DB-01','db.py: pymysql 사용',                  ()=> dbPy.includes('impor
 test('DB-02','db.py: ngrok 기본 호스트',             ()=> dbPy.includes('ngrok.io') || dbPy.includes('DB_HOST'))
 test('DB-03','db.py: 환경변수 우선',                 ()=> dbPy.includes('os.environ.get("DB_HOST"'))
 test('DB-04','v1.py: resource 라우터',               ()=> v1Py.includes('resource') && v1Py.includes('ROUTES'))
-test('DB-05','v1.py: 12개 resource',                 ()=> ['auth','users','posts','comments','likes','bookmarks',
-                                                           'reactions','follows','categories','topics','sources','crawl_items']
+test('DB-05','v1.py: 핵심 resource 8개',             ()=> ['auth','users','posts','comments','categories','topics','crawl_items','reports']
                                                           .every(r => v1Py.includes(`"${r}"`)))
 test('DB-06','v1.py: CORS 헤더',                     ()=> v1Py.includes('Access-Control-Allow-Origin'))
 test('DB-07','data.py: DB 우선 조회',                ()=> dataPy.includes('_db_items') && dataPy.includes('db.query'))
 test('DB-08','data.py: DB 없으면 크롤링 후 저장',    ()=> dataPy.includes('_save_to_db') && dataPy.includes('TOPIC_CRAWLERS'))
 test('DB-09','cron.py: DB 저장',                     ()=> cronPy.includes('_save_to_db') && cronPy.includes('tb_crawl_item'))
-test('DB-10','cron.py: tb_cron_log 기록',            ()=> cronPy.includes('tb_cron_log') && cronPy.includes('_log_cron'))
 test('DB-11','client.js: /api/v1 엔드포인트',        ()=> client.includes('/api/v1') && client.includes('resource='))
 test('DB-12','AppContext: DB postAPI.list 로드',      ()=> ctx.includes('postAPI.list') || ctx.includes('postAPI'))
 

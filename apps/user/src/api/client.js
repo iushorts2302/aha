@@ -74,11 +74,12 @@ export const userAPI = {
   get:    (id)     => req('users', 'GET', null, { id }),
   update: (id, d)  => req('users', 'PATCH', { id, ...d }),
   delete: (id)     => req('users', 'DELETE', { id }),
-  getBookmarks:   (uid)         => req('bookmarks', 'GET', null, { user_id: uid }),
-  toggleBookmark: (uid, postId) => req('bookmarks', 'POST', { user_id: uid, post_id: postId }),
-  getFollowing: (uid)            => req('follows', 'GET', null, { user_id: uid, type: 'following' }),
-  getFollowers: (uid)            => req('follows', 'GET', null, { user_id: uid, type: 'followers' }),
-  toggleFollow: (fromId, toId)   => req('follows', 'POST', { follower_id: fromId, followee_id: toId }),
+  // bookmarks/follows: localStorage 기반 (서버 동기화 비활성)
+  getBookmarks:   () => Promise.resolve({ bookmarks: [] }),
+  toggleBookmark: () => Promise.resolve({ ok: true }),
+  getFollowing: () => Promise.resolve({ users: [] }),
+  getFollowers: () => Promise.resolve({ users: [] }),
+  toggleFollow: () => Promise.resolve({ ok: true }),
 }
 
 // ── 게시글 ──────────────────────────────────────────────
@@ -90,7 +91,7 @@ export const postAPI = {
   update: (id, data) => req('posts', 'PATCH', { id, ...data }),
   remove: (id)       => req('posts', 'DELETE', { id }),
   toggleLike: (postId, userId) =>
-    req('likes', 'POST', { post_id: postId, user_id: userId }),
+    Promise.resolve({ ok: true }),  // tb_post_like 제거됨, localStorage 사용
 }
 
 // ── 댓글 ────────────────────────────────────────────────
@@ -103,18 +104,7 @@ export const commentAPI = {
 }
 
 // ── 이모지 반응 ─────────────────────────────────────────
-export const reactionAPI = {
-  get: (targetType, targetId, userId) =>
-    req('reactions', 'GET', null, {
-      target_type: targetType, target_id: targetId,
-      ...(userId ? { user_id: userId } : {}),
-    }),
-  toggle: (targetType, targetId, userId, reactionKey) =>
-    req('reactions', 'POST', {
-      target_type: targetType, target_id: targetId,
-      user_id: userId, reaction_key: reactionKey,
-    }),
-}
+// reactionAPI: 제거됨 (tb_reaction 미사용)
 
 // ── 카테고리/토픽 ────────────────────────────────────────
 export const categoryAPI = {

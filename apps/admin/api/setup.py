@@ -10,6 +10,7 @@ from urllib.parse import urlparse, parse_qs
 sys.path.insert(0, os.path.dirname(__file__))
 
 DDL_TABLES = [
+
 """CREATE TABLE IF NOT EXISTS tb_user (
     seq_no BIGINT NOT NULL AUTO_INCREMENT,
     email VARCHAR(200) NOT NULL,
@@ -25,24 +26,6 @@ DDL_TABLES = [
     PRIMARY KEY (seq_no),
     UNIQUE KEY uq_user_email (email),
     UNIQUE KEY uq_user_nickname (nickname)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_user_follow (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    follower_seq_no BIGINT NOT NULL,
-    followee_seq_no BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_follow (follower_seq_no, followee_seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_user_expertise (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    user_seq_no BIGINT NOT NULL,
-    expertise_name VARCHAR(100) NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_user_expertise (user_seq_no, expertise_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
 
 """CREATE TABLE IF NOT EXISTS tb_category (
@@ -88,42 +71,6 @@ DDL_TABLES = [
     PRIMARY KEY (seq_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
 
-"""CREATE TABLE IF NOT EXISTS tb_post_tag (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    post_seq_no BIGINT NOT NULL,
-    tag_name VARCHAR(100) NOT NULL,
-    sort_order TINYINT NOT NULL DEFAULT 0,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_post_tag (post_seq_no, tag_name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_post_like (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    post_seq_no BIGINT NOT NULL,
-    user_seq_no BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_post_like (post_seq_no, user_seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_post_view (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    post_seq_no BIGINT NOT NULL,
-    user_seq_no BIGINT,
-    client_ip VARCHAR(45),
-    viewed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_user_bookmark (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    user_seq_no BIGINT NOT NULL,
-    post_seq_no BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_bookmark (user_seq_no, post_seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
 """CREATE TABLE IF NOT EXISTS tb_comment (
     seq_no BIGINT NOT NULL AUTO_INCREMENT,
     post_seq_no BIGINT NOT NULL,
@@ -136,27 +83,6 @@ DDL_TABLES = [
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME,
     PRIMARY KEY (seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_comment_like (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    comment_seq_no BIGINT NOT NULL,
-    user_seq_no BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_comment_like (comment_seq_no, user_seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_reaction (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    target_type VARCHAR(20) NOT NULL,
-    target_seq_no BIGINT NOT NULL,
-    user_seq_no BIGINT NOT NULL,
-    reaction_key VARCHAR(20) NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_reaction (target_type, target_seq_no, user_seq_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
 
 """CREATE TABLE IF NOT EXISTS tb_admin_log (
@@ -191,28 +117,6 @@ DDL_TABLES = [
     INDEX idx_report_created (created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 신고'""",
 
-"""CREATE TABLE IF NOT EXISTS tb_crawl_source (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    source_id VARCHAR(100) NOT NULL,
-    label VARCHAR(200) NOT NULL,
-    source_type VARCHAR(30) NOT NULL,
-    source_value VARCHAR(500) NOT NULL,
-    active_yn CHAR(1) NOT NULL DEFAULT 'Y',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_source_id (source_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_crawl_source_topic (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    source_seq_no BIGINT NOT NULL,
-    topic_seq_no BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_source_topic (source_seq_no, topic_seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
 """CREATE TABLE IF NOT EXISTS tb_crawl_item (
     seq_no BIGINT NOT NULL AUTO_INCREMENT,
     item_id VARCHAR(200) NOT NULL,
@@ -232,33 +136,6 @@ DDL_TABLES = [
     UNIQUE KEY uq_item_id (item_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
 
-"""CREATE TABLE IF NOT EXISTS tb_crawl_item_tag (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    item_seq_no BIGINT NOT NULL,
-    tag_name VARCHAR(100) NOT NULL,
-    sort_order TINYINT NOT NULL DEFAULT 0,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_crawl_tag (item_seq_no, tag_name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_crawl_item_view (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    item_seq_no BIGINT NOT NULL,
-    user_seq_no BIGINT,
-    client_ip VARCHAR(45),
-    viewed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_crawl_item_like (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    item_seq_no BIGINT NOT NULL,
-    user_seq_no BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_crawl_like (item_seq_no, user_seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
 """CREATE TABLE IF NOT EXISTS tb_admin (
     seq_no BIGINT NOT NULL AUTO_INCREMENT,
     email VARCHAR(200) NOT NULL,
@@ -272,29 +149,6 @@ DDL_TABLES = [
     UNIQUE KEY uq_admin_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
 
-"""CREATE TABLE IF NOT EXISTS tb_block (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    target_type VARCHAR(20) NOT NULL DEFAULT 'post',
-    target_seq_no BIGINT NOT NULL,
-    reason VARCHAR(500),
-    blocked_by BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    unblocked_at DATETIME,
-    PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_block (target_type, target_seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
-
-"""CREATE TABLE IF NOT EXISTS tb_cron_log (
-    seq_no BIGINT NOT NULL AUTO_INCREMENT,
-    topic_key VARCHAR(100),
-    result VARCHAR(20) NOT NULL,
-    item_count INT,
-    error_msg VARCHAR(1000),
-    elapsed_sec DECIMAL(10,2),
-    started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    finished_at DATETIME,
-    PRIMARY KEY (seq_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
 ]
 
 CATEGORIES = [
