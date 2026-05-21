@@ -51,11 +51,12 @@ export function HomePage({ navigate }) {
             }}>HOT</span>
           </div>
           <p style={{ fontSize: 12, color: 'var(--color-muted, #888)', margin: '0 0 16px' }}>
-            지금 가장 빠르게 변화하는 AI 트렌드 · 도구 · 연구를 한눈에
+            AI 에이전트 · 트렌드 · 도구 · 연구를 한눈에
           </p>
-          <CrawlFeed topicKey="ai.trend"     title="🔥 AI 트렌드"   limit={5} showRank navigate={navigate} />
-          <CrawlFeed topicKey="ai.tools"     title="🛠 AI 도구/SDK"  limit={5} navigate={navigate} />
-          <CrawlFeed topicKey="ai.research"  title="📄 AI 논문/연구" limit={4} navigate={navigate} />
+          <CrawlFeed topicKey="ai.agents"    title="🤖 AI 에이전트 / Skills" limit={5} showRank navigate={navigate} />
+          <CrawlFeed topicKey="ai.trend"     title="🔥 AI 트렌드"             limit={5} navigate={navigate} />
+          <CrawlFeed topicKey="ai.tools"     title="🛠 AI 도구/SDK"           limit={5} navigate={navigate} />
+          <CrawlFeed topicKey="ai.research"  title="📄 AI 논문/연구"          limit={4} navigate={navigate} />
         </section>
 
         {/* 2. 사용자 게시글 (있으면) */}
@@ -212,11 +213,12 @@ export function BoardPageNew({ navigate, searchQuery }) {
 
 // ── AI 뉴스 ─────────────────────────────────────────────────
 export function AIPage({ navigate }) {
-  const [tab, setTab] = useState('news')
+  const [tab, setTab] = useState('agents')
   const TABS = [
-    { key: 'news',     label: 'AI 뉴스' },
-    { key: 'tools',    label: 'AI 도구' },
+    { key: 'agents',   label: 'AI 에이전트' },
     { key: 'trend',    label: 'AI 트렌드' },
+    { key: 'tools',    label: 'AI 도구' },
+    { key: 'news',     label: 'AI 뉴스' },
     { key: 'research', label: 'AI 리서치' },
   ]
   return (

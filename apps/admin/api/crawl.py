@@ -441,7 +441,12 @@ TOPIC_CRAWLERS = {
         devto_articles("tools", 4),
         npm("developer tools cli", 4)),
 
-    # ── ai (4) — AI ──────────────────────────────────────
+    # ── ai (5) — AI ──────────────────────────────────────
+    # agents: AI 에이전트 / 자율 시스템 / Claude Skills / MCP 등 최신 트렌드
+    "ai.agents":       lambda: mix(
+        gh_api("topic:ai-agent stars:>200", "updated", 3),
+        gh_api("topic:autonomous-agent OR topic:agentic stars:>200", "updated", 3),
+        hn_search("AI agent OR autonomous OR Claude skills OR MCP", 4)),
     # news: HN AI 검색 + GitHub LLM
     "ai.news":         lambda: mix(
         hn_search("AI OR LLM OR GPT", 4),
@@ -605,6 +610,7 @@ TOPIC_LABELS = {
     "dev.python":     "Python/PyPI", "dev.devops":     "DevOps/인프라",
     "dev.tools":      "개발 도구",
     # ai
+    "ai.agents":  "AI 에이전트",
     "ai.news":    "AI 뉴스",    "ai.tools":    "AI 도구",
     "ai.trend":   "AI 트렌드", "ai.research": "AI 논문/연구",
     # startup

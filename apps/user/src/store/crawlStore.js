@@ -19,6 +19,7 @@ export const MENU_TOPICS = {
   'dev.python': { label: 'Python/PyPI', category: 'dev' },
   'dev.devops': { label: 'DevOps/인프라', category: 'dev' },
   'dev.tools': { label: '개발 도구', category: 'dev' },
+  'ai.agents': { label: 'AI 에이전트', category: 'ai' },
   'ai.news': { label: 'AI 뉴스', category: 'ai' },
   'ai.tools': { label: 'AI 도구', category: 'ai' },
   'ai.trend': { label: 'AI 트렌드', category: 'ai' },

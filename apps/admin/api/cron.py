@@ -10,6 +10,7 @@ from crawl import TOPIC_CRAWLERS, enrich
 
 PRIORITY_TOPICS = [
     # AI 우선 (홈 최상단 섹션)
+    "ai.agents",
     "ai.trend",
     "ai.tools",
     "ai.research",

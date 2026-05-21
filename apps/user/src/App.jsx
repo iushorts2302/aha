@@ -58,7 +58,7 @@ function AppInner() {
     const t = setTimeout(() => {
       prefetchTopics([
         // AI 최상단 섹션 — 가장 먼저 캐시 워밍
-        'ai.trend', 'ai.tools', 'ai.research',
+        'ai.agents', 'ai.trend', 'ai.tools', 'ai.research',
         // 그 외 홈 큐레이션 섹션
         'home.trending', 'ai.news', 'startup.new',
         'dev.trending', 'finance.crypto', 'learn.korean',
