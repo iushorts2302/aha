@@ -4,10 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 if (typeof document !== 'undefined' && !document.getElementById('aha-spin-style')) {
   const s = document.createElement('style')
   s.id = 'aha-spin-style'
-  s.textContent = '@keyframes spin { to { transform: rotate(360deg) } }'
+  s.textContent = [
+    '@keyframes spin { to { transform: rotate(360deg) } }',
+    '@keyframes skPulse { 0%,100%{opacity:1} 50%{opacity:.45} }',
+  ].join('')
   document.head.appendChild(s)
 }
-import { getItems } from '../store/crawlStore.js'
+import { getItems, getItemsStale } from '../store/crawlStore.js'
 import { saveDetail } from '../store/crawlDetailStore.js'
 import { getCrawlViews, getCrawlLikes } from '../store/crawlInteractionStore.js'
 
@@ -130,9 +133,30 @@ export function SectionHeader({ title, count, onRefresh, loading, source }) {
   )
 }
 
+/** 스켈레톤 카드 (방안 2: Optimistic UI) */
+function SkeletonCard() {
+  return (
+    <div style={{
+      border: '1px solid var(--color-border-soft)', borderRadius: 8,
+      padding: '14px 16px', marginBottom: 8, background: '#fff',
+      animation: 'skPulse 1.4s ease-in-out infinite',
+    }}>
+      <div style={{ height: 14, borderRadius: 4, background: '#f0f0f0', marginBottom: 8, width: '80%' }} />
+      <div style={{ height: 11, borderRadius: 4, background: '#f5f5f5', marginBottom: 6, width: '95%' }} />
+      <div style={{ height: 11, borderRadius: 4, background: '#f5f5f5', width: '60%' }} />
+      <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+        {[40, 52, 36].map((w, i) => (
+          <div key={i} style={{ height: 20, width: w, borderRadius: 99, background: '#f0f0f0' }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /** 크롤링 피드 */
 export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navigate }) {
-  const [items, setItems] = useState([])
+  // 방안 1+2: stale-while-revalidate — localStorage 즉시 표시 후 최신 데이터로 교체
+  const [items, setItems] = useState(() => getItemsStale(topicKey, limit))
   const [loading, setLoading] = useState(false)
   const [source, setSource] = useState(null)
 
@@ -148,11 +172,12 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
     } finally { setLoading(false) }
   }, [topicKey, limit])
 
-  // topicKey 변경 시 즉시 초기화 → 이전 토픽 데이터 잔류 방지
+  // topicKey 변경: stale 데이터 즉시 표시 + 백그라운드 갱신
   useEffect(() => {
-    setItems([])
-    setSource(null)
-    refresh()
+    const stale = getItemsStale(topicKey, limit)
+    setItems(stale)      // stale 데이터 즉시 표시 (스켈레톤 생략)
+    setSource(stale.length > 0 ? 'stale' : null)
+    refresh()            // 동시에 최신 데이터 fetch
   }, [topicKey])
   useEffect(() => { const t = setInterval(refresh, 60000); return () => clearInterval(t) }, [refresh])
 

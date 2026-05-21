@@ -13,6 +13,7 @@ import { BookmarksPage, CategoryPage } from './pages/MiscPages'
 import { LoginPage, SignupPage }       from './pages/AuthPages'
 import MaintenancePage from './pages/MaintenancePage'
 import { getState, onStateChange, CB_STATE } from './store/circuitBreaker.js'
+import { prefetchTopics } from './store/crawlStore.js'
 
 import {
   HomePage, TrendingPage, FeedPage, BoardPageNew,
@@ -51,6 +52,18 @@ function AppInner() {
 
   // 서킷브레이커 상태 구독
   useEffect(() => onStateChange(setCbState), [])
+
+  // 방안 3: 주요 토픽 프리페치 — 앱 시작 2초 후 자동 실행
+  useEffect(() => {
+    const t = setTimeout(() => {
+      prefetchTopics([
+        'home.trending', 'dev.trending', 'ai.news',
+        'it.news', 'game.news', 'startup.new',
+        'oss.trending', 'finance.crypto', 'job.dev', 'learn.tutorial',
+      ])
+    }, 2000)
+    return () => clearTimeout(t)
+  }, [])
 
   // 앱 구동 3초 후 /api/init 백그라운드 호출 (초기 렌더링 블로킹 방지)
   useEffect(() => {

@@ -59,38 +59,58 @@ export const MENU_TOPICS = {
 // 토픽별 init 트리거 여부 추적 (세션 내 1회만)
 const _initTriggered = new Set()
 
+// ── localStorage 캐시 (방안 2: stale-while-revalidate) ──
+const LS_PREFIX  = 'aha_crawl_v3_'
+const LS_TTL     = 30 * 60 * 1000   // 30분 — 오래된 데이터도 즉시 표시 후 갱신
+
+function lsRead(topicKey) {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + topicKey)
+    if (!raw) return null
+    const { items, savedAt } = JSON.parse(raw)
+    return { items, savedAt, stale: Date.now() - savedAt > LS_TTL }
+  } catch { return null }
+}
+
+function lsWrite(topicKey, items) {
+  try {
+    localStorage.setItem(LS_PREFIX + topicKey,
+      JSON.stringify({ items, savedAt: Date.now() }))
+  } catch {}
+}
+
 // ── DB API에서 크롤링 아이템 조회 ────────────────────────
 async function fetchFromDB(topicKey) {
-  const cached = _cache.get(topicKey)
-  if (cached && Date.now() - cached.fetchedAt < 60000) return cached.items
+  // 메모리 캐시 (60초)
+  const mem = _cache.get(topicKey)
+  if (mem && Date.now() - mem.fetchedAt < 60000) return mem.items
 
   try {
     const r = await fetch(
       `${ADMIN_API}/api/data?topic=${encodeURIComponent(topicKey)}`,
       { signal: AbortSignal.timeout(15000) }
     )
-    if (!r.ok) return []
+    if (!r.ok) return lsRead(topicKey)?.items || []
     const data = await r.json()
     const items = (data.items || []).filter(i => i.blocked_yn !== 'Y')
-    _cache.set(topicKey, { items, fetchedAt: Date.now() })
 
-    // 데이터가 비어있고 아직 init을 트리거하지 않았으면 백그라운드에서 크롤링 요청
+    if (items.length > 0) {
+      _cache.set(topicKey, { items, fetchedAt: Date.now() })
+      lsWrite(topicKey, items)  // localStorage 저장
+    }
+
+    // 데이터 없으면 init 트리거
     if (items.length === 0 && !_initTriggered.has(topicKey)) {
       _initTriggered.add(topicKey)
       fetch(`${ADMIN_API}/api/init`, { signal: AbortSignal.timeout(30000) })
         .then(res => res.ok ? res.json() : null)
-        .then(d => {
-          if (d?.topics_crawled > 0) {
-            // 크롤링 완료 → 캐시 무효화 → 다음 getItems 호출 시 새 데이터 반환
-            _cache.delete(topicKey)
-          }
-        })
+        .then(d => { if (d?.topics_crawled > 0) _cache.delete(topicKey) })
         .catch(() => {})
     }
 
     return items
   } catch {
-    return []
+    return lsRead(topicKey)?.items || []
   }
 }
 
@@ -98,6 +118,24 @@ async function fetchFromDB(topicKey) {
 export async function getItems(topicKey, limit = 10) {
   const items = await fetchFromDB(topicKey)
   return items.slice(0, limit)
+}
+
+/** localStorage에서 즉시 반환 (stale-while-revalidate) */
+export function getItemsStale(topicKey, limit = 10) {
+  // 메모리 캐시 먼저
+  const mem = _cache.get(topicKey)
+  if (mem) return mem.items.slice(0, limit)
+  // localStorage 폴백
+  return (lsRead(topicKey)?.items || []).slice(0, limit)
+}
+
+/** 방안 3: 주요 토픽 백그라운드 프리페치 */
+export function prefetchTopics(keys) {
+  keys.forEach((key, i) => {
+    setTimeout(() => {
+      if (!_cache.has(key)) fetchFromDB(key).catch(() => {})
+    }, i * 800)   // 800ms 간격으로 순차 프리페치 (서버 부하 분산)
+  })
 }
 
 export function getItemsSync(topicKey) {
