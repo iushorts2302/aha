@@ -35,7 +35,7 @@ export function HomePage({ navigate }) {
       <div style={{ marginTop: 'var(--sp-xxl)' }}>
         {/* 1. AI 트렌드 — 최상단 강조 (그라데이션 배경 박스) */}
         <section style={{
-          marginBottom: 32, padding: '20px 20px 4px',
+          marginBottom: 56, padding: '24px 24px 8px',
           background: 'linear-gradient(135deg, #f0f6ff 0%, #faf5ff 100%)',
           border: '1px solid rgba(0,102,204,0.12)',
           borderRadius: 14,
@@ -61,7 +61,7 @@ export function HomePage({ navigate }) {
 
         {/* 2. 사용자 게시글 (있으면) */}
         {hotPosts.length > 0 && (
-          <section style={{ marginBottom: 32 }}>
+          <section style={{ marginBottom: 56 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, paddingBottom: 8,
               borderBottom: '2px solid var(--color-ink)' }}>🔥 오늘의 인기 글</h2>
             {hotPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate} />)}
@@ -69,32 +69,32 @@ export function HomePage({ navigate }) {
         )}
 
         {/* 3. 실시간 IT 이슈 */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 56 }}>
           <CrawlFeed topicKey="home.trending" title="🔴 실시간 인기" limit={5} showRank navigate={navigate} />
         </section>
 
         {/* 4. AI 일반 뉴스 */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 56 }}>
           <CrawlFeed topicKey="ai.news" title="📰 AI 뉴스" limit={5} navigate={navigate} />
         </section>
 
         {/* 5. 한국 스타트업 */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 56 }}>
           <CrawlFeed topicKey="startup.new" title="🚀 한국 스타트업" limit={5} navigate={navigate} />
         </section>
 
         {/* 6. 개발 트렌딩 */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 56 }}>
           <CrawlFeed topicKey="dev.trending" title="💻 개발 트렌딩" limit={5} navigate={navigate} />
         </section>
 
         {/* 7. 코인 시세 */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 56 }}>
           <CrawlFeed topicKey="finance.crypto" title="💰 코인 시세" limit={5} navigate={navigate} />
         </section>
 
         {/* 8. 한국 개발자 글 (Velog) */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 56 }}>
           <CrawlFeed topicKey="learn.korean" title="📚 한국 개발자 글" limit={5} navigate={navigate} />
         </section>
       </div>

@@ -30,7 +30,7 @@ export default function PostCard({ post: postProp, navigate }) {
 
   return (
     <article
-      className="py-3 border-bottom"
+      className="py-4 border-bottom"
       style={{ cursor: 'pointer' }}
       onClick={() => navigate(`post/${post.id}`)}
     >

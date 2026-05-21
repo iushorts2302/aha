@@ -45,7 +45,7 @@ export function CrawlCard({ item, onClick, rank, navigate }) {
 
   return (
     <article
-      className="py-3 border-bottom"
+      className="py-4 border-bottom"
       style={{ cursor: 'pointer', display: 'flex', gap: '12px', alignItems: 'flex-start' }}
       onClick={() => {
         if (navigate) { saveDetail(item); navigate(`crawl-detail/${item.id}`) }
@@ -101,7 +101,7 @@ export function SectionHeader({ title, count, onRefresh, loading, source }) {
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       borderBottom: '2px solid var(--color-ink)',
-      marginBottom: 12, paddingBottom: 8,
+      marginBottom: 18, paddingBottom: 10,
       gap: 8, flexWrap: 'nowrap', minWidth: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
@@ -138,7 +138,7 @@ function SkeletonCard() {
   return (
     <div style={{
       border: '1px solid var(--color-border-soft)', borderRadius: 8,
-      padding: '14px 16px', marginBottom: 8, background: '#fff',
+      padding: '16px 18px', marginBottom: 12, background: '#fff',
       animation: 'skPulse 1.4s ease-in-out infinite',
     }}>
       <div style={{ height: 14, borderRadius: 4, background: '#f0f0f0', marginBottom: 8, width: '80%' }} />
