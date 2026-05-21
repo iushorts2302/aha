@@ -375,7 +375,8 @@ class handler(BaseHTTPRequestHandler):
                 # 현황만 확인
                 tables_to_check = [
                     "tb_category","tb_topic","tb_user","tb_post",
-                    "tb_crawl_item","tb_admin","tb_comment"
+                    "tb_crawl_item","tb_admin","tb_comment",
+                    "tb_report","tb_admin_log"
                 ]
                 for t in tables_to_check:
                     try:
