@@ -14,23 +14,6 @@
 
 ---
 
-## DB 연결 정보
-
-| 항목 | 값 |
-|---|---|
-| **Host** | 0.tcp.jp.ngrok.io |
-| **Port** | 10840 (ngrok 재시작 시 변경) |
-| **User** | srvaha |
-| **Password** | qwER12#$ |
-| **Database** | aha_db |
-| **내부 IP** | 172.30.8.82 (Windows Server, MariaDB) |
-| **공인 IP** | 211.217.252.169 (공유기 NAT) |
-| **터널** | ngrok TCP → 공유기 → 172.30.8.82:3306 |
-
-> ⚠️ ngrok 무료 플랜: 재시작 시 포트 변경됨 → `db.py` 기본값 + Vercel 환경변수 `DB_PORT` 업데이트 필요
-
----
-
 ## 프로젝트 구조
 
 ```
