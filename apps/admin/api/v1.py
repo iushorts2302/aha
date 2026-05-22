@@ -281,8 +281,16 @@ def topics_get(p, b):
     return 200, {"topics": db.query(sql + " ORDER BY t.sort_order,t.seq_no", args)}
 
 def topics_post(p, b):
-    key = b.get("topic_key","").strip(); cat = b.get("category_id"); label = b.get("label","").strip()
-    if not key or not cat or not label: return 400, {"error": "topic_key, category_id, label 필수"}
+    key = b.get("topic_key","").strip()
+    label = b.get("label","").strip()
+    # category_seq_no(숫자) 또는 category_id(문자) 모두 허용
+    cat = b.get("category_seq_no") or b.get("category_id")
+    if not key or not cat or not label: return 400, {"error": "topic_key, category, label 필수"}
+    # 문자열 category_id로 들어왔으면 seq_no로 변환
+    if isinstance(cat, str) and not cat.isdigit():
+        row = db.query_one("SELECT seq_no FROM tb_category WHERE category_id=%s", (cat,))
+        if not row: return 400, {"error": f"카테고리 '{cat}' 없음"}
+        cat = row["seq_no"]
     if db.query_one("SELECT seq_no FROM tb_topic WHERE topic_key=%s", (key,)): return 409, {"error": "이미 존재하는 topic_key"}
     seq = db.execute("INSERT INTO tb_topic (topic_key,category_seq_no,label,sort_order,active_yn) VALUES(%s,%s,%s,%s,%s)",
                      (key, cat, label, b.get("sort_order",0), "Y" if b.get("active",True) else "N"))
@@ -300,6 +308,12 @@ def topics_patch(p, b):
 def topics_delete(p, b):
     tid = b.get("id")
     if not tid: return 400, {"error": "id 필수"}
+    # 1) 연결된 crawl_item 먼저 삭제 (외래키 제약 해결)
+    try:
+        db.execute("DELETE FROM tb_crawl_item WHERE topic_seq_no=%s", (tid,))
+    except Exception:
+        pass
+    # 2) topic 삭제
     db.execute("DELETE FROM tb_topic WHERE seq_no=%s", (tid,))
     return 200, {"ok": True}
 
