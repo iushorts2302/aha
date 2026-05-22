@@ -274,6 +274,26 @@ class handler(BaseHTTPRequestHandler):
                 return _json(self, 200, result)
 
             step = params.get("step", ["all"])[0]
+            if step == "drop_user_personal":
+                # 옛 스키마 테이블 강제 재생성 (target_type 컬럼 추가)
+                for t in ["tb_user_bookmark", "tb_user_follow", "tb_user_preference"]:
+                    try:
+                        db.execute(f"DROP TABLE IF EXISTS {t}")
+                        result["tables"][t] = "dropped"
+                    except Exception as e:
+                        result["errors"].append(f"{t} drop: {str(e)[:80]}")
+                # 재생성
+                NEW_ONLY = ("tb_user_bookmark", "tb_user_follow", "tb_user_preference")
+                for ddl in DDL_TABLES:
+                    table_name = ddl.split("EXISTS")[1].split("(")[0].strip()
+                    if table_name not in NEW_ONLY: continue
+                    try:
+                        db.execute(ddl)
+                        result["tables"][table_name] = "recreated"
+                    except Exception as e:
+                        result["errors"].append(f"{table_name}: {str(e)[:80]}")
+                self._json(200, result)
+                return
 
             if step in ("all", "tables", "new"):
                 # ── 1. 테이블 생성 ──────────────────────────
