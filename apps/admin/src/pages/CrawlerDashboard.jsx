@@ -20,7 +20,7 @@
  *  - 전체 실행 / 만료만 버튼 (의존 데이터 없음)
  *  - 수집 수 / 마지막 수집 / 상태 컬럼 (DB 의존)
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { crawlTopics } from '../store/crawler.js'
 
 const ADMIN_API = 'https://admin-vert-psi.vercel.app'
@@ -46,9 +46,21 @@ export default function CrawlerDashboard() {
 
   // ── 초기 로드 ────────────────────────────────────────
   useEffect(() => {
-    loadTopics()
-    addLog('크롤링 관리 페이지 로드됨')
+    (async () => {
+      await loadTopics()
+      addLog('크롤링 관리 페이지 로드됨')
+    })()
   }, [])
+
+  // ── 토픽 로드 완료 후 자동 크롤링 시작 (1회만) ──────
+  const autoStartedRef = useRef(false)
+  useEffect(() => {
+    if (autoStartedRef.current) return
+    if (topics.length === 0) return
+    autoStartedRef.current = true
+    // 모든 활성 토픽 자동 시작
+    setTimeout(() => runAll(topics.filter(t => t.active_yn !== 'N')), 200)
+  }, [topics])
 
   async function loadTopics() {
     setLoading(true)
@@ -78,6 +90,43 @@ export default function CrawlerDashboard() {
       if (st === 'error')   addLog(`✗ [${t?.label || k}] ${result}`, 'error')
     }
     await crawlTopics([key], onProgress)
+  }
+
+  // ── 전체 토픽 자동 실행 ─────────────────────────────
+  // 1) 모든 토픽을 즉시 loading 상태로 표시 (시각적 피드백)
+  // 2) 3개씩 병렬 배치로 순차 실행 (서버 부하 방지)
+  async function runAll(targetTopics) {
+    if (!targetTopics || targetTopics.length === 0) return
+    addLog(`전체 크롤링 시작 (${targetTopics.length}개 토픽)`)
+
+    // 1) 모든 토픽을 즉시 'loading'으로 표시
+    const initialStatus = {}
+    targetTopics.forEach(t => { initialStatus[t.topic_key] = 'loading' })
+    setTopicStatus(prev => ({ ...prev, ...initialStatus }))
+
+    // 2) 3개씩 배치 병렬 처리
+    const BATCH_SIZE = 3
+    const keys = targetTopics.map(t => t.topic_key)
+    let completed = 0
+
+    for (let i = 0; i < keys.length; i += BATCH_SIZE) {
+      const batch = keys.slice(i, i + BATCH_SIZE)
+      await Promise.all(batch.map(async key => {
+        const t = topics.find(tt => tt.topic_key === key)
+        try {
+          const items = await import('../store/crawler.js').then(m => m.crawlTopic(key))
+          setTopicStatus(prev => ({ ...prev, [key]: 'success' }))
+          completed++
+          addLog(`✓ [${t?.label || key}] ${items.length}개 수집  (${completed}/${keys.length})`, 'success')
+        } catch (err) {
+          setTopicStatus(prev => ({ ...prev, [key]: 'error' }))
+          completed++
+          addLog(`✗ [${t?.label || key}] ${(err.message || '').slice(0, 60)}`, 'error')
+        }
+      }))
+    }
+
+    addLog(`전체 크롤링 완료 (성공/실패 포함 ${completed}건)`, 'success')
   }
 
   // ── 초기화 크롤링 (빈 토픽만) ─────────────────────────
@@ -115,12 +164,20 @@ export default function CrawlerDashboard() {
             토픽별 수동 크롤링 · 자동 크롤링은 Vercel Cron(10분 간격)이 처리
           </p>
         </div>
-        <button
-          onClick={runInit}
-          className="btn btn-primary"
-          style={{ height: 36 }}>
-          빈 토픽 일괄 채우기
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => runAll(topics.filter(t => t.active_yn !== 'N'))}
+            className="btn btn-secondary"
+            style={{ height: 36 }}>
+            전체 재실행
+          </button>
+          <button
+            onClick={runInit}
+            className="btn btn-primary"
+            style={{ height: 36 }}>
+            빈 토픽 일괄 채우기
+          </button>
+        </div>
       </div>
 
       {/* DB 연결 상태 — 아코디언 */}
