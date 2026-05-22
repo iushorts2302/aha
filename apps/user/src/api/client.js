@@ -74,12 +74,17 @@ export const userAPI = {
   get:    (id)     => req('users', 'GET', null, { id }),
   update: (id, d)  => req('users', 'PATCH', { id, ...d }),
   delete: (id)     => req('users', 'DELETE', { id }),
-  // bookmarks/follows: localStorage 기반 (서버 동기화 비활성)
-  getBookmarks:   () => Promise.resolve({ bookmarks: [] }),
-  toggleBookmark: () => Promise.resolve({ ok: true }),
-  getFollowing: () => Promise.resolve({ users: [] }),
-  getFollowers: () => Promise.resolve({ users: [] }),
-  toggleFollow: () => Promise.resolve({ ok: true }),
+  // bookmarks: DB 기반 동기화
+  getBookmarks:   (uid)                       => req('bookmarks', 'GET', null, { user_id: uid }),
+  toggleBookmark: (uid, type, seq, key, title) =>
+    req('bookmarks', 'POST', { user_id: uid, target_type: type, target_seq_no: seq, target_key: key, target_title: title }),
+}
+
+// ── 팔로우 (별칭 export — AuthContext에서 followAPI로 사용) ─
+export const followAPI = {
+  getFollowing: (uid)          => req('follows', 'GET', null, { user_id: uid, type: 'following' }),
+  getFollowers: (uid)          => req('follows', 'GET', null, { user_id: uid, type: 'followers' }),
+  toggleFollow: (fromId, toId) => req('follows', 'POST', { follower_id: fromId, followee_id: toId }),
 }
 
 // ── 게시글 ──────────────────────────────────────────────
@@ -109,6 +114,11 @@ export const commentAPI = {
 // ── 카테고리/토픽 ────────────────────────────────────────
 export const categoryAPI = {
   list: () => req('categories', 'GET'),
+}
+
+export const preferenceAPI = {
+  get:  (uid)         => req('preferences', 'GET', null, { user_id: uid }),
+  save: (uid, prefs)  => req('preferences', 'POST', { user_id: uid, preferences: prefs }),
 }
 
 export const reportAPI = {

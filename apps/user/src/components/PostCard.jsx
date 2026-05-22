@@ -97,7 +97,7 @@ export default function PostCard({ post: postProp, navigate }) {
           {/* 북마크 */}
           <button className="border-0 bg-transparent p-0"
             style={{ color: isBookmarked ? 'var(--color-primary)' : '#aaa', transition: 'color 0.2s' }}
-            onClick={e => { e.stopPropagation(); if (currentUser) toggleBookmark(post.id) }}>
+            onClick={e => { e.stopPropagation(); if (currentUser) toggleBookmark(post.id, { type: 'post', title: post.title }) }}>
             {isBookmarked ? '★' : '☆'}
           </button>
           {/* 신고 — 로그인 + 본인 글 아닐 때만 */}

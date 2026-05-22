@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { authAPI, userAPI } from '../api/client.js'
+import { authAPI, userAPI, followAPI, preferenceAPI } from '../api/client.js'
 
 const AuthContext = createContext(null)
 const LS_USER_KEY  = 'aha_user_v2'   // 로그인 유저 세션
@@ -81,15 +81,27 @@ export function AuthProvider({ children }) {
     try {
       const data = await authAPI.login(email, password)
       if (!data || !data.seq_no) throw new Error('로그인 실패')
+      // 즐겨찾기: post와 crawl_item 모두 처리
+      // - post: target_seq_no를 ID 문자열로 사용 (기존 호환)
+      // - crawl_item: target_key를 ID로 사용
+      const rawBookmarks = data.bookmarks || []
+      const bookmarkIds = rawBookmarks.map(b =>
+        b.target_type === 'crawl_item'
+          ? `crawl:${b.target_key}`
+          : String(b.target_seq_no)
+      ).filter(Boolean)
+
       const user = {
         seq_no: data.seq_no, id: String(data.seq_no),
         email: data.email || email, nickname: data.nickname || email.split('@')[0],
         bio: data.bio || '', avatar: data.avatar_url || '',
         role: data.role || 'user',
         expertise: data.expertise || [],
-        bookmarks: (data.bookmarks || []).map(String),
-        following: (data.following || []).map(String),
-        followers: [],
+        bookmarks:     bookmarkIds,
+        bookmarksRaw:  rawBookmarks,  // 상세 정보 (제목 등) — 즐겨찾기 페이지에서 사용
+        following:     (data.following || []).map(String),
+        followers:     (data.followers || []).map(String),
+        preferences:   data.preferences || {},
       }
       _persist(user)
       return user
@@ -145,16 +157,35 @@ export function AuthProvider({ children }) {
   }
 
   // ── 북마크 토글 ─────────────────────────────────────
-  async function toggleBookmark(postId) {
+  /**
+   * @param {string|number} targetId  - post의 경우 seq_no, crawl_item의 경우 url 등 unique key
+   * @param {object} opts
+   *   - type:   'post' | 'crawl_item' (기본 'post')
+   *   - title:  목록 표시용 제목 (선택)
+   */
+  async function toggleBookmark(targetId, opts = {}) {
     if (!currentUser) return
-    const pid = String(postId)
+    const type  = opts.type  || 'post'
+    const title = opts.title || ''
+    const lookupKey = type === 'crawl_item' ? `crawl:${targetId}` : String(targetId)
+
     const bookmarks = currentUser.bookmarks || []
-    const has = bookmarks.includes(pid)
-    const next = has ? bookmarks.filter(b => b !== pid) : [...bookmarks, pid]
+    const has = bookmarks.includes(lookupKey)
+    const next = has ? bookmarks.filter(b => b !== lookupKey) : [...bookmarks, lookupKey]
+
+    // 낙관적 업데이트
     _persist({ ...currentUser, bookmarks: next })
+
     try {
-      await userAPI.toggleBookmark(currentUser.seq_no || currentUser.id, postId)
-    } catch {}
+      const uid = currentUser.seq_no || currentUser.id
+      const tseq = type === 'post' ? Number(targetId) : null
+      const tkey = type === 'crawl_item' ? String(targetId) : null
+      await userAPI.toggleBookmark(uid, type, tseq, tkey, title)
+    } catch (e) {
+      // 실패 시 롤백
+      _persist({ ...currentUser, bookmarks })
+      console.warn('북마크 동기화 실패', e)
+    }
   }
 
   // ── 팔로우 토글 ─────────────────────────────────────
@@ -166,14 +197,29 @@ export function AuthProvider({ children }) {
     const next = has ? following.filter(f => f !== tid) : [...following, tid]
     _persist({ ...currentUser, following: next })
     try {
-      await userAPI.toggleFollow(currentUser.seq_no || currentUser.id, targetId)
-    } catch {}
+      await followAPI.toggleFollow(currentUser.seq_no || currentUser.id, targetId)
+    } catch (e) {
+      _persist({ ...currentUser, following })
+      console.warn('팔로우 동기화 실패', e)
+    }
+  }
+
+  // ── 개인화 설정 저장 ───────────────────────────────
+  async function savePreference(key, value) {
+    if (!currentUser) return
+    const prefs = { ...(currentUser.preferences || {}), [key]: value }
+    _persist({ ...currentUser, preferences: prefs })
+    try {
+      await preferenceAPI.save(currentUser.seq_no || currentUser.id, { [key]: value })
+    } catch (e) {
+      console.warn('설정 저장 실패', e)
+    }
   }
 
   return (
     <AuthContext.Provider value={{
       currentUser, users, login, signup, logout,
-      getUserById, toggleBookmark, toggleFollow,
+      getUserById, toggleBookmark, toggleFollow, savePreference,
     }}>
       {children}
     </AuthContext.Provider>

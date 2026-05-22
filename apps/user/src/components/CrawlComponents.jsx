@@ -12,6 +12,7 @@ if (typeof document !== 'undefined' && !document.getElementById('aha-spin-style'
 }
 import { getItems, getItemsStale } from '../store/crawlStore.js'
 import { saveDetail } from '../store/crawlDetailStore.js'
+import { useAuth } from '../context/AuthContext.jsx'
 import { getCrawlViews, getCrawlLikes } from '../store/crawlInteractionStore.js'
 
 function timeAgo(iso) {
@@ -27,6 +28,11 @@ function timeAgo(iso) {
 export function CrawlCard({ item, onClick, rank, navigate }) {
   const [liveViews, setLiveViews] = useState(() => getCrawlViews(item.id))
   const [liveLikes, setLiveLikes] = useState(() => getCrawlLikes(item.id))
+  const { currentUser, toggleBookmark } = useAuth()
+
+  // 즐겨찾기 키: crawl_item url 또는 id
+  const bookmarkKey = item.source || item.id
+  const isBookmarked = currentUser?.bookmarks?.includes(`crawl:${bookmarkKey}`) ?? false
 
   // localStorage 변경 감지 (다른 탭/상세 진입 후 복귀)
   useEffect(() => {
@@ -83,10 +89,21 @@ export function CrawlCard({ item, onClick, rank, navigate }) {
             <span key={tag} className="tag">{tag}</span>
           ))}
           <div className="ms-auto d-flex gap-3">
-            <div className="d-flex gap-3">
+            <div className="d-flex gap-3 align-items-center">
               <small className="text-muted">👁 {liveViews}</small>
               <small className="text-muted" style={{ color: liveLikes.liked ? 'var(--color-primary)' : '' }}>♥ {liveLikes.count}</small>
-              <small className="text-muted">💬 0</small>
+              {currentUser && (
+                <button
+                  onClick={e => { e.stopPropagation(); toggleBookmark(bookmarkKey, { type: 'crawl_item', title: item.title }) }}
+                  style={{
+                    background: 'none', border: 'none', padding: '0 2px',
+                    fontSize: 16, lineHeight: 1, cursor: 'pointer',
+                    color: isBookmarked ? 'var(--color-primary)' : '#bbb',
+                  }}
+                  title={isBookmarked ? '즐겨찾기 해제' : '즐겨찾기'}>
+                  {isBookmarked ? '★' : '☆'}
+                </button>
+              )}
             </div>
           </div>
         </div>

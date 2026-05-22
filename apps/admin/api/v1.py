@@ -47,6 +47,23 @@ def auth_post(p, b):
     if not row: return 401, {"error": "이메일 또는 비밀번호가 올바르지 않습니다."}
     if row["status"] != "active": return 403, {"error": "정지된 계정"}
     db.execute("UPDATE tb_user SET last_login_at=NOW() WHERE seq_no=%s", (row["seq_no"],))
+
+    # ── 개인화 데이터 동기화 (로그인 시 한 번에 로드) ──
+    uid = row["seq_no"]
+    row["bookmarks"] = [
+        {"target_type": b["target_type"], "target_seq_no": b["target_seq_no"],
+         "target_key":  b["target_key"],  "target_title":  b["target_title"]}
+        for b in db.query(
+            "SELECT target_type,target_seq_no,target_key,target_title "
+            "FROM tb_user_bookmark WHERE user_seq_no=%s ORDER BY created_at DESC LIMIT 500", (uid,))
+    ]
+    row["following"] = [r["followee_seq_no"] for r in db.query(
+        "SELECT followee_seq_no FROM tb_user_follow WHERE follower_seq_no=%s", (uid,))]
+    row["followers"] = [r["follower_seq_no"] for r in db.query(
+        "SELECT follower_seq_no FROM tb_user_follow WHERE followee_seq_no=%s", (uid,))]
+    row["preferences"] = {r["pref_key"]: r["pref_value"] for r in db.query(
+        "SELECT pref_key,pref_value FROM tb_user_preference WHERE user_seq_no=%s", (uid,))}
+
     row["token"] = secrets.token_hex(32)
     return 200, row
 
@@ -559,6 +576,121 @@ def reports_patch(p, b):
     return 200, {"ok": True, "status": new_status}
 
 
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# BOOKMARKS (즐겨찾기)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def bookmarks_get(p, b):
+    uid = p.get("user_id", [None])[0]
+    if not uid: return 400, {"error": "user_id 필수"}
+    rows = db.query(
+        "SELECT seq_no,target_type,target_seq_no,target_key,target_title,created_at "
+        "FROM tb_user_bookmark WHERE user_seq_no=%s ORDER BY created_at DESC LIMIT 500",
+        (uid,))
+    return 200, {"bookmarks": rows, "count": len(rows)}
+
+def bookmarks_post(p, b):
+    """즐겨찾기 토글: 있으면 삭제, 없으면 추가"""
+    uid    = b.get("user_id")
+    ttype  = b.get("target_type", "post")  # 'post' or 'crawl_item'
+    tseq   = b.get("target_seq_no")        # post일 때
+    tkey   = b.get("target_key")           # crawl_item일 때
+    title  = (b.get("target_title", "") or "")[:500]
+    if not uid: return 400, {"error": "user_id 필수"}
+    if ttype not in ("post", "crawl_item"): return 400, {"error": "target_type은 post|crawl_item"}
+    if not tseq and not tkey: return 400, {"error": "target_seq_no 또는 target_key 필수"}
+
+    # 기존 항목 조회 (post는 seq, crawl_item은 key 기준)
+    if tseq:
+        existing = db.query_one(
+            "SELECT seq_no FROM tb_user_bookmark "
+            "WHERE user_seq_no=%s AND target_type=%s AND target_seq_no=%s",
+            (uid, ttype, tseq))
+    else:
+        existing = db.query_one(
+            "SELECT seq_no FROM tb_user_bookmark "
+            "WHERE user_seq_no=%s AND target_type=%s AND target_key=%s",
+            (uid, ttype, tkey))
+
+    if existing:
+        db.execute("DELETE FROM tb_user_bookmark WHERE seq_no=%s", (existing["seq_no"],))
+        return 200, {"bookmarked": False}
+    else:
+        db.execute(
+            "INSERT INTO tb_user_bookmark (user_seq_no,target_type,target_seq_no,target_key,target_title) "
+            "VALUES(%s,%s,%s,%s,%s)",
+            (uid, ttype, tseq, tkey, title))
+        return 201, {"bookmarked": True}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# FOLLOWS (팔로우)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def follows_get(p, b):
+    uid  = p.get("user_id", [None])[0]
+    typ  = p.get("type", ["following"])[0]
+    if not uid: return 400, {"error": "user_id 필수"}
+    if typ == "following":
+        rows = db.query(
+            "SELECT u.seq_no,u.nickname,u.bio,u.avatar_url,f.created_at "
+            "FROM tb_user_follow f JOIN tb_user u ON u.seq_no=f.followee_seq_no "
+            "WHERE f.follower_seq_no=%s ORDER BY f.created_at DESC", (uid,))
+    else:
+        rows = db.query(
+            "SELECT u.seq_no,u.nickname,u.bio,u.avatar_url,f.created_at "
+            "FROM tb_user_follow f JOIN tb_user u ON u.seq_no=f.follower_seq_no "
+            "WHERE f.followee_seq_no=%s ORDER BY f.created_at DESC", (uid,))
+    return 200, {"users": rows, "count": len(rows)}
+
+def follows_post(p, b):
+    """팔로우 토글"""
+    follower = b.get("follower_id")
+    followee = b.get("followee_id")
+    if not follower or not followee: return 400, {"error": "follower_id, followee_id 필수"}
+    if str(follower) == str(followee): return 400, {"error": "자기 자신 팔로우 불가"}
+
+    existing = db.query_one(
+        "SELECT seq_no FROM tb_user_follow WHERE follower_seq_no=%s AND followee_seq_no=%s",
+        (follower, followee))
+    if existing:
+        db.execute("DELETE FROM tb_user_follow WHERE seq_no=%s", (existing["seq_no"],))
+        return 200, {"following": False}
+    else:
+        db.execute(
+            "INSERT INTO tb_user_follow (follower_seq_no,followee_seq_no) VALUES(%s,%s)",
+            (follower, followee))
+        return 201, {"following": True}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PREFERENCES (개인화 설정)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def preferences_get(p, b):
+    uid = p.get("user_id", [None])[0]
+    if not uid: return 400, {"error": "user_id 필수"}
+    rows = db.query(
+        "SELECT pref_key,pref_value FROM tb_user_preference WHERE user_seq_no=%s", (uid,))
+    return 200, {"preferences": {r["pref_key"]: r["pref_value"] for r in rows}}
+
+def preferences_post(p, b):
+    """단일 또는 다중 설정 일괄 저장 (upsert)"""
+    uid   = b.get("user_id")
+    prefs = b.get("preferences", {})  # { key: value, ... }
+    if not uid: return 400, {"error": "user_id 필수"}
+    if not isinstance(prefs, dict) or not prefs:
+        return 400, {"error": "preferences는 비어있지 않은 dict"}
+
+    for k, v in prefs.items():
+        k = str(k)[:50]
+        v = str(v)[:500]
+        db.execute(
+            "INSERT INTO tb_user_preference (user_seq_no,pref_key,pref_value) VALUES(%s,%s,%s) "
+            "ON DUPLICATE KEY UPDATE pref_value=VALUES(pref_value)",
+            (uid, k, v))
+    return 200, {"saved": len(prefs)}
+
+
 # ── 라우팅 테이블 ──────────────────────────────────────────
 ROUTES = {
     "auth":       {"POST": auth_post},
@@ -569,7 +701,10 @@ ROUTES = {
     "topics":     {"GET": topics_get, "POST": topics_post, "PATCH": topics_patch, "DELETE": topics_delete},
     "crawl_items":{"GET": crawl_items_get, "POST": crawl_items_post, "PATCH": crawl_items_patch, "DELETE": crawl_items_delete},
     "reports":    {"GET": reports_get, "POST": reports_post, "PATCH": reports_patch},
-    "admin_logs": {"GET": admin_logs_get},
+    "admin_logs":  {"GET": admin_logs_get},
+    "bookmarks":   {"GET": bookmarks_get,   "POST": bookmarks_post},
+    "follows":     {"GET": follows_get,     "POST": follows_post},
+    "preferences": {"GET": preferences_get, "POST": preferences_post},
 }
 
 # ── Vercel Handler ─────────────────────────────────────────
@@ -615,7 +750,10 @@ class handler(BaseHTTPRequestHandler):
                         "posts":      {"posts": [], "total": 0, "page": 1, "limit": 20},
                         "comments":   {"comments": [], "count": 0},
                         "reports":    {"reports": [], "count": 0, "stats": {}, "reasons": {}},
-                        "admin_logs": {"logs": [], "count": 0},
+                        "admin_logs":  {"logs": [], "count": 0},
+                        "bookmarks":   {"bookmarks": [], "count": 0},
+                        "follows":     {"users": [], "count": 0},
+                        "preferences": {"preferences": {}},
                                                                 "reactions":  {"counts": {}, "user_reaction": None},
                                             # DB 없어도 config 기본값으로 19개/63개 반환
                         "categories": {"categories": _DC.get("categories", [])},

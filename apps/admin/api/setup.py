@@ -28,6 +28,38 @@ DDL_TABLES = [
     UNIQUE KEY uq_user_nickname (nickname)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
 
+"""CREATE TABLE IF NOT EXISTS tb_user_bookmark (
+    seq_no BIGINT NOT NULL AUTO_INCREMENT,
+    user_seq_no BIGINT NOT NULL,
+    target_type VARCHAR(20) NOT NULL COMMENT 'post | crawl_item',
+    target_seq_no BIGINT NULL COMMENT 'post.seq_no (post일 때)',
+    target_key VARCHAR(255) NULL COMMENT 'crawl_item url 등 외부 키 (crawl_item일 때)',
+    target_title VARCHAR(500) NULL COMMENT '제목 캐시 (목록 표시용)',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (seq_no),
+    INDEX idx_bookmark_user (user_seq_no, created_at DESC),
+    UNIQUE KEY uq_bookmark_post (user_seq_no, target_type, target_seq_no),
+    UNIQUE KEY uq_bookmark_key  (user_seq_no, target_type, target_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 즐겨찾기'""",
+
+"""CREATE TABLE IF NOT EXISTS tb_user_follow (
+    seq_no BIGINT NOT NULL AUTO_INCREMENT,
+    follower_seq_no BIGINT NOT NULL,
+    followee_seq_no BIGINT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (seq_no),
+    UNIQUE KEY uq_follow (follower_seq_no, followee_seq_no),
+    INDEX idx_follow_followee (followee_seq_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='팔로우 관계'""",
+
+"""CREATE TABLE IF NOT EXISTS tb_user_preference (
+    user_seq_no BIGINT NOT NULL,
+    pref_key VARCHAR(50) NOT NULL COMMENT 'theme | font_size | feed_layout | notifications ...',
+    pref_value VARCHAR(500) NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_seq_no, pref_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='개인화 설정'""",
+
 """CREATE TABLE IF NOT EXISTS tb_category (
     seq_no BIGINT NOT NULL AUTO_INCREMENT,
     category_id VARCHAR(50) NOT NULL,
@@ -230,7 +262,8 @@ class handler(BaseHTTPRequestHandler):
                 tables_to_check = [
                     "tb_category","tb_topic","tb_user","tb_post",
                     "tb_crawl_item","tb_admin","tb_comment",
-                    "tb_report","tb_admin_log"
+                    "tb_report","tb_admin_log",
+                    "tb_user_bookmark","tb_user_follow","tb_user_preference"
                 ]
                 for t in tables_to_check:
                     try:
@@ -245,7 +278,7 @@ class handler(BaseHTTPRequestHandler):
             if step in ("all", "tables", "new"):
                 # ── 1. 테이블 생성 ──────────────────────────
                 # 'new' = 신규 추가 테이블만 처리 (tb_report, tb_admin_log)
-                NEW_ONLY = ("tb_report", "tb_admin_log")
+                NEW_ONLY = ("tb_report", "tb_admin_log", "tb_user_bookmark", "tb_user_follow", "tb_user_preference")
                 created = 0
                 for ddl in DDL_TABLES:
                     table_name = ddl.split("EXISTS")[1].split("(")[0].strip()
