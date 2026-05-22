@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { postAPI } from '../api/client.js'
 import { ahaScore } from '../store/algorithm.js'
 import ReactionBar from '../components/ReactionBar.jsx'
 import CommentSection from '../components/CommentSection'
@@ -31,28 +32,77 @@ export default function PostDetailPage({ postId, navigate, prevPage }) {
   const { currentUser, toggleBookmark, getUserById, toggleFollow } = useAuth()
   const { allPosts, blockedIds, toggleLike, categories, getCommentsByPostId, incrementView } = useApp()
   const [copied, setCopied] = useState(false)
+  const [dbPost, setDbPost] = useState(null)  // DB 직접 조회 폴백
+  const [loadingDb, setLoadingDb] = useState(false)
   const hasViewed = useRef(false)
 
-  // allPosts에서 직접 find → toggleLike/incrementView 후 즉시 반영
-  const post = blockedIds?.has(postId) ? null : (allPosts || []).find(p => p.id === postId) ?? null
+  // 1단계: allPosts(localStorage + DB 머지)에서 검색 — 안전한 String 비교
+  const localPost = blockedIds?.has(String(postId)) ? null
+    : (allPosts || []).find(p => String(p.id) === String(postId)) ?? null
+
+  // 2단계: localStorage에 없으면 DB에서 직접 조회 (딥링크/새로고침 대응)
+  useEffect(() => {
+    if (localPost || !postId) return
+    // postId가 숫자 형식이면 DB seq_no로 조회 시도
+    if (!/^\d+$/.test(String(postId))) return  // 'p123456...' 형식은 localStorage 전용
+    setLoadingDb(true)
+    postAPI.get(postId)
+      .then(d => {
+        if (!d || d.error) { setDbPost(null); return }
+        // DB 응답 → PostCard에서 쓰는 형식으로 정규화
+        setDbPost({
+          id:         String(d.seq_no),
+          seq_no:     d.seq_no,
+          authorId:   String(d.author_seq_no),
+          authorNickname: d.author_nickname || '',
+          categoryId: d.category_id || null,
+          title:      d.title || '',
+          body:       d.body || '',
+          tags:       d.tags || [],
+          likes:      [],
+          views:      d.view_count || 0,
+          view_count: d.view_count || 0,
+          like_count: d.like_count || 0,
+          comment_count: d.comment_count || 0,
+          createdAt:  d.created_at,
+          created_at: d.created_at,
+          status:     d.status,
+          type:       d.post_type || 'user',
+        })
+      })
+      .catch(() => setDbPost(null))
+      .finally(() => setLoadingDb(false))
+  }, [postId, localPost])
+
+  const post = localPost || dbPost
 
   // 조회수: 이 인스턴스 마운트 시 1회만
   useEffect(() => {
-    if (!hasViewed.current && postId) {
+    if (!hasViewed.current && postId && post) {
       hasViewed.current = true
       incrementView(postId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [post])
 
   function goBack() {
-    // prevPage는 ref에서 읽은 값이라 항상 정확
     navigate(prevPage || 'board')
   }
+
+  // DB 조회 중 → 로딩 표시
+  if (!post && loadingDb) return (
+    <div className="text-center py-5">
+      <div className="spinner-border text-primary" role="status" style={{ width: 32, height: 32 }}>
+        <span className="visually-hidden">불러오는 중...</span>
+      </div>
+      <p className="text-muted mt-3" style={{ fontSize: 13 }}>게시글을 불러오는 중...</p>
+    </div>
+  )
 
   if (!post) return (
     <div className="text-center py-5">
       <p className="text-muted mb-3">게시글을 찾을 수 없습니다.</p>
+      <p className="text-muted small mb-3">이미 삭제되었거나 비공개 처리되었을 수 있습니다.</p>
       <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => navigate('board')}>
         게시판으로
       </button>
@@ -64,8 +114,8 @@ export default function PostDetailPage({ postId, navigate, prevPage }) {
   const author       = getUserById(post.authorId)
   const category     = categories.find(c => c.id === post.categoryId)
   const isLiked      = !!currentUser && likes.includes(currentUser.id)
-  const isBookmarked = currentUser?.bookmarks?.includes(post.id) ?? false
-  const isFollowing  = currentUser?.following?.includes(post.authorId) ?? false
+  const isBookmarked = currentUser?.bookmarks?.includes(String(post.id)) ?? false
+  const isFollowing  = currentUser?.following?.includes(String(post.authorId)) ?? false
   const isMe         = currentUser?.id === post.authorId
   const score        = ahaScore(post, comments.length)
 

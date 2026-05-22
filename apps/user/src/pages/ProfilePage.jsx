@@ -23,12 +23,12 @@ export default function ProfilePage({ userId, navigate }) {
   )
 
   const isMe = currentUser?.id === userId
-  const isFollowing = currentUser?.following?.includes(userId) || false
+  const isFollowing = currentUser?.following?.includes(String(userId)) || false
 
   const commentsMap = Object.fromEntries(posts.map(p => [p.id, comments.filter(c => c.postId === p.id).length]))
   const userPosts    = sortPosts(getPostsByAuthor(userId), commentsMap, 'hot')
   const userComments = comments.filter(c => c.authorId === userId)
-  const savedPosts   = isMe ? posts.filter(p => currentUser.bookmarks?.includes(p.id)) : []
+  const savedPosts   = isMe ? posts.filter(p => currentUser.bookmarks?.includes(String(p.id))) : []
 
   const visibleTabs = TABS.filter(t => !t.meOnly || isMe)
 

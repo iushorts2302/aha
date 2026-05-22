@@ -85,7 +85,7 @@ test('VW-02','AppContext: views+1 로직',              ()=> ctx.includes('views
 test('VW-03','AppContext: setPosts 함수형 업데이트',   ()=> ctx.includes('setPosts(prev =>'))
 test('VW-04','AppContext: writeLS 즉시 저장',          ()=> ctx.includes('writeLS(POSTS_KEY'))
 test('VW-05','Post: useRef(false) 중복방지',          ()=> detail.includes('useRef(false)'))
-test('VW-06','Post: useEffect([]) 마운트1회',         ()=> detail.includes('}, [])'))
+test('VW-06','Post: hasViewed로 조회수 1회 보장',     ()=> detail.includes('hasViewed.current') && detail.includes('incrementView('))
 test('VW-07','Crawl: crawlInteractionStore import',  ()=> crawl.includes('crawlInteractionStore'))
 test('VW-08','Crawl: incrementCrawlView 호출',        ()=> crawl.includes('incrementCrawlView'))
 test('VW-09','Crawl: useRef(false) 중복방지',         ()=> crawl.includes('useRef(false)'))

@@ -25,7 +25,7 @@ export default function PostCard({ post: postProp, navigate }) {
   const commentCount = comments.filter(c => c.postId === post.id).length
   const likes        = Array.isArray(post.likes) ? post.likes : []
   const isLiked      = !!currentUser && likes.includes(currentUser.id)
-  const isBookmarked = currentUser?.bookmarks?.includes(post.id) ?? false
+  const isBookmarked = currentUser?.bookmarks?.includes(String(post.id)) ?? false
   const score        = ahaScore(post, commentCount)
 
   return (

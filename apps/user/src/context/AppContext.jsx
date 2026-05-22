@@ -102,7 +102,7 @@ export function AppProvider({ children }) {
           }
         })
         .catch(() => setDbAvailable(false))
-    }, 5000)  // 5초 지연 — localStorage 데이터 먼저 표시
+    }, 1000)  // 1초 지연 — localStorage 먼저 + DB 빠르게 동기화
     return () => clearTimeout(t)
   }, [])
 
