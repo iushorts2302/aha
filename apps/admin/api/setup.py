@@ -292,7 +292,7 @@ class handler(BaseHTTPRequestHandler):
                         result["tables"][table_name] = "recreated"
                     except Exception as e:
                         result["errors"].append(f"{table_name}: {str(e)[:80]}")
-                self._json(200, result)
+                _json(self, 200, result)
                 return
 
             if step in ("all", "tables", "new"):
