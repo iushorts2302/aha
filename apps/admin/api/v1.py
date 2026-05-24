@@ -871,6 +871,79 @@ def oauth_config_get(p, b):
     }
 
 
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# REACTIONS (게시글 / 크롤 아이템 리액션)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def reactions_get(p, b):
+    """GET ?resource=reactions&target_type=post&target_id=X[&user_id=Y]
+    응답: {counts: {key: n, ...}, user_reaction: key|null}
+    """
+    target_type = p.get("target_type", ["post"])[0]
+    target_id   = p.get("target_id", [""])[0]
+    user_id     = p.get("user_id", [""])[0]
+
+    if not target_id:
+        return 400, {"error": "target_id 필수"}
+
+    # 리액션 종류별 카운트
+    rows = db.query(
+        "SELECT reaction_key, COUNT(*) AS n FROM tb_reaction "
+        "WHERE target_type=%s AND target_id=%s GROUP BY reaction_key",
+        (target_type, target_id))
+    counts = {r["reaction_key"]: int(r["n"]) for r in rows}
+
+    # 현재 사용자의 리액션
+    user_reaction = None
+    if user_id:
+        row = db.query_one(
+            "SELECT reaction_key FROM tb_reaction "
+            "WHERE target_type=%s AND target_id=%s AND user_id=%s",
+            (target_type, target_id, user_id))
+        if row:
+            user_reaction = row["reaction_key"]
+
+    return 200, {"counts": counts, "user_reaction": user_reaction}
+
+def reactions_post(p, b):
+    """POST {target_type, target_id, user_id, reaction_key}
+    동일 키 재요청 시 토글(삭제), 다른 키면 교체.
+    응답: 갱신된 {counts, user_reaction}
+    """
+    target_type = b.get("target_type", "post")
+    target_id   = str(b.get("target_id", ""))
+    user_id     = str(b.get("user_id", ""))
+    reaction_key = b.get("reaction_key", "")
+
+    if not target_id or not user_id or not reaction_key:
+        return 400, {"error": "target_id, user_id, reaction_key 필수"}
+
+    # 기존 리액션 확인
+    existing = db.query_one(
+        "SELECT reaction_key FROM tb_reaction "
+        "WHERE target_type=%s AND target_id=%s AND user_id=%s",
+        (target_type, target_id, user_id))
+
+    if existing and existing["reaction_key"] == reaction_key:
+        # 같은 키 → 토글 삭제
+        db.execute(
+            "DELETE FROM tb_reaction WHERE target_type=%s AND target_id=%s AND user_id=%s",
+            (target_type, target_id, user_id))
+    else:
+        # 다른 키 또는 신규 → upsert
+        db.execute(
+            "INSERT INTO tb_reaction (target_type, target_id, user_id, reaction_key) "
+            "VALUES(%s, %s, %s, %s) "
+            "ON DUPLICATE KEY UPDATE reaction_key=VALUES(reaction_key), created_at=NOW()",
+            (target_type, target_id, user_id, reaction_key))
+
+    # 갱신된 상태 반환
+    return reactions_get(
+        {"target_type": [target_type], "target_id": [target_id], "user_id": [user_id]},
+        {})
+
+
 # ── 라우팅 테이블 ──────────────────────────────────────────
 ROUTES = {
     "auth":       {"POST": auth_post},
@@ -885,6 +958,7 @@ ROUTES = {
     "bookmarks":   {"GET": bookmarks_get,   "POST": bookmarks_post},
     "follows":     {"GET": follows_get,     "POST": follows_post},
     "preferences":   {"GET": preferences_get, "POST": preferences_post},
+    "reactions":     {"GET": reactions_get, "POST": reactions_post},
     "oauth":         {"POST": oauth_post},
     "oauth_config":  {"GET": oauth_config_get},
 }

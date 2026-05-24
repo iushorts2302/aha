@@ -194,6 +194,18 @@ DDL_TABLES = [
     PRIMARY KEY (seq_no),
     UNIQUE KEY uq_allowlist_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='관리자 OAuth 화이트리스트'""",
+"""CREATE TABLE IF NOT EXISTS tb_reaction (
+    seq_no BIGINT NOT NULL AUTO_INCREMENT,
+    target_type VARCHAR(20) NOT NULL COMMENT 'post | crawl_item',
+    target_id VARCHAR(100) NOT NULL,
+    user_id VARCHAR(100) NOT NULL,
+    reaction_key VARCHAR(40) NOT NULL COMMENT 'like, heart, fire, thinking, etc',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (seq_no),
+    UNIQUE KEY uq_reaction (target_type, target_id, user_id),
+    KEY idx_target (target_type, target_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='게시글/크롤 아이템 리액션'""",
+
 
 ]
 
@@ -277,7 +289,7 @@ class handler(BaseHTTPRequestHandler):
                     "tb_category","tb_topic","tb_user","tb_post",
                     "tb_crawl_item","tb_admin","tb_comment",
                     "tb_report","tb_admin_log",
-                    "tb_user_bookmark","tb_user_follow","tb_user_preference","tb_admin_allowlist"
+                    "tb_user_bookmark","tb_user_follow","tb_user_preference","tb_admin_allowlist","tb_reaction"
                 ]
                 for t in tables_to_check:
                     try:
@@ -288,6 +300,18 @@ class handler(BaseHTTPRequestHandler):
                 return _json(self, 200, result)
 
             step = params.get("step", ["all"])[0]
+            if step == "create_reactions":
+                # tb_reaction 테이블만 생성 (기존 데이터 영향 없음)
+                for ddl in DDL_TABLES:
+                    if "tb_reaction" in ddl:
+                        try:
+                            db.execute(ddl)
+                            result["tables"]["tb_reaction"] = "created"
+                        except Exception as e:
+                            result["errors"].append(f"tb_reaction: {str(e)[:100]}")
+                        break
+                _json(self, 200, result)
+                return
             if step == "oauth_migration":
                 # 기존 tb_admin에 OAuth 컬럼 추가 (있으면 무시)
                 MIGRATIONS = [
