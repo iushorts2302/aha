@@ -232,6 +232,70 @@ export default function PostDetailPage({ postId, navigate, prevPage }) {
 
       {/* 댓글 */}
       <CommentSection postId={post.id} navigate={navigate} />
+
+      {/* 관련 글 추천 — 같은 카테고리의 다른 게시글 */}
+      <RelatedPosts currentPost={post} navigate={navigate} />
     </article>
+  )
+}
+
+/* ── 관련 글 추천 — 같은 카테고리 내 다른 게시글 (Phase 4) ── */
+function RelatedPosts({ currentPost, navigate }) {
+  const { allPosts } = useApp()
+  if (!currentPost || !allPosts) return null
+
+  // 같은 카테고리 + 자기 자신 제외 + 최대 4개
+  const related = allPosts
+    .filter(p =>
+      String(p.id) !== String(currentPost.id) &&
+      p.categoryId === currentPost.categoryId &&
+      p.status !== 'hidden'
+    )
+    .slice(0, 4)
+
+  if (related.length === 0) return null
+
+  return (
+    <section style={{
+      marginTop: 48, paddingTop: 24,
+      borderTop: '1px solid var(--color-divider)',
+    }}>
+      <h3 style={{
+        fontSize: 15, fontWeight: 700, margin: '0 0 12px',
+        color: 'var(--color-ink)',
+      }}>
+        🔗 함께 보면 좋은 글
+      </h3>
+      <p style={{ fontSize: 12, color: 'var(--color-muted)', margin: '0 0 16px' }}>
+        같은 카테고리의 다른 글을 살펴보세요
+      </p>
+      <div className="aha-stagger">
+        {related.map(p => (
+          <div
+            key={p.id}
+            onClick={() => navigate(`post/${p.id}`)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`post/${p.id}`) } }}
+            style={{
+              padding: '12px 14px', marginBottom: 8, borderRadius: 10,
+              background: 'var(--color-parchment, #f5f5f7)',
+              cursor: 'pointer', transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--color-parchment, #f5f5f7)'}>
+            <p style={{
+              fontSize: 14, fontWeight: 600, color: 'var(--color-ink)',
+              margin: 0, lineHeight: 1.4,
+              overflow: 'hidden', textOverflow: 'ellipsis',
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            }}>{p.title}</p>
+            <p style={{ fontSize: 11, color: 'var(--color-muted)', margin: '4px 0 0' }}>
+              {p.authorNickname || '익명'} · 댓글 {p.comment_count || 0}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }

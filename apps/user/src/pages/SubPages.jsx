@@ -323,65 +323,355 @@ export function LearnPage({ navigate }) {
 // ── 알림(Notification) ───────────────────────────────────────
 export function NotificationPage({ navigate }) {
   const { currentUser } = useAuth()
-  const [tab, setTab] = useState('comment')
-  const TABS = [
-    { key: 'comment', label: '댓글' }, { key: 'mention', label: '멘션' },
-    { key: 'follow', label: '팔로우' }, { key: 'system', label: '시스템' },
-  ]
+  const { getPostsByAuthor, comments } = useApp()
+  const [tab, setTab] = useState('all')
   if (!currentUser) return <LoginPrompt navigate={navigate} />
+
+  // 활동 피드 — 내 글에 달린 댓글 + 좋아요 + 시스템 알림 통합
+  const myPosts = getPostsByAuthor(currentUser.id) || []
+  const myPostIds = new Set(myPosts.map(p => String(p.id)))
+
+  // 내 글에 달린 댓글 (자신 제외)
+  const commentsOnMyPosts = (comments || [])
+    .filter(c => myPostIds.has(String(c.postId)) && String(c.authorId) !== String(currentUser.id))
+    .map(c => ({
+      id: `cmt-${c.id}`,
+      type: 'comment',
+      timestamp: c.createdAt,
+      icon: '💬',
+      iconBg: '#e0f2fe',
+      title: `${c.authorNickname || '누군가'}님이 회원님의 글에 댓글을 남겼어요`,
+      detail: c.content.slice(0, 80),
+      onClick: () => navigate(`post/${c.postId}`),
+    }))
+
+  // 내 글에 좋아요 (현재 데이터에 likes 배열 있을 경우)
+  const likesOnMyPosts = myPosts
+    .filter(p => (p.likes || []).length > 0)
+    .map(p => ({
+      id: `like-${p.id}`,
+      type: 'like',
+      timestamp: p.createdAt,
+      icon: '❤️',
+      iconBg: '#fee2e2',
+      title: `회원님의 글에 ${(p.likes || []).length}명이 좋아요를 눌렀어요`,
+      detail: p.title,
+      onClick: () => navigate(`post/${p.id}`),
+    }))
+
+  // 시스템 알림 (예시)
+  const systemNotifs = [
+    {
+      id: 'sys-welcome',
+      type: 'system',
+      timestamp: currentUser.createdAt || new Date().toISOString(),
+      icon: '👋',
+      iconBg: '#fef3c7',
+      title: `${currentUser.nickname}님, aha!에 오신 것을 환영합니다`,
+      detail: '관심 카테고리를 골라 맞춤 추천을 받아보세요',
+      onClick: () => navigate('my'),
+    },
+  ]
+
+  const allNotifs = [...commentsOnMyPosts, ...likesOnMyPosts, ...systemNotifs]
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+
+  const filtered = tab === 'all' ? allNotifs
+    : tab === 'comment' ? commentsOnMyPosts
+    : tab === 'like'    ? likesOnMyPosts
+    : systemNotifs
+
+  const TABS = [
+    { key: 'all',     label: `전체 (${allNotifs.length})` },
+    { key: 'comment', label: `댓글 (${commentsOnMyPosts.length})` },
+    { key: 'like',    label: `좋아요 (${likesOnMyPosts.length})` },
+    { key: 'system',  label: `시스템 (${systemNotifs.length})` },
+  ]
+
   return (
     <div className="fade-up">
-      <PageHeader title="알림" subtitle="나의 활동 알림" />
+      <PageHeader title="알림" subtitle={`나의 활동과 시스템 알림 ${allNotifs.length}건`} />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      <div style={{ padding: '64px 0', textAlign: 'center' }}>
-        <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)' }}>새로운 알림이 없습니다.</p>
+      {filtered.length === 0 ? (
+        <div style={{ padding: '64px 0', textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0 }}>
+            새로운 알림이 없어요
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 6, opacity: 0.7 }}>
+            글을 작성하거나 다른 사용자와 소통해보세요
+          </p>
+        </div>
+      ) : (
+        <div className="aha-stagger" style={{ marginTop: 12 }}>
+          {filtered.map(n => (
+            <div
+              key={n.id}
+              onClick={n.onClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n.onClick?.() } }}
+              style={{
+                display: 'flex', gap: 12, padding: '14px 16px',
+                background: '#fff',
+                border: '1px solid var(--color-divider)',
+                borderRadius: 10, marginBottom: 8,
+                cursor: n.onClick ? 'pointer' : 'default',
+              }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: n.iconBg, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18,
+              }}>{n.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', margin: 0 }}>
+                  {n.title}
+                </p>
+                {n.detail && (
+                  <p style={{
+                    fontSize: 12, color: 'var(--color-muted)',
+                    margin: '4px 0 0', lineHeight: 1.4,
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  }}>{n.detail}</p>
+                )}
+                <p style={{ fontSize: 11, color: 'var(--color-muted)', margin: '4px 0 0', opacity: 0.7 }}>
+                  {timeAgo(n.timestamp)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* 시간 표시 헬퍼 */
+function timeAgo(iso) {
+  if (!iso) return ''
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return '방금 전'
+  if (m < 60) return `${m}분 전`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}시간 전`
+  const d = Math.floor(h / 24)
+  if (d < 7) return `${d}일 전`
+  return new Date(iso).toLocaleDateString('ko-KR')
+}
+
+// ── 마이(My) — 활동 대시보드 (Phase 3) ───────────────────────
+export function MyPage({ navigate }) {
+  const { currentUser, logout } = useAuth()
+  const { getPostsByAuthor, comments } = useApp()
+  if (!currentUser) return <LoginPrompt navigate={navigate} />
+
+  const myPosts    = getPostsByAuthor(currentUser.id) || []
+  const myComments = (comments || []).filter(cmt => String(cmt.authorId) === String(currentUser.id))
+  const initial    = (currentUser.nickname || '?')[0].toUpperCase()
+  const followCount = (currentUser.following || []).length
+  const followerCount = (currentUser.followers || []).length
+
+  // 즐겨찾기 미리보기 — 게시글 + 외부 콘텐츠 합산
+  const bookmarksRaw = currentUser.bookmarksRaw || []
+  const crawlBookmarks = bookmarksRaw.filter(b => b.target_type === 'crawl_item')
+  const postBookmarkCount = bookmarksRaw.filter(b => b.target_type === 'post').length
+  const totalBookmarks = bookmarksRaw.length
+
+  // 맞춤 추천 카테고리 — preferences.favorite_categories 기반
+  const prefs = currentUser.preferences || {}
+  const favCats = prefs.favorite_categories
+    ? prefs.favorite_categories.split(',').map(s => s.trim()).filter(Boolean)
+    : []
+  // 추천이 없으면 인기 카테고리 기본값
+  const recommendedTopics = favCats.length > 0
+    ? favCats.slice(0, 3).map(cat => ({ topic: `${cat}.trending` || `${cat}.new`, label: cat.toUpperCase() }))
+    : [
+        { topic: 'ai.agents',     label: 'AI 에이전트' },
+        { topic: 'dev.trending',  label: 'GitHub 트렌딩' },
+        { topic: 'home.trending', label: '실시간 인기' },
+      ]
+
+  return (
+    <div className="fade-up">
+      {/* ── 프로필 카드 ── */}
+      <div style={{
+        padding: '28px 24px', marginBottom: 24,
+        background: 'linear-gradient(135deg, #f8f9ff 0%, #fff5f5 100%)',
+        border: '1px solid rgba(0,102,204,0.10)',
+        borderRadius: 16,
+        display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+      }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%',
+          background: 'var(--color-primary)', color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 28, fontWeight: 700, flexShrink: 0,
+        }}>{initial}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{
+            fontSize: 24, fontWeight: 700, margin: 0,
+            color: 'var(--color-ink)', letterSpacing: '-0.02em',
+          }}>{currentUser.nickname}</h1>
+          <p style={{ fontSize: 13, color: 'var(--color-muted)', margin: '4px 0 12px' }}>{currentUser.email}</p>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+            {[
+              { label: '게시글', value: myPosts.length },
+              { label: '댓글',   value: myComments.length },
+              { label: '즐겨찾기', value: totalBookmarks },
+              { label: '팔로잉', value: followCount },
+            ].map(s => (
+              <div key={s.label}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-ink)' }}>{s.value}</span>
+                <span style={{ fontSize: 11, color: 'var(--color-muted)', marginLeft: 4 }}>{s.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={() => navigate(`profile/${currentUser.id}`)}
+          className="btn-secondary-aha"
+          style={{ height: 36, fontSize: 12 }}>
+          공개 프로필 보기
+        </button>
+      </div>
+
+      {/* ── 섹션 1: 즐겨찾기 미리보기 ── */}
+      <DashSection
+        title="⭐ 내 즐겨찾기"
+        count={totalBookmarks}
+        action={totalBookmarks > 0 ? { label: '전체 보기 →', onClick: () => navigate('bookmarks') } : null}>
+        {totalBookmarks === 0 ? (
+          <EmptyHint
+            text="아직 저장한 콘텐츠가 없어요"
+            sub="카드의 ★ 버튼을 눌러 보관해보세요"
+          />
+        ) : (
+          <>
+            {postBookmarkCount > 0 && (
+              <p style={{ fontSize: 12, color: 'var(--color-muted)', margin: '0 0 8px' }}>
+                📝 게시글 {postBookmarkCount}개 저장됨
+              </p>
+            )}
+            {crawlBookmarks.slice(0, 4).map(b => (
+              <a
+                key={b.target_key}
+                href={b.target_key.startsWith('http') ? b.target_key : `https://${b.target_key}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  display: 'block', padding: '10px 12px',
+                  borderRadius: 8, marginBottom: 6,
+                  background: 'var(--color-parchment, #f5f5f7)',
+                  textDecoration: 'none', color: 'var(--color-ink)',
+                  fontSize: 13, lineHeight: 1.4,
+                  border: '1px solid transparent',
+                  transition: 'border-color 0.15s ease, background 0.15s ease',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,102,204,0.15)'; e.currentTarget.style.background = '#fff' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'var(--color-parchment, #f5f5f7)' }}>
+                <span style={{ color: 'var(--color-primary)', marginRight: 6 }}>★</span>
+                {b.target_title || b.target_key}
+              </a>
+            ))}
+          </>
+        )}
+      </DashSection>
+
+      {/* ── 섹션 2: 내가 쓴 글 ── */}
+      <DashSection
+        title="📝 내가 쓴 글"
+        count={myPosts.length}
+        action={{ label: '+ 새 글', onClick: () => navigate('write') }}>
+        {myPosts.length === 0 ? (
+          <EmptyHint
+            text="아직 작성한 글이 없어요"
+            sub="첫 글을 작성해보세요"
+          />
+        ) : (
+          myPosts.slice(0, 4).map(p => <PostCard key={p.id} post={p} navigate={navigate} />)
+        )}
+      </DashSection>
+
+      {/* ── 섹션 3: 내 댓글 ── */}
+      {myComments.length > 0 && (
+        <DashSection title="💬 내가 쓴 댓글" count={myComments.length}>
+          {myComments.slice(0, 4).map(cmt => (
+            <div
+              key={cmt.id}
+              onClick={() => navigate(`post/${cmt.postId}`)}
+              style={{
+                padding: '10px 12px', borderRadius: 8, marginBottom: 6,
+                background: 'var(--color-parchment, #f5f5f7)',
+                cursor: 'pointer', fontSize: 13, lineHeight: 1.5,
+              }}>
+              <p style={{ margin: 0, color: 'var(--color-ink)' }}>{cmt.content}</p>
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--color-muted)' }}>
+                ↗ 게시글로 이동
+              </p>
+            </div>
+          ))}
+        </DashSection>
+      )}
+
+      {/* ── 섹션 4: 맞춤 추천 ── */}
+      <DashSection title="🎯 맞춤 추천">
+        <p style={{ fontSize: 12, color: 'var(--color-muted)', margin: '0 0 12px' }}>
+          관심사 기반 추천 콘텐츠
+        </p>
+        {recommendedTopics.map(rec => (
+          <div key={rec.topic} style={{ marginBottom: 16 }}>
+            <CrawlFeed topicKey={rec.topic} title={`▸ ${rec.label}`} limit={3} navigate={navigate} />
+          </div>
+        ))}
+      </DashSection>
+
+      {/* ── 로그아웃 ── */}
+      <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--color-divider)' }}>
+        <button onClick={() => logout()} className="btn-secondary-aha" style={{ fontSize: 13 }}>
+          로그아웃
+        </button>
       </div>
     </div>
   )
 }
 
-// ── 마이(My) ─────────────────────────────────────────────────
-export function MyPage({ navigate }) {
-  const { currentUser, logout } = useAuth()
-  const { getPostsByAuthor } = useApp()
-  const [tab, setTab] = useState('profile')
-  const TABS = [
-    { key: 'profile', label: '프로필' }, { key: 'posts', label: '작성글' },
-    { key: 'saved', label: '저장글' }, { key: 'settings', label: '계정 설정' },
-  ]
-  if (!currentUser) return <LoginPrompt navigate={navigate} />
-  const myPosts = getPostsByAuthor(currentUser.id)
+/* ── 대시보드 섹션 셸 ── */
+function DashSection({ title, count, action, children }) {
   return (
-    <div className="fade-up">
-      <div style={{ padding: 'var(--sp-section) 0 var(--sp-xxl)', borderBottom: '1px solid var(--color-divider)', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--color-ink)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 600 }}>{(currentUser.nickname||"?")[0]}</div>
-        <div>
-          <h1 style={{ fontSize: 'var(--text-display-md)', fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.374px' }}>{currentUser.nickname}</h1>
-          <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)', marginTop: '4px' }}>{currentUser.email}</p>
-          <div style={{ display: 'flex', gap: '24px', marginTop: '12px' }}>
-            {[{ label: '게시글', value: myPosts.length }, { label: '팔로워', value: currentUser.followers.length }, { label: '팔로잉', value: currentUser.following.length }].map(s => (
-              <div key={s.label}><span style={{ fontSize: 'var(--text-tagline)', fontWeight: 600, color: 'var(--color-ink)' }}>{s.value}</span><span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', marginLeft: '4px' }}>{s.label}</span></div>
-            ))}
-          </div>
-        </div>
-        <div style={{ flex: 1 }} />
-        <button onClick={() => navigate(`profile/${currentUser.id}`)} className="btn-secondary" style={{ height: '36px', padding: '0 20px', minWidth: 'unset', fontSize: 'var(--text-caption)' }}>프로필 보기</button>
+    <section style={{ marginBottom: 32 }}>
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+        marginBottom: 12, paddingBottom: 8,
+        borderBottom: '1px solid var(--color-divider)',
+      }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--color-ink)' }}>
+          {title}
+          {typeof count === 'number' && count > 0 && (
+            <span style={{ fontSize: 12, color: 'var(--color-muted)', fontWeight: 500, marginLeft: 8 }}>
+              {count}
+            </span>
+          )}
+        </h2>
+        {action && (
+          <button
+            onClick={action.onClick}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontSize: 12, color: 'var(--color-primary)', padding: 0,
+            }}>{action.label}</button>
+        )}
       </div>
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'profile' && <div style={{ padding: '24px 0' }}>{currentUser.bio && <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-body)', marginBottom: '20px' }}>{currentUser.bio}</p>}{currentUser.expertise?.length > 0 && <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>{currentUser.expertise.map(e => <span key={e} style={{ fontSize: 'var(--text-caption)', padding: '6px 16px', borderRadius: 'var(--r-pill)', border: '2px solid var(--color-primary)', color: 'var(--color-primary)', fontWeight: 600 }}>⚡ {e}</span>)}</div>}</div>}
-      {tab === 'posts' && (myPosts.length > 0 ? <div>{myPosts.map(p => <PostCard key={p.id} post={p} navigate={navigate}/>)}</div> : <div style={{ padding: '64px 0', textAlign: 'center' }}><p style={{ color: 'var(--color-muted-48)', marginBottom: '20px', fontSize: 'var(--text-body)' }}>작성한 글이 없습니다.</p><button onClick={() => navigate('write')} className="btn-primary">글 작성하기</button></div>)}
-      {tab === 'saved' && <div style={{ padding: '64px 0', textAlign: 'center' }}><p style={{ fontSize: 'var(--text-body)', color: 'var(--color-muted-48)' }}>저장된 글이 없습니다.</p></div>}
-      {tab === 'settings' && (
-        <div style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px' }}>
-          {[{ label: '닉네임', value: currentUser.nickname }, { label: '이메일', value: currentUser.email }, { label: '가입일', value: currentUser.createdAt }].map(f => (
-            <div key={f.label} style={{ borderBottom: '1px solid var(--color-divider)', paddingBottom: '16px' }}>
-              <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-muted-48)', marginBottom: '4px', fontWeight: 600 }}>{f.label}</p>
-              <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-ink)' }}>{f.value}</p>
-            </div>
-          ))}
-          <button onClick={() => logout()} className="btn-secondary" style={{ marginTop: '16px', alignSelf: 'flex-start' }}>로그아웃</button>
-        </div>
-      )}
+      <div>{children}</div>
+    </section>
+  )
+}
+
+function EmptyHint({ text, sub }) {
+  return (
+    <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+      <p style={{ fontSize: 13, color: 'var(--color-muted)', margin: 0 }}>{text}</p>
+      {sub && <p style={{ fontSize: 11, color: 'var(--color-muted)', margin: '4px 0 0', opacity: 0.7 }}>{sub}</p>}
     </div>
   )
 }
