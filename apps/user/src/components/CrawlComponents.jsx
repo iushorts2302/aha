@@ -94,11 +94,14 @@ export function CrawlCard({ item, onClick, rank, navigate }) {
               <small className="text-muted" style={{ color: liveLikes.liked ? 'var(--color-primary)' : '' }}>♥ {liveLikes.count}</small>
               {currentUser && (
                 <button
+                  className={isBookmarked ? 'aha-pop' : ''}
+                  key={`bm-crawl-${isBookmarked}`}
                   onClick={e => { e.stopPropagation(); toggleBookmark(bookmarkKey, { type: 'crawl_item', title: item.title }) }}
                   style={{
                     background: 'none', border: 'none', padding: '0 2px',
                     fontSize: 16, lineHeight: 1, cursor: 'pointer',
                     color: isBookmarked ? 'var(--color-primary)' : '#bbb',
+                    display: 'inline-block',
                   }}
                   title={isBookmarked ? '즐겨찾기 해제' : '즐겨찾기'}>
                   {isBookmarked ? '★' : '☆'}
@@ -239,9 +242,11 @@ export function CrawlFeed({ topicKey, title, limit = 10, showRank = false, navig
   return (
     <div style={{ marginBottom: 36 }}>
       <SectionHeader title={title} count={items.length} onRefresh={refresh} loading={loading} source={source} />
-      {items.map((item, i) => (
-        <CrawlCard key={item.id} item={item} rank={showRank ? i + 1 : null} navigate={navigate} />
-      ))}
+      <div className="aha-stagger" key={`feed-${topicKey || title}-${items.length}`}>
+        {items.map((item, i) => (
+          <CrawlCard key={item.id} item={item} rank={showRank ? i + 1 : null} navigate={navigate} />
+        ))}
+      </div>
     </div>
   )
 }

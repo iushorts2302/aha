@@ -275,3 +275,100 @@ img { max-width: 100%; display: block; }
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(0,102,204,0.12); }
+
+/* ─────────────────────────────────────────────────────────
+   목적 지향형 마이크로 인터랙션 (Al-ASeo 패턴 적용)
+   • 핵심 원칙: 기능적 안내, 성능 우선, transform/opacity만 사용
+   • prefers-reduced-motion 자동 차단
+   • GPU compositor만 건드림 → Core Web Vitals 영향 없음
+───────────────────────────────────────────────────────── */
+
+/* 1) 카드 hover lift — PostCard, CrawlCard 등 클릭 가능한 카드 */
+.py-4.border-bottom,
+.card.shadow-sm {
+  transition: transform 0.18s cubic-bezier(0.4,0,0.2,1),
+              box-shadow 0.18s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* PostCard / CrawlCard (cursor:pointer로 표시된 클릭 가능 영역) hover */
+[role="button"]:hover,
+.card.shadow-sm:hover,
+a.py-4:hover {
+  transform: translateY(-1px);
+}
+
+/* 2) 클릭 피드백 — 가벼운 물리적 눌림 (모든 버튼 + 클릭 카드) */
+.btn:active,
+[role="button"]:active,
+button:not(:disabled):active,
+a.btn:active {
+  transform: scale(0.97);
+  transition: transform 0.08s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* 3) 별표/좋아요 토글 시 pop — 사용자 액션 성공 피드백 */
+@keyframes ahaPopOnce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.aha-pop {
+  animation: ahaPopOnce 0.28s cubic-bezier(0.4,0,0.2,1) both;
+}
+
+/* 4) 버튼 hover lift + 미세 그림자 (primary 버튼 한정) */
+.btn-primary {
+  transition: transform 0.15s cubic-bezier(0.4,0,0.2,1),
+              box-shadow 0.15s cubic-bezier(0.4,0,0.2,1),
+              background-color 0.15s ease;
+}
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,102,204,0.22);
+}
+
+/* 5) 마운트 stagger fade-in — 리스트 진입 시 자연스러운 등장 */
+@keyframes ahaFadeUpStagger {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.aha-stagger > * {
+  animation: ahaFadeUpStagger 0.32s cubic-bezier(0.4,0,0.2,1) both;
+  opacity: 0;
+}
+.aha-stagger > *:nth-child(1) { animation-delay: 0.00s; }
+.aha-stagger > *:nth-child(2) { animation-delay: 0.04s; }
+.aha-stagger > *:nth-child(3) { animation-delay: 0.08s; }
+.aha-stagger > *:nth-child(4) { animation-delay: 0.12s; }
+.aha-stagger > *:nth-child(5) { animation-delay: 0.16s; }
+.aha-stagger > *:nth-child(6) { animation-delay: 0.20s; }
+.aha-stagger > *:nth-child(7) { animation-delay: 0.24s; }
+.aha-stagger > *:nth-child(8) { animation-delay: 0.28s; }
+.aha-stagger > *:nth-child(9) { animation-delay: 0.32s; }
+.aha-stagger > *:nth-child(10) { animation-delay: 0.36s; }
+.aha-stagger > *:nth-child(n+11) { animation-delay: 0.40s; }
+
+/* 6) 키보드 포커스 표시 강화 — 접근성 */
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 7) prefers-reduced-motion — 모든 모션 즉시 완료 (접근성 필수) */
+@media (prefers-reduced-motion: reduce) {
+  .py-4.border-bottom,
+  .card.shadow-sm,
+  .btn,
+  .btn-primary,
+  [role="button"],
+  .aha-stagger > *,
+  .aha-pop {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

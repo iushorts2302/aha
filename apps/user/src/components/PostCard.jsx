@@ -88,7 +88,9 @@ export default function PostCard({ post: postProp, navigate }) {
           <small className="text-muted">👁 {post.views ?? 0}</small>
           {/* 좋아요 */}
           <button className="border-0 bg-transparent p-0 small"
-            style={{ color: isLiked ? 'var(--color-primary)' : '#aaa', transition: 'color 0.2s' }}
+            className={isLiked ? 'aha-pop' : ''}
+            key={`like-${isLiked}`}
+            style={{ color: isLiked ? 'var(--color-primary)' : '#aaa', transition: 'color 0.2s', display: 'inline-block' }}
             onClick={e => { e.stopPropagation(); if (currentUser) toggleLike(post.id, currentUser.id) }}>
             ♥ {likes.length}
           </button>
@@ -96,7 +98,9 @@ export default function PostCard({ post: postProp, navigate }) {
           <small className="text-muted">💬 {commentCount}</small>
           {/* 북마크 */}
           <button className="border-0 bg-transparent p-0"
-            style={{ color: isBookmarked ? 'var(--color-primary)' : '#aaa', transition: 'color 0.2s' }}
+            className={isBookmarked ? 'aha-pop' : ''}
+            key={`bm-${isBookmarked}`}
+            style={{ color: isBookmarked ? 'var(--color-primary)' : '#aaa', transition: 'color 0.2s', display: 'inline-block' }}
             onClick={e => { e.stopPropagation(); if (currentUser) toggleBookmark(post.id, { type: 'post', title: post.title }) }}>
             {isBookmarked ? '★' : '☆'}
           </button>
