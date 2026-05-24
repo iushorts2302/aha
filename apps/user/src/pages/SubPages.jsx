@@ -166,7 +166,14 @@ export function AIPage({ navigate }) {
   ]
   return (
     <div className="fade-up">
-      <PageHeader title="AI 뉴스" subtitle="TechCrunch AI · The Verge · VentureBeat 기반 최신 AI 소식" />
+      <CategoryHero
+        icon="🤖"
+        title="AI 트렌드"
+        subtitle="TechCrunch AI · The Verge · VentureBeat · arXiv 기반 최신 AI 소식"
+        gradient="linear-gradient(135deg, #f0f6ff 0%, #faf5ff 100%)"
+        accentColor="rgba(120, 80, 220, 0.10)"
+      />
+      <CrawlFeed topicKey="ai.trend" title="🔥 지금 가장 핫한 AI" limit={5} showRank navigate={navigate} />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`ai.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
@@ -183,7 +190,14 @@ export function StartupPage({ navigate }) {
   ]
   return (
     <div className="fade-up">
-      <PageHeader title="스타트업" subtitle="Product Hunt · Y Combinator · Crunchbase 기반" />
+      <CategoryHero
+        icon="🚀"
+        title="스타트업"
+        subtitle="Product Hunt · Y Combinator · 디스콰이엇 기반 한국·글로벌 스타트업 소식"
+        gradient="linear-gradient(135deg, #fff5f0 0%, #fff0ee 100%)"
+        accentColor="rgba(255, 120, 80, 0.10)"
+      />
+      <CrawlFeed topicKey="startup.new" title="🔥 주목받는 신규 스타트업" limit={5} showRank navigate={navigate} />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`startup.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
@@ -202,7 +216,14 @@ export function DevPage({ navigate }) {
   ]
   return (
     <div className="fade-up">
-      <PageHeader title="개발" subtitle="GitHub Trending · Dev.to · Stack Overflow 기반" />
+      <CategoryHero
+        icon="💻"
+        title="개발"
+        subtitle="GitHub Trending · Dev.to · Stack Overflow · velog 기반 개발 콘텐츠"
+        gradient="linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%)"
+        accentColor="rgba(34, 197, 94, 0.10)"
+      />
+      <CrawlFeed topicKey="dev.trending" title="🔥 GitHub 트렌딩 TOP" limit={5} showRank navigate={navigate} />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`dev.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
@@ -219,7 +240,14 @@ export function DesignPage({ navigate }) {
   ]
   return (
     <div className="fade-up">
-      <PageHeader title="디자인" subtitle="Dribbble · Behance · Awwwards 기반 UI/UX 레퍼런스" />
+      <CategoryHero
+        icon="🎨"
+        title="디자인"
+        subtitle="Dribbble · Behance · Awwwards 기반 UI/UX 레퍼런스"
+        gradient="linear-gradient(135deg, #fdf2ff 0%, #fff0f5 100%)"
+        accentColor="rgba(217, 70, 239, 0.10)"
+      />
+      <CrawlFeed topicKey="design.ui" title="🔥 인기 UI 컴포넌트" limit={5} showRank navigate={navigate} />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`design.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
@@ -234,7 +262,14 @@ export function GamePage({ navigate }) {
   ]
   return (
     <div className="fade-up">
-      <PageHeader title="게임" subtitle="Inven · IGN · GameSpot 기반 게임 뉴스" />
+      <CategoryHero
+        icon="🎮"
+        title="게임"
+        subtitle="Inven · IGN · GameSpot 기반 국내·해외 게임 뉴스"
+        gradient="linear-gradient(135deg, #f0f5ff 0%, #faf0ff 100%)"
+        accentColor="rgba(99, 102, 241, 0.10)"
+      />
+      <CrawlFeed topicKey="game.news" title="🔥 최신 게임 뉴스" limit={5} showRank navigate={navigate} />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`game.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
@@ -249,7 +284,14 @@ export function FinancePage({ navigate }) {
   ]
   return (
     <div className="fade-up">
-      <PageHeader title="주식/코인" subtitle="TradingView · CoinMarketCap · Investing.com 기반" />
+      <CategoryHero
+        icon="💰"
+        title="주식 / 코인"
+        subtitle="TradingView · CoinGecko · Investing.com 기반 금융 시장 동향"
+        gradient="linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%)"
+        accentColor="rgba(234, 179, 8, 0.12)"
+      />
+      <CrawlFeed topicKey="finance.crypto" title="🔥 코인 시세 변동" limit={5} showRank navigate={navigate} />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`finance.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>
@@ -264,7 +306,14 @@ export function LearnPage({ navigate }) {
   ]
   return (
     <div className="fade-up">
-      <PageHeader title="학습/강의" subtitle="Inflearn · Coursera · Udemy 기반 교육 콘텐츠" />
+      <CategoryHero
+        icon="📚"
+        title="학습 / 강의"
+        subtitle="Inflearn · Coursera · velog 기반 한국·해외 교육 콘텐츠"
+        gradient="linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 100%)"
+        accentColor="rgba(16, 185, 129, 0.10)"
+      />
+      <CrawlFeed topicKey="learn.korean" title="🔥 추천 한국어 자료" limit={5} showRank navigate={navigate} />
       <TabNav tabs={TABS} active={tab} onChange={setTab} />
       <CrawlFeed topicKey={`learn.${tab}`} title={TABS.find(t=>t.key===tab)?.label} limit={10} navigate={navigate} />
     </div>

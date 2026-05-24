@@ -302,3 +302,44 @@ export function ComingSoon({ name }) {
     </div>
   )
 }
+
+/** 카테고리 페이지 상단 hero 영역 — 그라데이션 배경 + 큰 이모지 + 설명
+ * 카테고리 페이지를 단순한 '탭+리스트' 구조에서 풍성하게 만들어주는 컴포넌트
+ */
+export function CategoryHero({ icon, title, subtitle, gradient, accentColor }) {
+  return (
+    <section
+      style={{
+        position: 'relative',
+        marginBottom: 28,
+        padding: '32px 24px',
+        background: gradient || 'linear-gradient(135deg, #f0f6ff 0%, #e9efff 100%)',
+        border: '1px solid rgba(0,102,204,0.10)',
+        borderRadius: 16,
+        overflow: 'hidden',
+      }}>
+      {/* 배경 장식: 큰 반투명 원 */}
+      <div style={{
+        position: 'absolute', top: -40, right: -40,
+        width: 160, height: 160, borderRadius: '50%',
+        background: accentColor || 'rgba(0,102,204,0.08)',
+        filter: 'blur(40px)', pointerEvents: 'none',
+      }} />
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <span style={{ fontSize: 44, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{
+            fontSize: 'clamp(22px, 4vw, 28px)', fontWeight: 700, margin: 0,
+            color: 'var(--color-ink)', letterSpacing: '-0.02em',
+          }}>{title}</h1>
+          {subtitle && (
+            <p style={{
+              fontSize: 13, color: 'var(--color-muted)',
+              margin: '4px 0 0', lineHeight: 1.5,
+            }}>{subtitle}</p>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}

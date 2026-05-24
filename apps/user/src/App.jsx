@@ -5,6 +5,7 @@ import {
 import { AuthProvider } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
 import Header from './components/Header'
+import Sidebar from './components/Sidebar'
 import MobileTabBar from './components/MobileTabBar'
 
 import PostDetailPage  from './pages/PostDetailPage'
@@ -128,12 +129,20 @@ function AppInner() {
     return <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>{renderPage()}</div>
   }
 
+  // 사이드바가 자연스러운 페이지(메인 카테고리/홈/게시판)에만 노출
+  // 상세/검색/작성/마이페이지 등은 1-column 유지 → 콘텐츠 집중
+  const SIDEBAR_PAGES = ['home', 'ai', 'dev', 'startup', 'design', 'game', 'finance', 'learn', 'board']
+  const showSidebar = SIDEBAR_PAGES.includes(page)
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
       <Header currentPage={page} navigate={navigate} />
-      <main className="container" style={{ maxWidth: '960px', paddingTop: '8px', paddingBottom: '80px' }}>
-        {renderPage()}
-      </main>
+      <div className="aha-main-grid">
+        <main style={{ minWidth: 0 }}>
+          {renderPage()}
+        </main>
+        {showSidebar && <Sidebar navigate={navigate} />}
+      </div>
       <MobileTabBar currentPage={page} navigate={navigate} />
     </div>
   )
