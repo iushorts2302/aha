@@ -182,6 +182,31 @@ export function AdminProvider({ children }) {
     setAdmin(adminData)
     localStorage.setItem(LS_ADMIN_KEY, JSON.stringify(adminData))
   }
+  /**
+   * OAuth 로그인 — provider+code를 백엔드로 보내 인증 + 자동 가입
+   * @returns admin 객체 (성공) 또는 throw (실패)
+   */
+  async function loginOAuth(provider, code, redirect_uri) {
+    const res = await api('/oauth', { method: 'POST',
+      body: JSON.stringify({ provider, code, redirect_uri }) })
+    const adminData = {
+      seq_no: res.seq_no, email: res.email, name: res.name,
+      role: res.role, avatar: res.avatar_url, provider,
+    }
+    setAdmin(adminData)
+    localStorage.setItem(LS_ADMIN_KEY, JSON.stringify(adminData))
+    return adminData
+  }
+
+  // OAuth 설정 조회 (활성화된 provider만 버튼 노출)
+  async function getOAuthConfig() {
+    try {
+      return await api('/oauth_config')
+    } catch {
+      return { kakao: { enabled: false }, google: { enabled: false } }
+    }
+  }
+
   function logout() { setAdmin(null); localStorage.removeItem(LS_ADMIN_KEY) }
 
   // ── 카테고리 CRUD ────────────────────────────────────
@@ -358,7 +383,7 @@ export function AdminProvider({ children }) {
   return (
     <AdminContext.Provider value={{
       admin, dbAvailable, stats, categories, topics, sources, users, posts, comments, reports, reportStats,
-      login, logout, loadAll,
+      login, loginOAuth, getOAuthConfig, logout, loadAll,
       addCategory, updateCategory, deleteCategory,
       addTopic, updateTopic, deleteTopic,
       addSource, updateSource, deleteSource, toggleSource,

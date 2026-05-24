@@ -171,15 +171,29 @@ DDL_TABLES = [
 """CREATE TABLE IF NOT EXISTS tb_admin (
     seq_no BIGINT NOT NULL AUTO_INCREMENT,
     email VARCHAR(200) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NULL COMMENT 'OAuth 사용자는 NULL',
     name VARCHAR(100) NOT NULL,
     role VARCHAR(30) NOT NULL DEFAULT 'admin',
     status VARCHAR(20) NOT NULL DEFAULT 'active',
+    auth_provider VARCHAR(20) NOT NULL DEFAULT 'local' COMMENT 'local | kakao | google',
+    provider_id VARCHAR(100) NULL COMMENT 'OAuth provider 측 사용자 ID',
+    avatar_url VARCHAR(500) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_login_at DATETIME,
     PRIMARY KEY (seq_no),
-    UNIQUE KEY uq_admin_email (email)
+    UNIQUE KEY uq_admin_email (email),
+    UNIQUE KEY uq_admin_provider (auth_provider, provider_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
+
+"""CREATE TABLE IF NOT EXISTS tb_admin_allowlist (
+    seq_no BIGINT NOT NULL AUTO_INCREMENT,
+    email VARCHAR(200) NOT NULL,
+    role VARCHAR(30) NOT NULL DEFAULT 'admin',
+    note VARCHAR(200) NULL COMMENT '추가 메모',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (seq_no),
+    UNIQUE KEY uq_allowlist_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='관리자 OAuth 화이트리스트'""",
 
 ]
 
@@ -263,7 +277,7 @@ class handler(BaseHTTPRequestHandler):
                     "tb_category","tb_topic","tb_user","tb_post",
                     "tb_crawl_item","tb_admin","tb_comment",
                     "tb_report","tb_admin_log",
-                    "tb_user_bookmark","tb_user_follow","tb_user_preference"
+                    "tb_user_bookmark","tb_user_follow","tb_user_preference","tb_admin_allowlist"
                 ]
                 for t in tables_to_check:
                     try:
@@ -274,6 +288,34 @@ class handler(BaseHTTPRequestHandler):
                 return _json(self, 200, result)
 
             step = params.get("step", ["all"])[0]
+            if step == "oauth_migration":
+                # 기존 tb_admin에 OAuth 컬럼 추가 (있으면 무시)
+                MIGRATIONS = [
+                    "ALTER TABLE tb_admin MODIFY password_hash VARCHAR(255) NULL",
+                    "ALTER TABLE tb_admin ADD COLUMN auth_provider VARCHAR(20) NOT NULL DEFAULT 'local'",
+                    "ALTER TABLE tb_admin ADD COLUMN provider_id VARCHAR(100) NULL",
+                    "ALTER TABLE tb_admin ADD COLUMN avatar_url VARCHAR(500) NULL",
+                    "ALTER TABLE tb_admin ADD UNIQUE KEY uq_admin_provider (auth_provider, provider_id)",
+                ]
+                for sql in MIGRATIONS:
+                    try:
+                        db.execute(sql)
+                        result["migrations"] = result.get("migrations", [])
+                        result["migrations"].append(f"OK: {sql[:60]}")
+                    except Exception as e:
+                        result["migrations"] = result.get("migrations", [])
+                        result["migrations"].append(f"SKIP: {sql[:60]} ({str(e)[:50]})")
+                # 화이트리스트 테이블 생성
+                try:
+                    for ddl in DDL_TABLES:
+                        if "tb_admin_allowlist" in ddl:
+                            db.execute(ddl)
+                            result["tables"]["tb_admin_allowlist"] = "created"
+                            break
+                except Exception as e:
+                    result["errors"].append(f"allowlist: {str(e)[:80]}")
+                _json(self, 200, result)
+                return
             if step == "drop_user_personal":
                 # 옛 스키마 테이블 강제 재생성 (target_type 컬럼 추가)
                 for t in ["tb_user_bookmark", "tb_user_follow", "tb_user_preference"]:

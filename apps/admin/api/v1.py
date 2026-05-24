@@ -705,6 +705,147 @@ def preferences_post(p, b):
     return 200, {"saved": len(prefs)}
 
 
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OAUTH (카카오 / 구글 간편 로그인 — 관리자 전용)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import os, json as _json_mod
+from urllib.parse import urlencode
+from urllib.request import urlopen, Request as _Req
+
+KAKAO_REST_KEY     = os.environ.get("KAKAO_REST_KEY", "")
+KAKAO_REDIRECT_URI = os.environ.get("KAKAO_REDIRECT_URI", "")  # https://admin-vert-psi.vercel.app/oauth/kakao
+GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "")  # https://admin-vert-psi.vercel.app/oauth/google
+
+def _fetch_json(url, data=None, headers=None):
+    """헬퍼: JSON GET/POST"""
+    h = headers or {}
+    if data and isinstance(data, dict):
+        data = urlencode(data).encode()
+        h.setdefault("Content-Type", "application/x-www-form-urlencoded")
+    req = _Req(url, data=data, headers=h)
+    with urlopen(req, timeout=10) as r:
+        return _json_mod.loads(r.read().decode())
+
+def _admin_login_or_register(email, name, provider, provider_id, avatar=None):
+    """OAuth 로그인 또는 자동 등록 (화이트리스트 기반)"""
+    # 1) provider_id로 기존 사용자 매칭
+    row = db.query_one(
+        "SELECT seq_no,email,name,role,status,auth_provider FROM tb_admin "
+        "WHERE auth_provider=%s AND provider_id=%s",
+        (provider, provider_id))
+
+    # 2) 없으면 이메일로 매칭 (local → oauth 연동)
+    if not row and email:
+        row = db.query_one(
+            "SELECT seq_no,email,name,role,status,auth_provider FROM tb_admin WHERE email=%s",
+            (email,))
+        if row:
+            # 기존 계정에 OAuth 연동
+            db.execute(
+                "UPDATE tb_admin SET auth_provider=%s, provider_id=%s, avatar_url=%s WHERE seq_no=%s",
+                (provider, provider_id, avatar, row["seq_no"]))
+
+    # 3) 그래도 없으면 화이트리스트 확인 후 자동 생성
+    if not row:
+        if not email:
+            return 400, {"error": "이메일을 가져올 수 없습니다 (provider 동의 항목 확인 필요)"}
+        allow = db.query_one(
+            "SELECT role FROM tb_admin_allowlist WHERE email=%s", (email,))
+        if not allow:
+            return 403, {"error": f"등록되지 않은 이메일입니다: {email}\n관리자 화이트리스트에 추가 후 다시 시도하세요."}
+        seq = db.execute(
+            "INSERT INTO tb_admin (email,password_hash,name,role,status,auth_provider,provider_id,avatar_url) "
+            "VALUES(%s, NULL, %s, %s, 'active', %s, %s, %s)",
+            (email, name or email.split("@")[0], allow["role"], provider, provider_id, avatar))
+        row = {
+            "seq_no": seq, "email": email, "name": name or email.split("@")[0],
+            "role": allow["role"], "status": "active", "auth_provider": provider
+        }
+
+    # 4) 정지 계정 차단
+    if row["status"] != "active":
+        return 403, {"error": "비활성 계정"}
+
+    # 5) 마지막 로그인 시각 갱신
+    db.execute("UPDATE tb_admin SET last_login_at=NOW() WHERE seq_no=%s", (row["seq_no"],))
+    _log_admin("admin_oauth_login", "admin", row["seq_no"], f"provider={provider}", admin_seq_no=row["seq_no"])
+
+    return 200, {**row, "token": secrets.token_hex(32)}
+
+def oauth_post(p, b):
+    """OAuth code → access_token → user info → 관리자 로그인"""
+    provider = b.get("provider")  # 'kakao' or 'google'
+    code     = b.get("code")
+    redirect = b.get("redirect_uri", "")
+
+    if provider not in ("kakao", "google"):
+        return 400, {"error": "provider는 kakao 또는 google"}
+    if not code:
+        return 400, {"error": "code 필수"}
+
+    try:
+        if provider == "kakao":
+            if not KAKAO_REST_KEY:
+                return 500, {"error": "KAKAO_REST_KEY 환경변수 미설정"}
+            # 1) code → access_token
+            tok = _fetch_json("https://kauth.kakao.com/oauth/token", {
+                "grant_type":   "authorization_code",
+                "client_id":    KAKAO_REST_KEY,
+                "redirect_uri": redirect or KAKAO_REDIRECT_URI,
+                "code":         code,
+            })
+            access_token = tok.get("access_token")
+            if not access_token: return 400, {"error": f"kakao token error: {tok}"}
+            # 2) access_token → user info
+            user = _fetch_json("https://kapi.kakao.com/v2/user/me",
+                headers={"Authorization": f"Bearer {access_token}"})
+            kakao_id = str(user.get("id", ""))
+            account  = user.get("kakao_account", {}) or {}
+            profile  = account.get("profile", {}) or {}
+            email    = account.get("email", "")
+            name     = profile.get("nickname", "")
+            avatar   = profile.get("profile_image_url", "")
+            return _admin_login_or_register(email, name, "kakao", kakao_id, avatar)
+
+        else:  # google
+            if not GOOGLE_CLIENT_ID:
+                return 500, {"error": "GOOGLE_CLIENT_ID 환경변수 미설정"}
+            # 1) code → access_token
+            tok = _fetch_json("https://oauth2.googleapis.com/token", {
+                "grant_type":    "authorization_code",
+                "client_id":     GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri":  redirect or GOOGLE_REDIRECT_URI,
+                "code":          code,
+            })
+            access_token = tok.get("access_token")
+            if not access_token: return 400, {"error": f"google token error: {tok}"}
+            # 2) access_token → userinfo
+            user = _fetch_json("https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"})
+            google_id = str(user.get("sub", ""))
+            email     = user.get("email", "")
+            name      = user.get("name", "")
+            avatar    = user.get("picture", "")
+            return _admin_login_or_register(email, name, "google", google_id, avatar)
+
+    except Exception as e:
+        return 500, {"error": f"OAuth 처리 실패: {str(e)[:200]}"}
+
+def oauth_config_get(p, b):
+    """프론트가 OAuth 활성화 여부를 확인하기 위한 공개 정보 (시크릿은 제외)"""
+    return 200, {
+        "kakao":  {"enabled": bool(KAKAO_REST_KEY), "client_id": KAKAO_REST_KEY,
+                   "redirect_uri": KAKAO_REDIRECT_URI},
+        "google": {"enabled": bool(GOOGLE_CLIENT_ID), "client_id": GOOGLE_CLIENT_ID,
+                   "redirect_uri": GOOGLE_REDIRECT_URI},
+    }
+
+
 # ── 라우팅 테이블 ──────────────────────────────────────────
 ROUTES = {
     "auth":       {"POST": auth_post},
@@ -718,7 +859,9 @@ ROUTES = {
     "admin_logs":  {"GET": admin_logs_get},
     "bookmarks":   {"GET": bookmarks_get,   "POST": bookmarks_post},
     "follows":     {"GET": follows_get,     "POST": follows_post},
-    "preferences": {"GET": preferences_get, "POST": preferences_post},
+    "preferences":   {"GET": preferences_get, "POST": preferences_post},
+    "oauth":         {"POST": oauth_post},
+    "oauth_config":  {"GET": oauth_config_get},
 }
 
 # ── Vercel Handler ─────────────────────────────────────────
@@ -768,6 +911,8 @@ class handler(BaseHTTPRequestHandler):
                         "bookmarks":   {"bookmarks": [], "count": 0},
                         "follows":     {"users": [], "count": 0},
                         "preferences": {"preferences": {}},
+                        "oauth": {"error": "DB unavailable"},
+                        "oauth_config": {"kakao": {"enabled": False}, "google": {"enabled": False}},
                                                                 "reactions":  {"counts": {}, "user_reaction": None},
                                             # DB 없어도 config 기본값으로 19개/63개 반환
                         "categories": {"categories": _DC.get("categories", [])},

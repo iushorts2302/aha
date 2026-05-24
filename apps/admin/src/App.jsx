@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AdminProvider, useAdmin } from './context/AdminContext'
 import { AdminTopbar, AdminSidebar, AdminOffcanvas } from './components/AdminLayout'
-import AdminLoginPage from './pages/AdminLoginPage'
+import AdminLoginPage, { OAuthCallback } from './pages/AdminLoginPage'
 import { DashboardPage, UserManager, PostManager, CommentManager, ReportManager, LogPage} from './pages/AdminPages'
 import { CategoryManager, TopicManager, SourceManager } from './pages/CrawlConfigManager'
 import CrawlerDashboard from './pages/CrawlerDashboard'
@@ -11,6 +11,13 @@ function AdminApp() {
   const { admin } = useAdmin()
   const [page, setPage] = useState('dashboard')
   function navigate(to) { setPage(to) }
+
+  // OAuth 콜백 URL 처리 — /oauth/kakao, /oauth/google
+  const oauthMatch = window.location.pathname.match(/^\/oauth\/(kakao|google)$/)
+  if (oauthMatch) {
+    return <OAuthCallback provider={oauthMatch[1]} navigate={navigate} />
+  }
+
   if (!admin) return <AdminLoginPage navigate={navigate} />
 
   const renderPage = () => {
