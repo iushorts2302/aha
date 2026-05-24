@@ -300,6 +300,23 @@ class handler(BaseHTTPRequestHandler):
                 return _json(self, 200, result)
 
             step = params.get("step", ["all"])[0]
+            if step == "recreate_reactions":
+                # 기존 tb_reaction 스키마가 다른 경우 → DROP 후 재생성
+                try:
+                    db.execute("DROP TABLE IF EXISTS tb_reaction")
+                    result["dropped"] = True
+                except Exception as e:
+                    result["errors"].append(f"DROP: {str(e)[:100]}")
+                for ddl in DDL_TABLES:
+                    if "tb_reaction" in ddl:
+                        try:
+                            db.execute(ddl)
+                            result["tables"]["tb_reaction"] = "recreated"
+                        except Exception as e:
+                            result["errors"].append(f"CREATE: {str(e)[:100]}")
+                        break
+                _json(self, 200, result)
+                return
             if step == "create_reactions":
                 # tb_reaction 테이블만 생성 (기존 데이터 영향 없음)
                 for ddl in DDL_TABLES:
