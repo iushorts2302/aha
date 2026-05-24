@@ -329,6 +329,24 @@ class handler(BaseHTTPRequestHandler):
                         result["migrations"].append(f"SKIP: {sql[:65]} ({str(e)[:40]})")
                 _json(self, 200, result)
                 return
+            if step == "add_allowlist":
+                # 화이트리스트 신규 등록: ?step=add_allowlist&email=...&role=admin
+                em   = params.get("email", [""])[0]
+                role = params.get("role", ["admin"])[0]
+                prov = params.get("provider", [""])[0] or None
+                pid  = params.get("provider_id", [""])[0] or None
+                if not em and not pid:
+                    _json(self, 400, {"error": "email 또는 provider_id 필수"})
+                    return
+                try:
+                    db.execute(
+                        "INSERT IGNORE INTO tb_admin_allowlist (email,provider,provider_id,role,note) "
+                        "VALUES(%s,%s,%s,%s,%s)",
+                        (em or None, prov, pid, role, "auto-added via setup"))
+                    _json(self, 200, {"ok": True, "email": em, "provider": prov, "provider_id": pid})
+                except Exception as e:
+                    _json(self, 500, {"error": str(e)[:200]})
+                return
             if step == "drop_user_personal":
                 # 옛 스키마 테이블 강제 재생성 (target_type 컬럼 추가)
                 for t in ["tb_user_bookmark", "tb_user_follow", "tb_user_preference"]:
