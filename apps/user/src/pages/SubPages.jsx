@@ -33,10 +33,8 @@ export function HomePage({ navigate }) {
       {/* 큐레이션 섹션 — 클릭 없이 다양한 컨텐츠 즉시 노출 */}
       <div style={{ marginTop: 'var(--sp-xxl)' }}>
         {/* 1. AI 트렌드 — 최상단 강조 (그라데이션 배경 박스) */}
-        <section style={{
+        <section className="aha-glass-light" style={{
           marginBottom: 56, padding: '24px 24px 8px',
-          background: 'linear-gradient(135deg, #f0f6ff 0%, #faf5ff 100%)',
-          border: '1px solid rgba(0,102,204,0.12)',
           borderRadius: 14,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>

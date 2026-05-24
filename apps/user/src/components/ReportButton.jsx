@@ -70,15 +70,15 @@ export default function ReportButton({ targetType, targetId, compact = false }) 
       {open && (
         <div
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
+          className="aha-glass-backdrop"
           style={{
-            position: 'fixed', inset: 0, zIndex: 1100,
-            background: 'rgba(0,0,0,0.5)', display: 'flex',
+            position: 'fixed', inset: 0, zIndex: 1100, display: 'flex',
             alignItems: 'center', justifyContent: 'center', padding: 16,
           }}
         >
-          <div style={{
-            background: '#fff', borderRadius: 14, padding: 20,
-            width: '100%', maxWidth: 360, boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+          <div className="aha-glass-modal" style={{
+            borderRadius: 14, padding: 20,
+            width: '100%', maxWidth: 360,
           }} onClick={(e) => e.stopPropagation()}>
             {done ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>

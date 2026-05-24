@@ -37,9 +37,8 @@ export default function Header({ currentPage, navigate }) {
 
   return (
     <>
-      <nav style={{
+      <nav className="aha-glass-dark" style={{
         position: 'sticky', top: 0, zIndex: 1030,
-        background: 'var(--color-nav-black)',
         minHeight: 'var(--nav-height)',
       }}>
         {/* ── 상단 바 ── */}

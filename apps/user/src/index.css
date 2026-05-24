@@ -372,3 +372,64 @@ a:focus-visible {
     opacity: 1 !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+   리퀴드 글래스 (오버레이 영역 한정 적용)
+   • 적용 대상: Header, 모달, AI 강조 박스 — 카드는 제외
+   • backdrop-filter는 모바일 Safari에서 -webkit- 접두사 필수
+   • 폴백: 미지원 브라우저는 불투명 배경으로 자연 degrade
+───────────────────────────────────────────────────────── */
+
+/* 기본 글래스 표면 — 어두운 배경 위 (Header용) */
+.aha-glass-dark {
+  background: rgba(29, 29, 31, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+          backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+/* @supports 폴백 — backdrop-filter 미지원 시 불투명 */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .aha-glass-dark { background: var(--color-nav-black, #1D1D1F); }
+}
+
+/* 밝은 배경 위 글래스 (AI 강조 박스용) */
+.aha-glass-light {
+  background: linear-gradient(135deg,
+    rgba(240, 246, 255, 0.85) 0%,
+    rgba(250, 245, 255, 0.85) 100%);
+  -webkit-backdrop-filter: saturate(140%) blur(24px);
+          backdrop-filter: saturate(140%) blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,  /* 위쪽 highlight */
+    0 8px 32px rgba(0, 102, 204, 0.06);      /* 부드러운 그림자 */
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .aha-glass-light {
+    background: linear-gradient(135deg, #f0f6ff 0%, #faf5ff 100%);
+  }
+}
+
+/* 모달 표면 (ReportButton 등) — 강한 blur + 흰 표면 */
+.aha-glass-modal {
+  background: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: saturate(180%) blur(28px);
+          backdrop-filter: saturate(180%) blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 20px 60px rgba(0, 0, 0, 0.18);
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .aha-glass-modal { background: #fff; }
+}
+
+/* 모달 backdrop — 옅은 dim + 미세 blur */
+.aha-glass-backdrop {
+  background: rgba(29, 29, 31, 0.32);
+  -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .aha-glass-backdrop { background: rgba(29, 29, 31, 0.55); }
+}
