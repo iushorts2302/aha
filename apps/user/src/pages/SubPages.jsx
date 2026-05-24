@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { sortPosts } from '../store/algorithm.js'
-import { CrawlFeed, TabNav, PageHeader, ComingSoon } from '../components/CrawlComponents.jsx'
+import { CrawlFeed, TabNav, PageHeader, ComingSoon, CategoryHero } from '../components/CrawlComponents.jsx'
 import PostCard from '../components/PostCard.jsx'
 
 // ── 홈 ─────────────────────────────────────────────────────
