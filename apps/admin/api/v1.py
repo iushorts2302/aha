@@ -721,14 +721,24 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "")  # https://admin-vert-psi.vercel.app/oauth/google
 
 def _fetch_json(url, data=None, headers=None):
-    """헬퍼: JSON GET/POST"""
+    """헬퍼: JSON GET/POST. HTTPError 발생 시 응답 본문을 그대로 보존하여 디버깅 가능."""
     h = headers or {}
     if data and isinstance(data, dict):
         data = urlencode(data).encode()
         h.setdefault("Content-Type", "application/x-www-form-urlencoded")
     req = _Req(url, data=data, headers=h)
-    with urlopen(req, timeout=10) as r:
-        return _json_mod.loads(r.read().decode())
+    try:
+        with urlopen(req, timeout=10) as r:
+            return _json_mod.loads(r.read().decode())
+    except Exception as e:
+        # HTTPError는 response body 보존
+        body = ""
+        try:
+            if hasattr(e, "read"):
+                body = e.read().decode(errors="replace")
+        except Exception:
+            pass
+        raise RuntimeError(f"{type(e).__name__}: {str(e)[:100]} | body={body[:300]}") from e
 
 def _admin_login_or_register(email, name, provider, provider_id, avatar=None):
     """OAuth 로그인 또는 자동 등록 (화이트리스트 기반)"""
@@ -802,13 +812,17 @@ def oauth_post(p, b):
         if provider == "kakao":
             if not KAKAO_REST_KEY:
                 return 500, {"error": "KAKAO_REST_KEY 환경변수 미설정"}
-            # 1) code → access_token
-            tok = _fetch_json("https://kauth.kakao.com/oauth/token", {
+            # 1) code → access_token (KAKAO_CLIENT_SECRET 설정 시 함께 전송)
+            kakao_body = {
                 "grant_type":   "authorization_code",
                 "client_id":    KAKAO_REST_KEY,
                 "redirect_uri": redirect or KAKAO_REDIRECT_URI,
                 "code":         code,
-            })
+            }
+            kakao_secret = os.environ.get("KAKAO_CLIENT_SECRET", "")
+            if kakao_secret:
+                kakao_body["client_secret"] = kakao_secret
+            tok = _fetch_json("https://kauth.kakao.com/oauth/token", kakao_body)
             access_token = tok.get("access_token")
             if not access_token: return 400, {"error": f"kakao token error: {tok}"}
             # 2) access_token → user info
