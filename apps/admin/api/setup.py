@@ -305,7 +305,7 @@ class handler(BaseHTTPRequestHandler):
                     except Exception as e:
                         result["migrations"] = result.get("migrations", [])
                         result["migrations"].append(f"SKIP: {sql[:60]} ({str(e)[:50]})")
-                # 화이트리스트 테이블 생성
+                # 화이트리스트 테이블 생성 (없으면)
                 try:
                     for ddl in DDL_TABLES:
                         if "tb_admin_allowlist" in ddl:
@@ -313,7 +313,20 @@ class handler(BaseHTTPRequestHandler):
                             result["tables"]["tb_admin_allowlist"] = "created"
                             break
                 except Exception as e:
-                    result["errors"].append(f"allowlist: {str(e)[:80]}")
+                    result["errors"].append(f"allowlist create: {str(e)[:80]}")
+                # 기존 allowlist에 provider/provider_id 컬럼 추가 (이메일 없는 OAuth 지원)
+                ALLOW_MIGRATIONS = [
+                    "ALTER TABLE tb_admin_allowlist MODIFY email VARCHAR(200) NULL",
+                    "ALTER TABLE tb_admin_allowlist ADD COLUMN provider VARCHAR(20) NULL",
+                    "ALTER TABLE tb_admin_allowlist ADD COLUMN provider_id VARCHAR(100) NULL",
+                    "ALTER TABLE tb_admin_allowlist ADD UNIQUE KEY uq_allowlist_provider (provider, provider_id)",
+                ]
+                for sql in ALLOW_MIGRATIONS:
+                    try:
+                        db.execute(sql)
+                        result["migrations"].append(f"OK: {sql[:65]}")
+                    except Exception as e:
+                        result["migrations"].append(f"SKIP: {sql[:65]} ({str(e)[:40]})")
                 _json(self, 200, result)
                 return
             if step == "drop_user_personal":

@@ -751,18 +751,29 @@ def _admin_login_or_register(email, name, provider, provider_id, avatar=None):
 
     # 3) 그래도 없으면 화이트리스트 확인 후 자동 생성
     if not row:
-        if not email:
-            return 400, {"error": "이메일을 가져올 수 없습니다 (provider 동의 항목 확인 필요)"}
-        allow = db.query_one(
-            "SELECT role FROM tb_admin_allowlist WHERE email=%s", (email,))
+        # 화이트리스트 매칭: 이메일 우선 → provider_id 보조
+        allow = None
+        if email:
+            allow = db.query_one(
+                "SELECT role,email FROM tb_admin_allowlist WHERE email=%s", (email,))
+        if not allow and provider_id:
+            allow = db.query_one(
+                "SELECT role,email FROM tb_admin_allowlist WHERE provider=%s AND provider_id=%s",
+                (provider, provider_id))
         if not allow:
-            return 403, {"error": f"등록되지 않은 이메일입니다: {email}\n관리자 화이트리스트에 추가 후 다시 시도하세요."}
+            identifier = email or f"{provider}:{provider_id}"
+            return 403, {"error":
+                f"등록되지 않은 계정입니다 ({identifier}).\n"
+                f"관리자 화이트리스트(tb_admin_allowlist)에 이메일 또는 "
+                f"(provider={provider}, provider_id={provider_id}) 추가 후 다시 시도하세요."}
+        # 이메일이 없으면 provider_id로 placeholder 이메일 생성 (UNIQUE 제약용)
+        final_email = email or allow.get("email") or f"{provider}_{provider_id}@oauth.local"
         seq = db.execute(
             "INSERT INTO tb_admin (email,password_hash,name,role,status,auth_provider,provider_id,avatar_url) "
             "VALUES(%s, NULL, %s, %s, 'active', %s, %s, %s)",
-            (email, name or email.split("@")[0], allow["role"], provider, provider_id, avatar))
+            (final_email, name or final_email.split("@")[0], allow["role"], provider, provider_id, avatar))
         row = {
-            "seq_no": seq, "email": email, "name": name or email.split("@")[0],
+            "seq_no": seq, "email": final_email, "name": name or final_email.split("@")[0],
             "role": allow["role"], "status": "active", "auth_provider": provider
         }
 
