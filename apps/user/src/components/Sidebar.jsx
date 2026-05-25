@@ -15,6 +15,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getItems } from '../store/crawlStore'
+import { saveDetail } from '../store/crawlDetailStore.js'
 
 const QUICK_CATEGORIES = [
   { key: 'ai',       label: 'AI',       icon: '🤖' },
@@ -59,15 +60,15 @@ export default function Sidebar({ navigate }) {
           <ol style={{ margin: 0, padding: 0, listStyle: 'none' }}>
             {trending.map((item, i) => (
               <li key={item.id} style={{ marginBottom: i === trending.length - 1 ? 0 : 10 }}>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => { saveDetail(item); navigate(`crawl-detail/${item.id}`) }}
                   className="aha-sidebar__item"
-                  title={item.title}>
+                  title={item.title}
+                  style={{ background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left', cursor: 'pointer' }}>
                   <span className="aha-sidebar__rank">{i + 1}</span>
                   <span className="aha-sidebar__title">{item.title}</span>
-                </a>
+                </button>
               </li>
             ))}
           </ol>
@@ -94,15 +95,15 @@ export default function Sidebar({ navigate }) {
             <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
               {myBookmarks.map((b, i) => (
                 <li key={b.target_key} style={{ marginBottom: i === myBookmarks.length - 1 ? 0 : 8 }}>
-                  <a
-                    href={b.target_key.startsWith('http') ? b.target_key : `https://${b.target_key}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => navigate('bookmarks')}
                     className="aha-sidebar__item"
-                    title={b.target_title}>
+                    title={b.target_title}
+                    style={{ background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left', cursor: 'pointer' }}>
                     <span style={{ color: 'var(--color-primary)', fontSize: 13, marginRight: 6 }}>★</span>
                     <span className="aha-sidebar__title">{b.target_title || '(제목 없음)'}</span>
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
