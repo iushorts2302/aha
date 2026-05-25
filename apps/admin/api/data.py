@@ -99,7 +99,35 @@ def _db_items(topic_key, limit=20):
                 by_id.setdefault(t["item_seq_no"], []).append(t["tag_name"])
             for r in rows:
                 r["tags"] = by_id.get(r["id"], [])
-        return rows
+        # URL 보강: source_url이 비어 있는 경우 GitHub 한국 조직 패턴으로 URL 조립
+        # 예: title="[네이버] anny" → https://github.com/naver/anny
+        ORG_MAP = {
+            "네이버": "naver", "카카오": "kakaocorp", "라인": "line",
+            "당근": "daangn", "토스": "toss", "쿠팡": "Coupang",
+            "우아한형제": "woowabros", "GitHub": None,  # 이미 GitHub 표시면 별도 처리
+        }
+        for r in rows:
+            if not r.get("source"):
+                title = r.get("title", "") or ""
+                if title.startswith("[") and "]" in title:
+                    label = title[1:title.index("]")]
+                    repo  = title[title.index("]") + 1:].strip()
+                    if " / " in repo:  # "[GitHub] org / repo" 패턴
+                        repo = repo.replace(" / ", "/", 1)
+                        r["source"] = f"https://github.com/{repo}"
+                    elif label in ORG_MAP and ORG_MAP[label]:
+                        r["source"] = f"https://github.com/{ORG_MAP[label]}/{repo}"
+            # 프론트 호환: url 필드도 함께 노출
+            r["url"] = r.get("source", "")
+
+        # 중복 제거: title 기준 (같은 레포가 여러 토픽에서 들어와 중복)
+        seen, deduped = set(), []
+        for r in rows:
+            key = r.get("title", "")
+            if key in seen: continue
+            seen.add(key)
+            deduped.append(r)
+        return deduped
     except Exception:
         return None
 
